@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farmaweb B2B - Catálogo de Productos</title>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Select2 para dropdowns con búsqueda -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+  <!-- Firebase SDK v9 (CDN) -->
+  <script type="module">
+    // Los módulos de Firebase se importan en firebase-config.js
+  </script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header-principal">
+    <div class="header-contenido">
+      <div class="header-logo">
+        <img src="img/logo-farmaweb.svg" alt="Farmaweb" class="logo-img" onerror="this.style.display='none'">
+      </div>
+      <div class="header-titulo">
+        <h1>Farmaweb B2B</h1>
+        <p class="header-tagline">Catálogo inteligente potenciado por IA</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Barra de búsqueda y filtros -->
+  <section class="filtros controles-tabla">
+    <div class="container">
+      <div class="filtros__grid filtros__grid--tabla">
+        <!-- Búsqueda -->
+        <div class="filtros__busqueda">
+          <input
+            type="text"
+            id="inputBusqueda"
+            class="input-busqueda"
+            placeholder="Buscar..."
+            autocomplete="off"
+          >
+        </div>
+
+        <!-- Filtro laboratorio (Select2) -->
+        <div class="filtros__laboratorio">
+          <label for="selectLaboratorio" class="filtro-label">Laboratorio:</label>
+          <select id="selectLaboratorio" class="select-laboratorio select2-filtro">
+            <option value="">Todos</option>
+          </select>
+        </div>
+
+        <!-- Filtro marca (Select2) -->
+        <div class="filtros__marca">
+          <label for="selectMarca" class="filtro-label">Marca:</label>
+          <select id="selectMarca" class="select-marca select2-filtro">
+            <option value="">Todas</option>
+          </select>
+        </div>
+
+        <!-- Filtro ofertas -->
+        <div class="filtros__ofertas">
+          <label for="filtroOfertas" class="filtro-label">Ofertas:</label>
+          <select id="filtroOfertas" class="select-ofertas">
+            <option value="">Todas</option>
+            <option value="marca_dia">Marca del día</option>
+            <option value="nadie_nos_gana">Nadie nos gana</option>
+            <option value="precio_viral">Precio viral</option>
+            <option value="obsequios">Obsequios</option>
+          </select>
+        </div>
+
+        <!-- Botón limpiar filtros -->
+        <div class="filtros__acciones">
+          <button id="btnLimpiarFiltros" class="btn-limpiar">Limpiar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tabla de productos -->
+  <main class="productos">
+    <div class="container">
+      <!-- Contenedor tabla con scroll horizontal -->
+      <div class="tabla-container">
+        <table id="tablaProductos" class="tabla-productos">
+          <thead>
+            <tr>
+              <th>Cantidad</th>
+              <th>Producto</th>
+              <th>Stock</th>
+              <th>Precio</th>
+              <th>P. Regular</th>
+              <th>Impuesto</th>
+              <th>Laboratorio</th>
+              <th>Principio Activo</th>
+              <th>Imagen</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="productosBody">
+            <!-- Filas de productos se renderizan aquí -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Loader -->
+      <div id="loader" class="loader" style="display: none;">
+        <div class="loader__spinner"></div>
+        <p>Cargando productos...</p>
+      </div>
+
+      <!-- Mensaje sin resultados -->
+      <div id="sinResultados" class="sin-resultados" style="display: none;">
+        <p>No se encontraron productos con los filtros seleccionados.</p>
+      </div>
+
+      <!-- Paginación con contador de resultados -->
+      <div class="paginacion-container" id="paginacion">
+        <div class="paginacion-info">
+          <span id="infoResultados">Cargando productos...</span>
+        </div>
+        <div class="paginacion-controles">
+          <button id="btnPrimera" class="btn-paginacion" title="Primera página">
+            &laquo;
+          </button>
+          <button id="btnAnterior" class="btn-paginacion" title="Página anterior">
+            &lsaquo;
+          </button>
+          <div class="paginacion__info">
+            <span>Página</span>
+            <input type="number" id="inputPagina" class="input-pagina" value="1" min="1">
+            <span>de <span id="totalPaginas">1</span></span>
+          </div>
+          <button id="btnSiguiente" class="btn-paginacion" title="Página siguiente">
+            &rsaquo;
+          </button>
+          <button id="btnUltima" class="btn-paginacion" title="Última página">
+            &raquo;
+          </button>
+          <div class="paginacion__porpagina">
+            <label for="selectPorPagina">Mostrar:</label>
+            <select id="selectPorPagina" class="select-porpagina">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2024 Farmaweb B2B - Distribuidora Farmacéutica</p>
+    </div>
+  </footer>
+
+  <!-- Botón flotante carrito -->
+  <button id="btnCarritoFlotante" class="carrito-flotante">
+    <svg class="carrito-flotante__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="9" cy="21" r="1"></circle>
+      <circle cx="20" cy="21" r="1"></circle>
+      <path d="m1 1 4 0 2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+    </svg>
+    <span id="carritoContador" class="carrito-flotante__badge">0</span>
+  </button>
+
+  <!-- Modal Carrito -->
+  <div id="modalCarrito" class="modal" style="display: none;">
+    <div class="modal__overlay"></div>
+    <div class="modal__contenido modal__contenido--carrito">
+      <div class="modal__header">
+        <h2 class="modal__titulo">Carrito de Compras</h2>
+        <button class="modal__cerrar" data-cerrar-modal="modalCarrito">&times;</button>
+      </div>
+      <div class="modal__body">
+        <!-- Lista de productos en el carrito -->
+        <div id="listaCarrito" class="carrito-lista">
+          <!-- Items se renderizan aquí -->
+        </div>
+
+        <!-- Mensaje carrito vacío -->
+        <div id="carritoVacio" class="carrito-vacio" style="display: none;">
+          <p>Tu carrito está vacío</p>
+          <p class="carrito-vacio__subtexto">Agrega productos para continuar</p>
+        </div>
+
+        <!-- Resumen de totales -->
+        <div id="carritoResumen" class="carrito-resumen">
+          <div class="carrito-resumen__linea">
+            <span>Subtotal:</span>
+            <span id="carritoSubtotal">$0</span>
+          </div>
+          <div class="carrito-resumen__linea">
+            <span>IVA (19%):</span>
+            <span id="carritoIVA">$0</span>
+          </div>
+          <div class="carrito-resumen__linea carrito-resumen__linea--total">
+            <span>Total:</span>
+            <span id="carritoTotal">$0</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal__footer">
+        <button id="btnVaciarCarrito" class="btn btn--secundario">Vaciar carrito</button>
+        <button id="btnSolicitarCotizacion" class="btn btn--primario">Solicitar cotización</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Formulario Cotización -->
+  <div id="modalCotizacion" class="modal" style="display: none;">
+    <div class="modal__overlay"></div>
+    <div class="modal__contenido modal__contenido--formulario">
+      <div class="modal__header">
+        <h2 class="modal__titulo">Solicitar Cotización</h2>
+        <button class="modal__cerrar" data-cerrar-modal="modalCotizacion">&times;</button>
+      </div>
+      <div class="modal__body">
+        <form id="formCotizacion" class="formulario-cotizacion">
+          <div class="formulario__grupo">
+            <label for="inputEmpresa">Empresa *</label>
+            <input type="text" id="inputEmpresa" name="empresa" required placeholder="Nombre de la empresa">
+          </div>
+
+          <div class="formulario__grupo">
+            <label for="inputNIT">NIT *</label>
+            <input type="text" id="inputNIT" name="nit" required placeholder="900.123.456-7">
+          </div>
+
+          <div class="formulario__grupo">
+            <label for="inputContacto">Nombre del contacto *</label>
+            <input type="text" id="inputContacto" name="contacto" required placeholder="Nombre completo">
+          </div>
+
+          <div class="formulario__fila">
+            <div class="formulario__grupo">
+              <label for="inputEmail">Email *</label>
+              <input type="email" id="inputEmail" name="email" required placeholder="correo@empresa.com">
+            </div>
+
+            <div class="formulario__grupo">
+              <label for="inputTelefono">Teléfono *</label>
+              <input type="tel" id="inputTelefono" name="telefono" required placeholder="300 123 4567">
+            </div>
+          </div>
+
+          <div class="formulario__fila">
+            <div class="formulario__grupo">
+              <label for="inputCiudad">Ciudad *</label>
+              <input type="text" id="inputCiudad" name="ciudad" required placeholder="Ciudad">
+            </div>
+
+            <div class="formulario__grupo">
+              <label for="inputDepartamento">Departamento</label>
+              <input type="text" id="inputDepartamento" name="departamento" placeholder="Departamento">
+            </div>
+          </div>
+
+          <div class="formulario__grupo">
+            <label for="inputDireccion">Dirección de entrega *</label>
+            <input type="text" id="inputDireccion" name="direccion" required placeholder="Dirección completa">
+          </div>
+
+          <div class="formulario__grupo">
+            <label for="inputNotas">Notas adicionales</label>
+            <textarea id="inputNotas" name="notas" rows="3" placeholder="Instrucciones especiales, observaciones..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal__footer">
+        <button type="button" class="btn btn--secundario" data-cerrar-modal="modalCotizacion">Cancelar</button>
+        <button type="submit" form="formCotizacion" id="btnEnviarCotizacion" class="btn btn--primario">
+          Enviar cotización
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Confirmación Cotización -->
+  <div id="modalConfirmacion" class="modal" style="display: none;">
+    <div class="modal__overlay"></div>
+    <div class="modal__contenido modal__contenido--confirmacion">
+      <div class="modal__header modal__header--exito">
+        <div class="confirmacion__icono">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </div>
+        <h2 class="modal__titulo">¡Cotización Enviada!</h2>
+      </div>
+      <div class="modal__body">
+        <div class="confirmacion__numero">
+          <span>Número de cotización:</span>
+          <strong id="numeroCotizacion">COT-2024-0001</strong>
+        </div>
+        <div class="confirmacion__mensaje">
+          <p>Tu cotización ha sido recibida exitosamente.</p>
+          <p>Nos pondremos en contacto contigo pronto.</p>
+        </div>
+        <div class="confirmacion__resumen">
+          <h4>Resumen:</h4>
+          <p><span>Productos:</span> <strong id="confirmacionProductos">0</strong></p>
+          <p><span>Total:</span> <strong id="confirmacionTotal">$0</strong></p>
+        </div>
+      </div>
+      <div class="modal__footer modal__footer--centrado">
+        <button class="btn btn--primario" data-cerrar-modal="modalConfirmacion">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle Producto -->
+  <div id="modalProducto" class="modal" style="display: none;">
+    <div class="modal__overlay"></div>
+    <div class="modal__contenido modal__contenido--producto">
+      <div class="modal__header">
+        <h2 class="modal__titulo" id="modalProductoTitulo">Detalle del Producto</h2>
+        <button class="modal__cerrar" data-cerrar-modal="modalProducto">&times;</button>
+      </div>
+      <div class="modal__body">
+        <div class="producto-detalle">
+          <div class="producto-detalle__imagen">
+            <img id="modalProductoImagen" src="" alt="Imagen del producto">
+            <div id="modalProductoSinImagen" class="producto-detalle__sin-imagen" style="display: none;">
+              Sin imagen disponible
+            </div>
+            <span id="modalImagenBadge" class="imagen-badge imagen-badge--modal" style="display: none;"></span>
+            <div id="modalImagenOverlay" class="imagen-hover-overlay imagen-hover-overlay--modal" style="display: none;">
+              <span>Click para ver galería</span>
+            </div>
+          </div>
+          <div class="producto-detalle__info">
+            <div class="producto-detalle__campo">
+              <span class="producto-detalle__label">SKU:</span>
+              <span id="modalProductoSku" class="producto-detalle__valor"></span>
+            </div>
+            <div class="producto-detalle__campo">
+              <span class="producto-detalle__label">Laboratorio:</span>
+              <span id="modalProductoLab" class="producto-detalle__valor"></span>
+            </div>
+            <div class="producto-detalle__campo">
+              <span class="producto-detalle__label">Marca:</span>
+              <span id="modalProductoMarca" class="producto-detalle__valor"></span>
+            </div>
+            <div class="producto-detalle__campo">
+              <span class="producto-detalle__label">Principio Activo:</span>
+              <span id="modalProductoPrincipio" class="producto-detalle__valor"></span>
+            </div>
+            <div class="producto-detalle__campo">
+              <span class="producto-detalle__label">Indicación:</span>
+              <span id="modalProductoIndicacion" class="producto-detalle__valor"></span>
+            </div>
+            <div class="producto-detalle__campo">
+              <span class="producto-detalle__label">EAN:</span>
+              <span id="modalProductoEan" class="producto-detalle__valor"></span>
+            </div>
+            <div class="producto-detalle__campo">
+              <span class="producto-detalle__label">Stock:</span>
+              <span id="modalProductoStock" class="producto-detalle__valor"></span>
+            </div>
+            <div class="producto-detalle__precios">
+              <div class="producto-detalle__precio">
+                <span class="producto-detalle__label">Precio:</span>
+                <span id="modalProductoPrecio" class="producto-detalle__valor producto-detalle__valor--precio"></span>
+              </div>
+              <div class="producto-detalle__precio-regular">
+                <span class="producto-detalle__label">P. Regular:</span>
+                <span id="modalProductoPrecioReg" class="producto-detalle__valor"></span>
+              </div>
+            </div>
+            <div class="producto-detalle__agregar">
+              <label for="modalProductoCantidad">Cantidad:</label>
+              <input type="number" id="modalProductoCantidad" value="1" min="1" class="input-cantidad-modal">
+              <button id="btnAgregarDesdeModal" class="btn btn--primario">
+                Agregar al carrito
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Galería de Imágenes -->
+  <div id="modalGaleria" class="modal" style="display: none;">
+    <div class="modal__overlay"></div>
+    <div class="galeria-contenedor">
+      <!-- Botón cerrar -->
+      <button id="btnCerrarGaleria" class="galeria__cerrar">&times;</button>
+
+      <!-- Título del producto -->
+      <h3 id="galeriaTitulo" class="galeria__titulo"></h3>
+
+      <!-- Imagen principal -->
+      <div class="galeria__principal">
+        <button id="btnGaleriaPrev" class="galeria__nav galeria__nav--prev">&#8249;</button>
+        <img id="galeriaImagenPrincipal" src="" alt="Imagen del producto" class="galeria__imagen-principal">
+        <button id="btnGaleriaNext" class="galeria__nav galeria__nav--next">&#8250;</button>
+      </div>
+
+      <!-- Contador de imágenes -->
+      <p id="galeriaContador" class="galeria__contador"></p>
+
+      <!-- Miniaturas -->
+      <div id="galeriaThumbnails" class="galeria__thumbnails">
+        <!-- Miniaturas se renderizan aquí -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts como módulos ES6 -->
+  <script type="module" src="js/firebase-config.js"></script>
+  <script type="module" src="js/utils.js"></script>
+  <script type="module" src="js/carrito.js"></script>
+  <script type="module" src="js/cotizacion.js"></script>
+  <script type="module" src="js/productos.js"></script>
+
+  <!-- Firebase SDKs para Chat Widget -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-functions-compat.js"></script>
+  <script>
+    // Inicializar Firebase para el widget de chat
+    if (!firebase.apps.length) {
+      firebase.initializeApp({
+        apiKey: "AIzaSyCKZdRRrG_p71bb0fzLQRPluF-jgbkeOtA",
+        authDomain: "farmaweb-b2b.firebaseapp.com",
+        projectId: "farmaweb-b2b",
+        storageBucket: "farmaweb-b2b.firebasestorage.app",
+        messagingSenderId: "562620034140",
+        appId: "1:562620034140:web:2eb253570de46ab59aca99"
+      });
+    }
+  </script>
+
+  <!-- Widget de Chat IA -->
+  <script src="/js/ia/chatWidget.js"></script>
+</body>
+</html>
