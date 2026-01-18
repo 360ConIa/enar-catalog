@@ -1,5 +1,5 @@
 /**
- * Configuración del Agente IA - Asesor Comercial Farmaweb
+ * Configuración del Agente IA - Asesor Comercial ENAR
  * Integra Vertex AI + Gemini + MCP Tools
  */
 
@@ -8,7 +8,7 @@ const SYSTEM_PROMPT = require('./systemPrompt');
 const { toolDefinitions, executeTool } = require('./tools');
 
 // Configuración del proyecto
-const PROJECT_ID = 'farmaweb-b2b';
+const PROJECT_ID = 'enar-b2b';
 const LOCATION = 'us-central1';
 const MODEL = 'gemini-1.5-pro';
 

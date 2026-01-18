@@ -359,7 +359,7 @@ function ejecutarDiagnosticoCompleto() {
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
-  ui.createMenu('Farmaweb Sync')
+  ui.createMenu('ENAR Sync')
     .addItem('Sincronizar productos', 'sincronizarProductosAFirestore')
     .addItem('Sincronizar prueba (5 productos)', 'sincronizarPrueba')
     .addSeparator()

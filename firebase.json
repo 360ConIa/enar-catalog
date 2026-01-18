@@ -6,7 +6,7 @@
   "functions": [
     {
       "source": "functions-sync",
-      "codebase": "farmaweb-sync"
+      "codebase": "enar-sync"
     }
   ],
   "hosting": {

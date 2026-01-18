@@ -6,7 +6,7 @@
 const admin = require('firebase-admin');
 
 /**
- * Busca productos en el catálogo de Farmaweb
+ * Busca productos en el catálogo de ENAR
  *
  * @param {Object} params - Parámetros de búsqueda
  * @param {string} params.query - Texto de búsqueda (nombre, principio activo, indicación)
@@ -96,7 +96,7 @@ async function consultarCatalogo({ query, laboratorio, marca, limite = 10 }) {
 // Definición de la herramienta para Vertex AI
 const TOOL_DEFINITION = {
   name: 'consultar_catalogo',
-  description: 'Busca productos en el catálogo de Farmaweb por nombre, principio activo o indicación',
+  description: 'Busca productos en el catálogo de ENAR por nombre, principio activo o indicación',
   parameters: {
     type: 'object',
     properties: {

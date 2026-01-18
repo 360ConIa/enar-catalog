@@ -1,5 +1,5 @@
 /**
- * Widget de Chat IA - Asesor Comercial Farmaweb
+ * Widget de Chat IA - Asesor Comercial ENAR
  * Interfaz para interactuar con el agente IA
  */
 
@@ -69,11 +69,11 @@ class ChatWidget {
           <div class="flex gap-2">
             <div class="flex-shrink-0">
               <div class="w-8 h-8 rounded-full bg-gradient-to-r from-[#ff9410] to-[#18aed1] flex items-center justify-center text-white text-sm font-bold">
-                F
+                E
               </div>
             </div>
             <div class="bg-white rounded-lg p-3 shadow-sm max-w-[80%]">
-              <p class="text-gray-800">¡Hola! Soy el Asesor Comercial de Farmaweb. ¿En qué puedo ayudarte hoy? 😊</p>
+              <p class="text-gray-800">¡Hola! Soy el Asesor Comercial de ENAR. ¿En qué puedo ayudarte hoy? 😊</p>
             </div>
           </div>
         </div>

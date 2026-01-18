@@ -27,9 +27,9 @@ import {
  */
 const firebaseConfig = {
   apiKey: "AIzaSyCKZdRRrG_p71bb0fzLQRPluF-jgbkeOtA",
-  authDomain: "farmaweb-b2b.firebaseapp.com",
-  projectId: "farmaweb-b2b",
-  storageBucket: "farmaweb-b2b.appspot.com",
+  authDomain: "enar-b2b.firebaseapp.com",
+  projectId: "enar-b2b",
+  storageBucket: "enar-b2b.appspot.com",
   messagingSenderId: "",
   appId: ""
 };

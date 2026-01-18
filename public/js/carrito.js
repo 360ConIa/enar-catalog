@@ -16,7 +16,7 @@ import { formatearPrecio } from './utils.js';
 
 class Carrito {
   constructor() {
-    this.STORAGE_KEY = 'farmaweb_carrito';
+    this.STORAGE_KEY = 'enar_carrito';
     this.IVA_PORCENTAJE = 0.19;
     this.items = this.cargarDesdeStorage();
     this.inicializarUI();

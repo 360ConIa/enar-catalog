@@ -980,7 +980,7 @@ function inicializarSelect2() {
 
 // Cargar productos al iniciar la página
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('Iniciando catálogo Farmaweb (Vista Tabla)...');
+  console.log('Iniciando catálogo ENAR (Vista Tabla)...');
 
   // Inicializar Select2 para búsqueda en dropdowns
   inicializarSelect2();

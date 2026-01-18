@@ -119,7 +119,7 @@ async function generarNumeroCotizacion() {
       // Crear documento de configuración si no existe
       await setDoc(configRef, {
         consecutivo_cotizacion: 1,
-        nombre_empresa: 'Farmaweb'
+        nombre_empresa: 'ENAR'
       });
     }
 

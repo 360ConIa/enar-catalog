@@ -12,7 +12,7 @@
  */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCKZdRRrG_p71bb0fzLQRPluF-jgbkeOtA",
-  projectId: "farmaweb-b2b"
+  projectId: "enar-b2b"
 };
 
 /**

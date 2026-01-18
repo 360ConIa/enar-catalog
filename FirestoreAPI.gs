@@ -163,7 +163,7 @@ function crearDocumentoConfiguracion(datos) {
 
   // Datos por defecto para configuración
   const datosCompletos = {
-    nombre_empresa: "Farmaweb",
+    nombre_empresa: "ENAR",
     consecutivo_actual: 0,
     ...datos
   };
@@ -408,7 +408,7 @@ function crearDocumentoConCheckpoint(indice) {
 
   const payload = {
     fields: {
-      nombre_empresa: { stringValue: "Farmaweb" },
+      nombre_empresa: { stringValue: "ENAR" },
       [CAMPO_CHECKPOINT]: { integerValue: String(indice) }
     }
   };

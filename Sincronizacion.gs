@@ -297,7 +297,7 @@ function sincronizarProductosPorLotes() {
   const tiempoInicio = new Date();
 
   Logger.log("╔══════════════════════════════════════════╗");
-  Logger.log("║  SINCRONIZACIÓN POR LOTES - FARMAWEB     ║");
+  Logger.log("║  SINCRONIZACIÓN POR LOTES - ENAR         ║");
   Logger.log("╚══════════════════════════════════════════╝");
   Logger.log(`Fecha/Hora: ${tiempoInicio.toLocaleString("es-CO")}`);
   Logger.log(`Productos por lote: ${PRODUCTOS_POR_LOTE}`);
