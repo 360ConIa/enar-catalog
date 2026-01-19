@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finalizar Orden - ENAR B2B</title>
+  <link rel="stylesheet" href="css/styles.css?v=5.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+    .page-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      padding: 15px 20px;
+      position: relative;
+    }
+    .page-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #D9232D;
+    }
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .header-left img {
+      height: 40px;
+    }
+    .header-left h1 {
+      color: white;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .header-nav a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      transition: background 0.3s;
+    }
+    .header-nav a:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .page-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin-bottom: 10px;
+    }
+    .page-subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .checkout-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 25px;
+    }
+    @media (max-width: 900px) {
+      .checkout-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .checkout-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+      margin-bottom: 25px;
+    }
+    .card-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      padding: 15px 20px;
+      color: white;
+    }
+    .card-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .card-body {
+      padding: 20px;
+    }
+    .cart-item {
+      display: flex;
+      gap: 15px;
+      padding: 15px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .cart-item:last-child {
+      border-bottom: none;
+    }
+    .cart-item-img {
+      width: 70px;
+      height: 70px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #f5f5f5;
+    }
+    .cart-item-info {
+      flex: 1;
+    }
+    .cart-item-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    .cart-item-code {
+      font-size: 12px;
+      color: #888;
+    }
+    .cart-item-price {
+      text-align: right;
+    }
+    .cart-item-quantity {
+      font-size: 13px;
+      color: #666;
+    }
+    .cart-item-subtotal {
+      font-size: 15px;
+      font-weight: 600;
+      color: #D9232D;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #444;
+      margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Poppins', sans-serif;
+      transition: all 0.3s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .summary-sticky {
+      position: sticky;
+      top: 20px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      font-size: 14px;
+    }
+    .summary-row.total {
+      border-top: 2px solid #1e3a8a;
+      margin-top: 10px;
+      padding-top: 15px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .summary-row.total .summary-value {
+      color: #D9232D;
+    }
+    .btn-confirm {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #D9232D 0%, #ff6b6b 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 20px;
+    }
+    .btn-confirm:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(217, 35, 45, 0.4);
+    }
+    .btn-confirm:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-back {
+      display: inline-block;
+      padding: 12px 20px;
+      background: #f3f4f6;
+      color: #374151;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+    .btn-back:hover {
+      background: #e5e7eb;
+    }
+    .message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+    }
+    .message.error {
+      background: #fee2e2;
+      color: #dc2626;
+      display: block;
+    }
+    .message.success {
+      background: #dcfce7;
+      color: #16a34a;
+      display: block;
+    }
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e0e0e0;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .empty-cart {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .empty-cart-icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+    }
+    .empty-cart h2 {
+      color: #666;
+      margin-bottom: 10px;
+    }
+    .empty-cart p {
+      color: #888;
+      margin-bottom: 20px;
+    }
+    .empty-cart a {
+      display: inline-block;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .loader {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+    .info-box {
+      background: #e0f2fe;
+      border: 1px solid #7dd3fc;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      color: #0369a1;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-content">
+      <div class="header-left">
+        <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+        <h1>ENAR B2B</h1>
+      </div>
+      <nav class="header-nav">
+        <a href="/">Volver al Catálogo</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="page-container">
+    <!-- Loading -->
+    <div id="loading" class="loading">
+      <div class="loading-spinner"></div>
+      <p>Cargando carrito...</p>
+    </div>
+
+    <!-- Empty Cart -->
+    <div id="emptyCart" class="empty-cart" style="display: none;">
+      <div class="empty-cart-icon">🛒</div>
+      <h2>Tu carrito está vacío</h2>
+      <p>Agrega productos desde el catálogo para crear una orden</p>
+      <a href="/">Ir al Catálogo</a>
+    </div>
+
+    <!-- Checkout Content -->
+    <div id="checkoutContent" style="display: none;">
+      <a href="/" class="btn-back">← Seguir comprando</a>
+
+      <h1 class="page-title">Finalizar Orden de Compra</h1>
+      <p class="page-subtitle">Revisa tu pedido y confirma los datos de entrega</p>
+
+      <!-- Message -->
+      <div id="message" class="message"></div>
+
+      <div class="checkout-grid">
+        <!-- Left Column -->
+        <div class="checkout-main">
+          <!-- Productos -->
+          <div class="checkout-card">
+            <div class="card-header">
+              <h2>Productos en tu orden (<span id="itemCount">0</span>)</h2>
+            </div>
+            <div class="card-body" id="cartItems">
+              <!-- Items dinámicos -->
+            </div>
+          </div>
+
+          <!-- Dirección de Entrega -->
+          <div class="checkout-card">
+            <div class="card-header">
+              <h2>Dirección de Entrega</h2>
+            </div>
+            <div class="card-body">
+              <div class="info-box">
+                Se usará la dirección de tu perfil. Puedes modificarla para esta orden.
+              </div>
+
+              <div class="form-group">
+                <label for="direccion">Dirección</label>
+                <input type="text" id="direccion" required>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ciudad">Ciudad</label>
+                  <input type="text" id="ciudad" required>
+                </div>
+                <div class="form-group">
+                  <label for="departamento">Departamento</label>
+                  <select id="departamento" required>
+                    <option value="">Seleccionar...</option>
+                    <option value="Amazonas">Amazonas</option>
+                    <option value="Antioquia">Antioquia</option>
+                    <option value="Arauca">Arauca</option>
+                    <option value="Atlántico">Atlántico</option>
+                    <option value="Bogotá D.C.">Bogotá D.C.</option>
+                    <option value="Bolívar">Bolívar</option>
+                    <option value="Boyacá">Boyacá</option>
+                    <option value="Caldas">Caldas</option>
+                    <option value="Caquetá">Caquetá</option>
+                    <option value="Casanare">Casanare</option>
+                    <option value="Cauca">Cauca</option>
+                    <option value="Cesar">Cesar</option>
+                    <option value="Chocó">Chocó</option>
+                    <option value="Córdoba">Córdoba</option>
+                    <option value="Cundinamarca">Cundinamarca</option>
+                    <option value="Guainía">Guainía</option>
+                    <option value="Guaviare">Guaviare</option>
+                    <option value="Huila">Huila</option>
+                    <option value="La Guajira">La Guajira</option>
+                    <option value="Magdalena">Magdalena</option>
+                    <option value="Meta">Meta</option>
+                    <option value="Nariño">Nariño</option>
+                    <option value="Norte de Santander">Norte de Santander</option>
+                    <option value="Putumayo">Putumayo</option>
+                    <option value="Quindío">Quindío</option>
+                    <option value="Risaralda">Risaralda</option>
+                    <option value="San Andrés y Providencia">San Andrés y Providencia</option>
+                    <option value="Santander">Santander</option>
+                    <option value="Sucre">Sucre</option>
+                    <option value="Tolima">Tolima</option>
+                    <option value="Valle del Cauca">Valle del Cauca</option>
+                    <option value="Vaupés">Vaupés</option>
+                    <option value="Vichada">Vichada</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="contacto">Persona de Contacto</label>
+                  <input type="text" id="contacto" required>
+                </div>
+                <div class="form-group">
+                  <label for="telefonoContacto">Teléfono de Contacto</label>
+                  <input type="tel" id="telefonoContacto" required>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Observaciones -->
+          <div class="checkout-card">
+            <div class="card-header">
+              <h2>Observaciones (Opcional)</h2>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <textarea id="observaciones" placeholder="Instrucciones especiales de entrega, notas adicionales..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column - Summary -->
+        <div class="checkout-sidebar">
+          <div class="summary-sticky">
+            <div class="checkout-card">
+              <div class="card-header">
+                <h2>Resumen de la Orden</h2>
+              </div>
+              <div class="card-body">
+                <div class="summary-row">
+                  <span>Subtotal</span>
+                  <span id="summarySubtotal">$0</span>
+                </div>
+                <div class="summary-row">
+                  <span>Envío</span>
+                  <span>Por confirmar</span>
+                </div>
+                <div class="summary-row total">
+                  <span>Total</span>
+                  <span class="summary-value" id="summaryTotal">$0</span>
+                </div>
+
+                <button type="button" class="btn-confirm" id="btnConfirm">
+                  Confirmar Orden
+                </button>
+
+                <p style="font-size: 12px; color: #888; text-align: center; margin-top: 15px;">
+                  Al confirmar, recibirás un correo con los detalles de tu orden
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { onAuthChange, obtenerDatosUsuario } from './js/auth.js';
+    import {
+      obtenerCarrito,
+      crearOrden,
+      formatearPrecio
+    } from './js/ordenes.js';
+
+    // Elementos del DOM
+    const loading = document.getElementById('loading');
+    const emptyCart = document.getElementById('emptyCart');
+    const checkoutContent = document.getElementById('checkoutContent');
+    const cartItemsContainer = document.getElementById('cartItems');
+    const itemCount = document.getElementById('itemCount');
+    const summarySubtotal = document.getElementById('summarySubtotal');
+    const summaryTotal = document.getElementById('summaryTotal');
+    const btnConfirm = document.getElementById('btnConfirm');
+    const message = document.getElementById('message');
+
+    let currentUser = null;
+    let userData = null;
+    let carrito = null;
+
+    // Mostrar mensaje
+    function showMessage(texto, tipo) {
+      message.textContent = texto;
+      message.className = `message ${tipo}`;
+    }
+
+    // Renderizar items del carrito
+    function renderizarCarrito() {
+      if (!carrito || carrito.items.length === 0) {
+        loading.style.display = 'none';
+        emptyCart.style.display = 'block';
+        return;
+      }
+
+      cartItemsContainer.innerHTML = carrito.items.map(item => `
+        <div class="cart-item">
+          <img
+            src="${item.imagen || 'img/no-image.png'}"
+            alt="${item.titulo}"
+            class="cart-item-img"
+            onerror="this.src='img/no-image.png'"
+          >
+          <div class="cart-item-info">
+            <div class="cart-item-title">${item.titulo}</div>
+            <div class="cart-item-code">${item.cod_interno}${item.marca ? ' | ' + item.marca : ''}</div>
+          </div>
+          <div class="cart-item-price">
+            <div class="cart-item-quantity">${item.cantidad} × ${formatearPrecio(item.precio_unitario)}</div>
+            <div class="cart-item-subtotal">${formatearPrecio(item.subtotal)}</div>
+          </div>
+        </div>
+      `).join('');
+
+      itemCount.textContent = carrito.cantidad_items;
+      summarySubtotal.textContent = formatearPrecio(carrito.total);
+      summaryTotal.textContent = formatearPrecio(carrito.total);
+
+      loading.style.display = 'none';
+      checkoutContent.style.display = 'block';
+    }
+
+    // Cargar datos
+    async function cargarDatos(user) {
+      // Obtener datos del usuario
+      const resultadoUsuario = await obtenerDatosUsuario(user.uid);
+      if (resultadoUsuario.success) {
+        userData = resultadoUsuario.data;
+
+        // Pre-llenar campos de dirección
+        document.getElementById('direccion').value = userData.direccion || '';
+        document.getElementById('ciudad').value = userData.ciudad || '';
+        document.getElementById('departamento').value = userData.departamento || '';
+        document.getElementById('contacto').value = userData.nombre || '';
+        document.getElementById('telefonoContacto').value = userData.telefono || '';
+      }
+
+      // Obtener carrito
+      const resultadoCarrito = await obtenerCarrito(user.uid);
+      if (resultadoCarrito.success) {
+        carrito = resultadoCarrito.carrito;
+        renderizarCarrito();
+      } else {
+        loading.style.display = 'none';
+        emptyCart.style.display = 'block';
+      }
+    }
+
+    // Confirmar orden
+    btnConfirm.addEventListener('click', async () => {
+      // Validar campos
+      const direccion = document.getElementById('direccion').value.trim();
+      const ciudad = document.getElementById('ciudad').value.trim();
+      const departamento = document.getElementById('departamento').value;
+      const contacto = document.getElementById('contacto').value.trim();
+      const telefonoContacto = document.getElementById('telefonoContacto').value.trim();
+      const observaciones = document.getElementById('observaciones').value.trim();
+
+      if (!direccion || !ciudad || !departamento || !contacto || !telefonoContacto) {
+        showMessage('Por favor completa todos los campos de entrega', 'error');
+        return;
+      }
+
+      btnConfirm.disabled = true;
+      btnConfirm.innerHTML = '<span class="loader"></span>Procesando...';
+
+      const resultado = await crearOrden(currentUser.uid, {
+        direccion,
+        ciudad,
+        departamento,
+        contacto,
+        telefonoContacto
+      }, observaciones);
+
+      if (resultado.success) {
+        // Redirigir a confirmación
+        window.location.href = `/orden-confirmacion.html?orden=${resultado.orden.id}`;
+      } else {
+        showMessage(resultado.error || 'Error al crear la orden', 'error');
+        btnConfirm.disabled = false;
+        btnConfirm.textContent = 'Confirmar Orden';
+      }
+    });
+
+    // Verificar autenticación
+    onAuthChange(async (user) => {
+      if (!user) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      currentUser = user;
+      await cargarDatos(user);
+    });
+  </script>
+</body>
+</html>

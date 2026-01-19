@@ -1,20 +1,88 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Productos: lectura pública, escritura solo autenticados
+    // Helper: Admin check
+    function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.email == 'sebastianbumq@enarapp.com';
+    }
+
+    // Helper: Usuario autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: Usuario aprobado
+    function isApproved() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.estado == 'aprobado';
+    }
+
+    // Productos: lectura pública, escritura solo admin
     match /productos/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
-    // Configuración: lectura y escritura solo autenticados
+    // Configuración: solo admin
     match /configuracion/{document=**} {
-      allow read, write: if request.auth != null;
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
-    // Cotizaciones: lectura y escritura solo autenticados
+    // Usuarios: usuarios pueden leer/escribir su propio doc, admin puede todo
+    match /usuarios/{userId} {
+      // Cualquier autenticado puede crear su propio documento (registro)
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+
+      // Usuario puede leer su propio documento, admin puede leer todos
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isAdmin()
+      );
+
+      // Usuario puede actualizar su propio documento (datos limitados)
+      // Admin puede actualizar cualquier documento
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional'])) ||
+        isAdmin()
+      );
+
+      // Solo admin puede eliminar
+      allow delete: if isAdmin();
+    }
+
+    // Carrito: cada usuario solo su propio carrito
+    match /carrito/{userId} {
+      allow read, write: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isAdmin()
+      );
+    }
+
+    // Órdenes: usuarios aprobados pueden crear y leer sus propias órdenes
+    match /ordenes/{ordenId} {
+      // Usuarios aprobados pueden crear órdenes (solo sus propias)
+      allow create: if isApproved() &&
+        request.resource.data.user_id == request.auth.uid;
+
+      // Usuarios pueden leer sus propias órdenes, admin puede leer todas
+      allow read: if isAuthenticated() && (
+        resource.data.user_id == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Solo admin puede actualizar órdenes (cambiar estado, etc.)
+      allow update: if isAdmin();
+
+      // Solo admin puede eliminar
+      allow delete: if isAdmin();
+    }
+
+    // Cotizaciones (legacy): solo autenticados
     match /cotizaciones/{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAuthenticated();
     }
   }
 }

@@ -6,7 +6,7 @@
   <title>ENAR B2B - Catálogo de Productos</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=5.0">
 
   <!-- Select2 para dropdowns con búsqueda -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -23,12 +23,28 @@
   <header class="header-principal">
     <div class="header-contenido">
       <div class="header-logo">
-        <img src="img/logo-enar.svg" alt="ENAR" class="logo-img" onerror="this.style.display='none'">
+        <img src="img/logo-enar.png" alt="ENAR" class="logo-img" onerror="this.style.display='none'">
       </div>
       <div class="header-titulo">
         <h1>ENAR B2B</h1>
         <p class="header-tagline">Catálogo inteligente potenciado por IA</p>
       </div>
+      <!-- Navegación de usuario -->
+      <nav class="header-nav" id="headerNav">
+        <!-- Estado no autenticado -->
+        <div id="navNoAuth">
+          <a href="login.html" class="header-nav__link">Iniciar Sesión</a>
+          <a href="registro.html" class="header-nav__link header-nav__link--registro">Registrarse</a>
+        </div>
+        <!-- Estado autenticado -->
+        <div id="navAuth" style="display: none;">
+          <span class="header-nav__user" id="navUserName">Usuario</span>
+          <a href="perfil.html" class="header-nav__link">Mi Perfil</a>
+          <a href="mis-ordenes.html" class="header-nav__link">Mis Órdenes</a>
+          <a href="admin.html" class="header-nav__link header-nav__link--admin" id="navAdminLink" style="display: none;">Admin</a>
+          <a href="#" class="header-nav__link header-nav__link--logout" id="navLogout">Salir</a>
+        </div>
+      </nav>
     </div>
   </header>
 
@@ -47,11 +63,11 @@
           >
         </div>
 
-        <!-- Filtro laboratorio (Select2) -->
-        <div class="filtros__laboratorio">
-          <label for="selectLaboratorio" class="filtro-label">Laboratorio:</label>
-          <select id="selectLaboratorio" class="select-laboratorio select2-filtro">
-            <option value="">Todos</option>
+        <!-- Filtro categoría (Select2) -->
+        <div class="filtros__categoria">
+          <label for="selectCategoria" class="filtro-label">Categoría:</label>
+          <select id="selectCategoria" class="select-categoria select2-filtro">
+            <option value="">Todas</option>
           </select>
         </div>
 
@@ -94,11 +110,10 @@
               <th>Cantidad</th>
               <th>Producto</th>
               <th>Stock</th>
-              <th>Precio</th>
-              <th>P. Regular</th>
-              <th>Impuesto</th>
-              <th>Laboratorio</th>
-              <th>Principio Activo</th>
+              <th id="thPrecioCliente">Tu Precio</th>
+              <th>P. Lista</th>
+              <th>Categoría</th>
+              <th>Marca</th>
               <th>Imagen</th>
               <th>Acciones</th>
             </tr>
@@ -212,7 +227,9 @@
       </div>
       <div class="modal__footer">
         <button id="btnVaciarCarrito" class="btn btn--secundario">Vaciar carrito</button>
-        <button id="btnSolicitarCotizacion" class="btn btn--primario">Solicitar cotización</button>
+        <button id="btnSolicitarCotizacion" class="btn btn--primario" style="display: none;">Solicitar cotización</button>
+        <button id="btnCrearOrden" class="btn btn--primario" style="display: none;">Crear Orden</button>
+        <a href="login.html" id="btnLoginParaOrden" class="btn btn--primario" style="display: none;">Inicia sesión para ordenar</a>
       </div>
     </div>
   </div>
@@ -425,6 +442,110 @@
   <script type="module" src="js/carrito.js"></script>
   <script type="module" src="js/cotizacion.js"></script>
   <script type="module" src="js/productos.js"></script>
+
+  <!-- Auth Navigation Handler -->
+  <script type="module">
+    import { onAuthChange, cerrarSesion, obtenerDatosUsuario, ESTADOS_USUARIO } from './js/auth.js';
+    import { agregarAlCarrito, obtenerCarrito } from './js/ordenes.js';
+
+    const ADMIN_EMAILS = ['sebastianbumq@enarapp.com'];
+
+    // Elementos de navegación
+    const navNoAuth = document.getElementById('navNoAuth');
+    const navAuth = document.getElementById('navAuth');
+    const navUserName = document.getElementById('navUserName');
+    const navAdminLink = document.getElementById('navAdminLink');
+    const navLogout = document.getElementById('navLogout');
+
+    // Botones del carrito
+    const btnSolicitarCotizacion = document.getElementById('btnSolicitarCotizacion');
+    const btnCrearOrden = document.getElementById('btnCrearOrden');
+    const btnLoginParaOrden = document.getElementById('btnLoginParaOrden');
+
+    let currentUser = null;
+    let userData = null;
+
+    // Actualizar navegación según estado de auth
+    function actualizarNavegacion(user, data) {
+      if (user && data && data.estado === 'aprobado') {
+        // Usuario autenticado y aprobado
+        navNoAuth.style.display = 'none';
+        navAuth.style.display = 'flex';
+        navUserName.textContent = data.nombre || user.email;
+
+        // Mostrar link de admin si es admin
+        if (ADMIN_EMAILS.includes(user.email)) {
+          navAdminLink.style.display = 'inline-block';
+        }
+
+        // Botones del carrito
+        btnSolicitarCotizacion.style.display = 'none';
+        btnCrearOrden.style.display = 'inline-block';
+        btnLoginParaOrden.style.display = 'none';
+
+      } else if (user) {
+        // Usuario autenticado pero NO aprobado
+        navNoAuth.style.display = 'none';
+        navAuth.style.display = 'flex';
+        navUserName.textContent = (data?.nombre || user.email) + ' (Pendiente)';
+
+        // No mostrar admin
+        navAdminLink.style.display = 'none';
+
+        // Usuario pendiente no puede crear órdenes
+        btnSolicitarCotizacion.style.display = 'inline-block';
+        btnCrearOrden.style.display = 'none';
+        btnLoginParaOrden.style.display = 'none';
+
+      } else {
+        // No autenticado
+        navNoAuth.style.display = 'flex';
+        navAuth.style.display = 'none';
+
+        // Mostrar opción de login
+        btnSolicitarCotizacion.style.display = 'none';
+        btnCrearOrden.style.display = 'none';
+        btnLoginParaOrden.style.display = 'inline-block';
+      }
+    }
+
+    // Cerrar sesión
+    navLogout?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await cerrarSesion();
+      window.location.reload();
+    });
+
+    // Crear orden - redirigir a página de checkout
+    btnCrearOrden?.addEventListener('click', () => {
+      window.location.href = '/orden.html';
+    });
+
+    // Escuchar cambios de autenticación
+    onAuthChange(async (user) => {
+      currentUser = user;
+
+      if (user) {
+        const resultado = await obtenerDatosUsuario(user.uid);
+        if (resultado.success) {
+          userData = resultado.data;
+        }
+      } else {
+        userData = null;
+      }
+
+      actualizarNavegacion(user, userData);
+
+      // Exponer datos de usuario globalmente para otros módulos
+      window.currentUserData = userData;
+      window.currentUser = user;
+
+      // Disparar evento personalizado
+      window.dispatchEvent(new CustomEvent('userStateChanged', {
+        detail: { user, userData }
+      }));
+    });
+  </script>
 
   <!-- Firebase SDKs para Chat Widget -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>

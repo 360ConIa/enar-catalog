@@ -3,7 +3,7 @@
  * CONFIGURACIÓN DE FIREBASE
  * ============================================
  * Archivo: firebase-config.js
- * Descripción: Inicialización de Firebase y Firestore
+ * Descripción: Inicialización de Firebase, Firestore y Auth
  *              usando SDK v9 modular (CDN)
  * ============================================
  */
@@ -13,6 +13,9 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 import {
   getFirestore,
   collection,
+  doc,
+  getDoc,
+  setDoc,
   query,
   where,
   orderBy,
@@ -20,6 +23,11 @@ import {
   startAfter,
   getDocs
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
 /**
  * Configuración de Firebase
@@ -40,21 +48,40 @@ const app = initializeApp(firebaseConfig);
 // Inicializar Firestore
 const db = getFirestore(app);
 
-// Nombre de la colección de productos
+// Inicializar Auth
+const auth = getAuth(app);
+
+// Nombre de las colecciones
 const COLECCION_PRODUCTOS = 'productos';
+const COLECCION_USUARIOS = 'usuarios';
+
+// Tipos de cliente válidos
+const TIPOS_CLIENTE = {
+  MAYORISTA: 'mayorista',
+  NEGOCIO: 'negocio',
+  PERSONA_NATURAL: 'persona_natural'
+};
 
 // Exportar para usar en otros módulos
 export {
   app,
   db,
+  auth,
   COLECCION_PRODUCTOS,
+  COLECCION_USUARIOS,
+  TIPOS_CLIENTE,
   collection,
+  doc,
+  getDoc,
+  setDoc,
   query,
   where,
   orderBy,
   limit,
   startAfter,
-  getDocs
+  getDocs,
+  onAuthStateChanged,
+  signOut
 };
 
 console.log('Firebase inicializado correctamente');

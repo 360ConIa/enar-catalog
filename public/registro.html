@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro - ENAR B2B</title>
+  <link rel="stylesheet" href="css/styles.css?v=5.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .register-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      padding: 15px 20px;
+      text-align: center;
+      position: relative;
+    }
+    .register-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #D9232D;
+    }
+    .register-header h1 {
+      color: white;
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .register-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .register-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 600px;
+      padding: 40px;
+    }
+    .register-title {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .register-title h2 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin-bottom: 8px;
+    }
+    .register-title p {
+      color: #666;
+      font-size: 14px;
+    }
+    .logo-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .logo-container img {
+      height: 60px;
+      width: auto;
+    }
+    .form-section {
+      margin-bottom: 30px;
+    }
+    .form-section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    @media (max-width: 500px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    .form-group label .required {
+      color: #D9232D;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Poppins', sans-serif;
+      transition: all 0.3s ease;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .form-group input::placeholder {
+      color: #aaa;
+    }
+    .form-group select {
+      cursor: pointer;
+      background: white;
+    }
+    .tipo-cliente-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 500px) {
+      .tipo-cliente-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+    .tipo-card {
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 15px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    .tipo-card:hover {
+      border-color: #3b82f6;
+    }
+    .tipo-card.selected {
+      border-color: #1e3a8a;
+      background: #f0f7ff;
+    }
+    .tipo-card input {
+      display: none;
+    }
+    .tipo-card-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    .tipo-card-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: #333;
+    }
+    .tipo-card-desc {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+    .btn-register {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+    .btn-register:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(30, 58, 138, 0.4);
+    }
+    .btn-register:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .login-link {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .login-link p {
+      color: #666;
+      font-size: 14px;
+    }
+    .login-link a {
+      color: #D9232D;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .login-link a:hover {
+      text-decoration: underline;
+    }
+    .message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+    }
+    .message.error {
+      background: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      display: block;
+    }
+    .message.success {
+      background: #dcfce7;
+      color: #16a34a;
+      border: 1px solid #bbf7d0;
+      display: block;
+    }
+    .message.warning {
+      background: #fef3c7;
+      color: #d97706;
+      border: 1px solid #fde68a;
+      display: block;
+    }
+    .message.info {
+      background: #dbeafe;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+      display: block;
+    }
+    .loader {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .back-to-catalog {
+      text-align: center;
+      margin-top: 15px;
+    }
+    .back-to-catalog a {
+      color: #666;
+      font-size: 13px;
+      text-decoration: none;
+    }
+    .back-to-catalog a:hover {
+      color: #1e3a8a;
+    }
+    .empresa-fields {
+      display: none;
+    }
+    .empresa-fields.visible {
+      display: block;
+    }
+    .info-box {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .info-box p {
+      color: #92400e;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .info-box strong {
+      color: #78350f;
+    }
+    .password-requirements {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="register-header">
+    <h1>ENAR B2B</h1>
+  </header>
+
+  <!-- Register Container -->
+  <div class="register-container">
+    <div class="register-card">
+      <!-- Logo -->
+      <div class="logo-container">
+        <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+      </div>
+
+      <!-- Title -->
+      <div class="register-title">
+        <h2>Crear Cuenta B2B</h2>
+        <p>Regístrate para acceder a precios especiales</p>
+      </div>
+
+      <!-- Info Box -->
+      <div class="info-box">
+        <p><strong>Nota:</strong> Tu cuenta será revisada por nuestro equipo antes de ser activada. Te notificaremos por correo cuando tu cuenta sea aprobada.</p>
+      </div>
+
+      <!-- Message -->
+      <div id="message" class="message"></div>
+
+      <!-- Register Form -->
+      <form id="registerForm">
+        <!-- Datos de Acceso -->
+        <div class="form-section">
+          <h3 class="form-section-title">Datos de Acceso</h3>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label for="email">Correo Electrónico <span class="required">*</span></label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                placeholder="tu@empresa.com"
+                autocomplete="email"
+              >
+            </div>
+            <div class="form-group">
+              <label for="password">Contraseña <span class="required">*</span></label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                placeholder="••••••••"
+                minlength="6"
+                autocomplete="new-password"
+              >
+              <p class="password-requirements">Mínimo 6 caracteres</p>
+            </div>
+            <div class="form-group">
+              <label for="confirmPassword">Confirmar Contraseña <span class="required">*</span></label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                required
+                placeholder="••••••••"
+                autocomplete="new-password"
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Datos Personales -->
+        <div class="form-section">
+          <h3 class="form-section-title">Datos Personales</h3>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label for="nombre">Nombre Completo <span class="required">*</span></label>
+              <input
+                type="text"
+                id="nombre"
+                name="nombre"
+                required
+                placeholder="Juan Pérez"
+              >
+            </div>
+            <div class="form-group full-width">
+              <label for="telefono">Teléfono <span class="required">*</span></label>
+              <input
+                type="tel"
+                id="telefono"
+                name="telefono"
+                required
+                placeholder="300 123 4567"
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Tipo de Cliente -->
+        <div class="form-section">
+          <h3 class="form-section-title">Tipo de Cliente</h3>
+          <div class="tipo-cliente-cards">
+            <label class="tipo-card" data-tipo="persona_natural">
+              <input type="radio" name="tipoCliente" value="persona_natural" checked>
+              <div class="tipo-card-icon">👤</div>
+              <div class="tipo-card-name">Persona Natural</div>
+              <div class="tipo-card-desc">Compra individual</div>
+            </label>
+            <label class="tipo-card" data-tipo="negocio">
+              <input type="radio" name="tipoCliente" value="negocio">
+              <div class="tipo-card-icon">🏪</div>
+              <div class="tipo-card-name">Negocio</div>
+              <div class="tipo-card-desc">Pequeño comercio</div>
+            </label>
+            <label class="tipo-card" data-tipo="mayorista">
+              <input type="radio" name="tipoCliente" value="mayorista">
+              <div class="tipo-card-icon">🏢</div>
+              <div class="tipo-card-name">Mayorista</div>
+              <div class="tipo-card-desc">Grandes volúmenes</div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Datos de Empresa (solo para negocio/mayorista) -->
+        <div class="form-section empresa-fields" id="empresaFields">
+          <h3 class="form-section-title">Datos de Empresa</h3>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label for="razonSocial">Razón Social <span class="required">*</span></label>
+              <input
+                type="text"
+                id="razonSocial"
+                name="razonSocial"
+                placeholder="Nombre de la empresa"
+              >
+            </div>
+            <div class="form-group full-width">
+              <label for="nit">NIT <span class="required">*</span></label>
+              <input
+                type="text"
+                id="nit"
+                name="nit"
+                placeholder="900.123.456-7"
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Dirección -->
+        <div class="form-section">
+          <h3 class="form-section-title">Dirección de Entrega</h3>
+          <div class="form-row">
+            <div class="form-group full-width">
+              <label for="direccion">Dirección <span class="required">*</span></label>
+              <input
+                type="text"
+                id="direccion"
+                name="direccion"
+                required
+                placeholder="Calle 123 # 45-67"
+              >
+            </div>
+            <div class="form-group">
+              <label for="ciudad">Ciudad <span class="required">*</span></label>
+              <input
+                type="text"
+                id="ciudad"
+                name="ciudad"
+                required
+                placeholder="Bogotá"
+              >
+            </div>
+            <div class="form-group">
+              <label for="departamento">Departamento <span class="required">*</span></label>
+              <select id="departamento" name="departamento" required>
+                <option value="">Seleccionar...</option>
+                <option value="Amazonas">Amazonas</option>
+                <option value="Antioquia">Antioquia</option>
+                <option value="Arauca">Arauca</option>
+                <option value="Atlántico">Atlántico</option>
+                <option value="Bogotá D.C.">Bogotá D.C.</option>
+                <option value="Bolívar">Bolívar</option>
+                <option value="Boyacá">Boyacá</option>
+                <option value="Caldas">Caldas</option>
+                <option value="Caquetá">Caquetá</option>
+                <option value="Casanare">Casanare</option>
+                <option value="Cauca">Cauca</option>
+                <option value="Cesar">Cesar</option>
+                <option value="Chocó">Chocó</option>
+                <option value="Córdoba">Córdoba</option>
+                <option value="Cundinamarca">Cundinamarca</option>
+                <option value="Guainía">Guainía</option>
+                <option value="Guaviare">Guaviare</option>
+                <option value="Huila">Huila</option>
+                <option value="La Guajira">La Guajira</option>
+                <option value="Magdalena">Magdalena</option>
+                <option value="Meta">Meta</option>
+                <option value="Nariño">Nariño</option>
+                <option value="Norte de Santander">Norte de Santander</option>
+                <option value="Putumayo">Putumayo</option>
+                <option value="Quindío">Quindío</option>
+                <option value="Risaralda">Risaralda</option>
+                <option value="San Andrés y Providencia">San Andrés y Providencia</option>
+                <option value="Santander">Santander</option>
+                <option value="Sucre">Sucre</option>
+                <option value="Tolima">Tolima</option>
+                <option value="Valle del Cauca">Valle del Cauca</option>
+                <option value="Vaupés">Vaupés</option>
+                <option value="Vichada">Vichada</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-register" id="registerBtn">
+          Crear Cuenta
+        </button>
+      </form>
+
+      <!-- Login Link -->
+      <div class="login-link">
+        <p>¿Ya tienes cuenta? <a href="login.html">Inicia sesión</a></p>
+      </div>
+
+      <!-- Back to Catalog -->
+      <div class="back-to-catalog">
+        <a href="/">← Volver al catálogo</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { registrarUsuario, onAuthChange } from './js/auth.js';
+
+    // Elementos del DOM
+    const registerForm = document.getElementById('registerForm');
+    const registerBtn = document.getElementById('registerBtn');
+    const message = document.getElementById('message');
+    const empresaFields = document.getElementById('empresaFields');
+    const tipoCards = document.querySelectorAll('.tipo-card');
+
+    // Mostrar/ocultar campos de empresa según tipo
+    tipoCards.forEach(card => {
+      const radio = card.querySelector('input[type="radio"]');
+
+      card.addEventListener('click', () => {
+        // Actualizar selección visual
+        tipoCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        radio.checked = true;
+
+        // Mostrar/ocultar campos de empresa
+        const tipo = card.dataset.tipo;
+        if (tipo === 'negocio' || tipo === 'mayorista') {
+          empresaFields.classList.add('visible');
+          document.getElementById('razonSocial').required = true;
+          document.getElementById('nit').required = true;
+        } else {
+          empresaFields.classList.remove('visible');
+          document.getElementById('razonSocial').required = false;
+          document.getElementById('nit').required = false;
+        }
+      });
+    });
+
+    // Inicializar selección por defecto
+    document.querySelector('.tipo-card[data-tipo="persona_natural"]').classList.add('selected');
+
+    // Mostrar mensaje
+    function showMessage(texto, tipo) {
+      message.textContent = texto;
+      message.className = `message ${tipo}`;
+      message.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Ocultar mensaje
+    function hideMessage() {
+      message.className = 'message';
+      message.textContent = '';
+    }
+
+    // Registro
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideMessage();
+
+      // Obtener valores
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const nombre = document.getElementById('nombre').value.trim();
+      const telefono = document.getElementById('telefono').value.trim();
+      const tipoCliente = document.querySelector('input[name="tipoCliente"]:checked').value;
+      const razonSocial = document.getElementById('razonSocial').value.trim();
+      const nit = document.getElementById('nit').value.trim();
+      const direccion = document.getElementById('direccion').value.trim();
+      const ciudad = document.getElementById('ciudad').value.trim();
+      const departamento = document.getElementById('departamento').value;
+
+      // Validaciones
+      if (password !== confirmPassword) {
+        showMessage('Las contraseñas no coinciden', 'error');
+        return;
+      }
+
+      if (password.length < 6) {
+        showMessage('La contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+      }
+
+      // Validar campos de empresa si es negocio o mayorista
+      if ((tipoCliente === 'negocio' || tipoCliente === 'mayorista') && (!razonSocial || !nit)) {
+        showMessage('Por favor completa los datos de empresa', 'error');
+        return;
+      }
+
+      registerBtn.disabled = true;
+      registerBtn.innerHTML = '<span class="loader"></span>Creando cuenta...';
+
+      const resultado = await registrarUsuario({
+        email,
+        password,
+        nombre,
+        telefono,
+        tipoCliente,
+        razonSocial,
+        nit,
+        direccion,
+        ciudad,
+        departamento
+      });
+
+      if (resultado.success) {
+        showMessage(resultado.mensaje, 'success');
+
+        // Mostrar mensaje de éxito y redirigir después de unos segundos
+        setTimeout(() => {
+          window.location.href = '/login.html';
+        }, 5000);
+      } else {
+        showMessage(resultado.error, 'error');
+        registerBtn.disabled = false;
+        registerBtn.textContent = 'Crear Cuenta';
+      }
+    });
+
+    // Verificar si ya está autenticado (no debería poder registrarse de nuevo)
+    onAuthChange((user) => {
+      if (user) {
+        window.location.href = '/';
+      }
+    });
+  </script>
+</body>
+</html>

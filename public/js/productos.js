@@ -29,6 +29,16 @@ import {
 // Importar carrito
 import { carrito } from './carrito.js';
 
+// Importar módulo de usuario
+import {
+  inicializarUsuario,
+  obtenerPrecioCliente,
+  getTipoCliente,
+  getEtiquetaTipoCliente,
+  onUsuarioChange,
+  estaAutenticado
+} from './usuario.js';
+
 // ============================================
 // CONSTANTES Y ESTADO
 // ============================================
@@ -40,13 +50,13 @@ const estado = {
   productos: [],           // Todos los productos cargados
   productosFiltrados: [],  // Productos después de filtrar
   cargando: false,         // Estado de carga
-  laboratorios: new Set(), // Lista única de laboratorios
+  categorias: new Set(),   // Lista única de categorías
   marcas: new Set(),       // Lista única de marcas
   paginaActual: 1,         // Página actual
   productosPorPagina: PRODUCTOS_POR_PAGINA_DEFAULT,
   filtros: {
     busqueda: '',
-    laboratorio: '',
+    categoria: '',
     marca: '',
     ofertas: ''            // '' = todas, 'oferta' = solo ofertas
   }
@@ -63,7 +73,7 @@ const elementos = {
 
   // Filtros
   inputBusqueda: document.getElementById('inputBusqueda'),
-  selectLaboratorio: document.getElementById('selectLaboratorio'),
+  selectCategoria: document.getElementById('selectCategoria'),
   selectMarca: document.getElementById('selectMarca'),
   filtroOfertas: document.getElementById('filtroOfertas'),
   btnLimpiarFiltros: document.getElementById('btnLimpiarFiltros'),
@@ -143,16 +153,16 @@ async function cargarTodosLosProductos() {
     const snapshot = await getDocs(q);
 
     estado.productos = [];
-    estado.laboratorios.clear();
+    estado.categorias.clear();
     estado.marcas.clear();
 
     snapshot.forEach(doc => {
       const producto = { id: doc.id, ...doc.data() };
       estado.productos.push(producto);
 
-      // Agregar laboratorio y marca a las listas únicas
-      if (producto.laboratorio) {
-        estado.laboratorios.add(producto.laboratorio);
+      // Agregar categoría y marca a las listas únicas
+      if (producto.categoria) {
+        estado.categorias.add(producto.categoria);
       }
       if (producto.marca) {
         estado.marcas.add(producto.marca);
@@ -160,7 +170,7 @@ async function cargarTodosLosProductos() {
     });
 
     // Actualizar selects de filtros
-    actualizarSelectLaboratorios();
+    actualizarSelectCategorias();
     actualizarSelectMarcas();
 
     // Aplicar filtros y renderizar
@@ -222,15 +232,15 @@ function filtrarProductosPorBusqueda(productos, textoBusqueda) {
  * Aplica los filtros activos y renderiza los productos
  */
 function aplicarFiltros() {
-  const { busqueda, laboratorio, marca, ofertas } = estado.filtros;
+  const { busqueda, categoria, marca, ofertas } = estado.filtros;
 
   // Filtrar productos - primero aplicar búsqueda AND
   let productosFiltrados = filtrarProductosPorBusqueda(estado.productos, busqueda);
 
   // Aplicar filtros adicionales
   estado.productosFiltrados = productosFiltrados.filter(producto => {
-    // Filtro por laboratorio
-    if (laboratorio && producto.laboratorio !== laboratorio) {
+    // Filtro por categoría
+    if (categoria && producto.categoria !== categoria) {
       return false;
     }
 
@@ -279,18 +289,18 @@ function aplicarFiltros() {
 }
 
 /**
- * Actualiza el select de laboratorios con opciones únicas
+ * Actualiza el select de categorías con opciones únicas
  */
-function actualizarSelectLaboratorios() {
-  const laboratoriosOrdenados = Array.from(estado.laboratorios).sort();
+function actualizarSelectCategorias() {
+  const categoriasOrdenadas = Array.from(estado.categorias).sort();
 
-  elementos.selectLaboratorio.innerHTML = '<option value="">Todos</option>';
+  elementos.selectCategoria.innerHTML = '<option value="">Todas</option>';
 
-  laboratoriosOrdenados.forEach(lab => {
+  categoriasOrdenadas.forEach(cat => {
     const option = document.createElement('option');
-    option.value = lab;
-    option.textContent = lab;
-    elementos.selectLaboratorio.appendChild(option);
+    option.value = cat;
+    option.textContent = cat;
+    elementos.selectCategoria.appendChild(option);
   });
 }
 
@@ -311,15 +321,15 @@ function actualizarSelectMarcas() {
 }
 
 /**
- * Actualiza las opciones de marca basado en el laboratorio seleccionado
- * @param {string} laboratorio - Laboratorio seleccionado (vacío = todos)
+ * Actualiza las opciones de marca basado en la categoría seleccionada
+ * @param {string} categoria - Categoría seleccionada (vacío = todas)
  */
-function actualizarFiltroMarca(laboratorio) {
+function actualizarFiltroMarca(categoria) {
   const marcas = new Set();
 
-  // Recorrer productos y obtener marcas del laboratorio
+  // Recorrer productos y obtener marcas de la categoría
   estado.productos.forEach(p => {
-    if (!laboratorio || p.laboratorio === laboratorio) {
+    if (!categoria || p.categoria === categoria) {
       if (p.marca) marcas.add(p.marca);
     }
   });
@@ -475,6 +485,11 @@ function renderizarFila(producto) {
     imagenHtml = `<div class="tabla-placeholder">Sin img</div>`;
   }
 
+  // Obtener precio según tipo de cliente
+  const precioCliente = obtenerPrecioCliente(producto);
+  const precioLista = producto.precio_lista || 0;
+  const tieneDescuento = precioLista > precioCliente && precioLista > 0;
+
   return `
     <tr>
       <td>
@@ -490,11 +505,10 @@ function renderizarFila(producto) {
       </td>
       <td title="${tituloTexto}">${tituloTexto}</td>
       <td><span class="${stockClass}">${cantidadStock}</span></td>
-      <td>${formatearPrecio(producto.p_real)}</td>
-      <td>${formatearPrecio(producto.p_corriente)}</td>
-      <td>${((producto.impuesto || 0.19) * 100).toFixed(0)}%</td>
-      <td>${producto.laboratorio || '-'}</td>
-      <td title="${principioTexto}">${principioTexto}</td>
+      <td class="td-precio-cliente">${formatearPrecio(precioCliente)}</td>
+      <td class="td-precio-lista ${tieneDescuento ? 'precio-tachado' : ''}">${formatearPrecio(precioLista)}</td>
+      <td>${producto.categoria || '-'}</td>
+      <td>${producto.marca || '-'}</td>
       <td class="td-imagen">${imagenHtml}</td>
       <td>
         <button class="btn-ver-detalles" data-producto='${productoDataStr}'>
@@ -552,7 +566,7 @@ function actualizarContador() {
   const inicio = filtrados > 0 ? (estado.paginaActual - 1) * estado.productosPorPagina + 1 : 0;
   const fin = Math.min(estado.paginaActual * estado.productosPorPagina, filtrados);
 
-  if (estado.filtros.busqueda || estado.filtros.laboratorio ||
+  if (estado.filtros.busqueda || estado.filtros.categoria ||
       estado.filtros.marca || estado.filtros.ofertas) {
     elementos.infoResultados.textContent =
       `Mostrando ${inicio}-${fin} de ${filtrados} resultados`;
@@ -588,14 +602,14 @@ function mostrarError(mensaje) {
  */
 function limpiarFiltros() {
   estado.filtros.busqueda = '';
-  estado.filtros.laboratorio = '';
+  estado.filtros.categoria = '';
   estado.filtros.marca = '';
   estado.filtros.ofertas = '';
 
   elementos.inputBusqueda.value = '';
 
   // Limpiar todos los Select2
-  $('#selectLaboratorio').val('').trigger('change.select2');
+  $('#selectCategoria').val('').trigger('change.select2');
   $('#selectMarca').val('').trigger('change.select2');
   $('#filtroOfertas').val('').trigger('change.select2');
 
@@ -935,20 +949,20 @@ document.addEventListener('keydown', (e) => {
  * Inicializa Select2 en los dropdowns de filtros
  */
 function inicializarSelect2() {
-  // Select2 para Laboratorio
-  $('#selectLaboratorio').select2({
-    placeholder: 'Todos',
+  // Select2 para Categoría
+  $('#selectCategoria').select2({
+    placeholder: 'Todas',
     allowClear: true,
     width: '220px',
     language: {
       noResults: () => 'No se encontraron resultados'
     }
   }).on('change', function() {
-    const labSeleccionado = $(this).val() || '';
-    estado.filtros.laboratorio = labSeleccionado;
+    const catSeleccionada = $(this).val() || '';
+    estado.filtros.categoria = catSeleccionada;
 
-    // Actualizar opciones de marca según laboratorio
-    actualizarFiltroMarca(labSeleccionado);
+    // Actualizar opciones de marca según categoría
+    actualizarFiltroMarca(catSeleccionada);
 
     aplicarFiltros();
   });
@@ -979,11 +993,28 @@ function inicializarSelect2() {
 }
 
 // Cargar productos al iniciar la página
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log('Iniciando catálogo ENAR (Vista Tabla)...');
 
   // Inicializar Select2 para búsqueda en dropdowns
   inicializarSelect2();
+
+  // Inicializar módulo de usuario
+  await inicializarUsuario();
+
+  // Escuchar cambios en el tipo de cliente para re-renderizar
+  onUsuarioChange(() => {
+    // Actualizar cabecera de la tabla con el tipo de cliente
+    const thPrecio = document.getElementById('thPrecioCliente');
+    if (thPrecio) {
+      thPrecio.textContent = `Tu Precio (${getEtiquetaTipoCliente()})`;
+    }
+
+    // Re-renderizar tabla si ya hay productos cargados
+    if (estado.productos.length > 0) {
+      renderizarTabla();
+    }
+  });
 
   cargarTodosLosProductos();
 });

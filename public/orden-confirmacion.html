@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orden Confirmada - ENAR B2B</title>
+  <link rel="stylesheet" href="css/styles.css?v=5.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+    .page-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      padding: 15px 20px;
+      position: relative;
+    }
+    .page-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #D9232D;
+    }
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .header-left img {
+      height: 40px;
+    }
+    .header-left h1 {
+      color: white;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .page-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    .success-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      padding: 50px 40px;
+      text-align: center;
+    }
+    .success-icon {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 30px;
+      animation: scaleIn 0.5s ease-out;
+    }
+    @keyframes scaleIn {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .success-icon svg {
+      width: 50px;
+      height: 50px;
+      color: white;
+    }
+    .success-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #10b981;
+      margin-bottom: 15px;
+    }
+    .success-message {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+    .order-number-box {
+      background: #f0fdf4;
+      border: 2px solid #10b981;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    .order-number-label {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .order-number {
+      font-size: 28px;
+      font-weight: 700;
+      color: #10b981;
+      letter-spacing: 2px;
+    }
+    .order-details {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 30px;
+      text-align: left;
+    }
+    .order-details h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 14px;
+    }
+    .detail-label {
+      color: #666;
+    }
+    .detail-value {
+      font-weight: 500;
+      color: #333;
+    }
+    .detail-value.total {
+      font-size: 18px;
+      font-weight: 700;
+      color: #D9232D;
+    }
+    .items-preview {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px dashed #e0e0e0;
+    }
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 13px;
+      color: #555;
+    }
+    .actions {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(30, 58, 138, 0.4);
+    }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: white;
+      color: #1e3a8a;
+      text-decoration: none;
+      border: 2px solid #1e3a8a;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .btn-secondary:hover {
+      background: #f0f4ff;
+    }
+    .next-steps {
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #e0e0e0;
+    }
+    .next-steps h4 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .steps-list {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    .step-item {
+      text-align: center;
+      max-width: 150px;
+    }
+    .step-icon {
+      width: 50px;
+      height: 50px;
+      background: #e0e7ff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 10px;
+      font-size: 24px;
+    }
+    .step-text {
+      font-size: 13px;
+      color: #666;
+    }
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e0e0e0;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .error-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      padding: 50px 40px;
+      text-align: center;
+    }
+    .error-icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+    }
+    .error-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #dc2626;
+      margin-bottom: 15px;
+    }
+    .error-message {
+      color: #666;
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-content">
+      <div class="header-left">
+        <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+        <h1>ENAR B2B</h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="page-container">
+    <!-- Loading -->
+    <div id="loading" class="loading">
+      <div class="loading-spinner"></div>
+      <p>Cargando detalles de la orden...</p>
+    </div>
+
+    <!-- Error -->
+    <div id="errorView" class="error-card" style="display: none;">
+      <div class="error-icon">⚠️</div>
+      <h2 class="error-title">Orden no encontrada</h2>
+      <p class="error-message">No pudimos encontrar la orden solicitada.</p>
+      <a href="/" class="btn-primary">Volver al Catálogo</a>
+    </div>
+
+    <!-- Success -->
+    <div id="successView" class="success-card" style="display: none;">
+      <div class="success-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+
+      <h1 class="success-title">¡Orden Confirmada!</h1>
+      <p class="success-message">
+        Tu orden de compra ha sido recibida y está siendo procesada.<br>
+        Te enviaremos un correo con los detalles y actualizaciones del estado.
+      </p>
+
+      <div class="order-number-box">
+        <div class="order-number-label">Número de Orden</div>
+        <div class="order-number" id="orderNumber">-</div>
+      </div>
+
+      <div class="order-details">
+        <h3>Detalles de la Orden</h3>
+        <div class="detail-row">
+          <span class="detail-label">Fecha</span>
+          <span class="detail-value" id="orderDate">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Estado</span>
+          <span class="detail-value" id="orderStatus">Pendiente</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Productos</span>
+          <span class="detail-value" id="orderItems">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Total</span>
+          <span class="detail-value total" id="orderTotal">-</span>
+        </div>
+
+        <div class="items-preview" id="itemsPreview">
+          <!-- Items dinámicos -->
+        </div>
+      </div>
+
+      <div class="actions">
+        <a href="mis-ordenes.html" class="btn-primary">
+          Ver mis órdenes
+        </a>
+        <a href="/" class="btn-secondary">
+          Seguir comprando
+        </a>
+      </div>
+
+      <div class="next-steps">
+        <h4>¿Qué sigue?</h4>
+        <div class="steps-list">
+          <div class="step-item">
+            <div class="step-icon">📧</div>
+            <div class="step-text">Recibirás confirmación por email</div>
+          </div>
+          <div class="step-item">
+            <div class="step-icon">📦</div>
+            <div class="step-text">Prepararemos tu pedido</div>
+          </div>
+          <div class="step-item">
+            <div class="step-icon">🚚</div>
+            <div class="step-text">Te notificaremos el envío</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { onAuthChange } from './js/auth.js';
+    import { obtenerOrden, formatearPrecio, textoEstado } from './js/ordenes.js';
+
+    // Elementos del DOM
+    const loading = document.getElementById('loading');
+    const errorView = document.getElementById('errorView');
+    const successView = document.getElementById('successView');
+
+    // Obtener ID de orden de la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const ordenId = urlParams.get('orden');
+
+    // Cargar orden
+    async function cargarOrden() {
+      if (!ordenId) {
+        loading.style.display = 'none';
+        errorView.style.display = 'block';
+        return;
+      }
+
+      const resultado = await obtenerOrden(ordenId);
+
+      if (!resultado.success) {
+        loading.style.display = 'none';
+        errorView.style.display = 'block';
+        return;
+      }
+
+      const orden = resultado.orden;
+
+      // Mostrar datos
+      document.getElementById('orderNumber').textContent = orden.numero_orden;
+      document.getElementById('orderDate').textContent = new Date(orden.created_at).toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      document.getElementById('orderStatus').textContent = textoEstado(orden.estado);
+      document.getElementById('orderItems').textContent = `${orden.cantidad_items} producto(s)`;
+      document.getElementById('orderTotal').textContent = formatearPrecio(orden.total);
+
+      // Mostrar items
+      const itemsPreview = document.getElementById('itemsPreview');
+      itemsPreview.innerHTML = orden.items.slice(0, 5).map(item => `
+        <div class="item-row">
+          <span>${item.cantidad}x ${item.titulo}</span>
+          <span>${formatearPrecio(item.subtotal)}</span>
+        </div>
+      `).join('');
+
+      if (orden.items.length > 5) {
+        itemsPreview.innerHTML += `
+          <div class="item-row" style="color: #888; font-style: italic;">
+            <span>+ ${orden.items.length - 5} producto(s) más</span>
+          </div>
+        `;
+      }
+
+      loading.style.display = 'none';
+      successView.style.display = 'block';
+    }
+
+    // Verificar autenticación
+    onAuthChange((user) => {
+      if (!user) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      cargarOrden();
+    });
+  </script>
+</body>
+</html>

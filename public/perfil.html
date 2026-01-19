@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Perfil - ENAR B2B</title>
+  <link rel="stylesheet" href="css/styles.css?v=5.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+    .page-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      padding: 15px 20px;
+      position: relative;
+    }
+    .page-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #D9232D;
+    }
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .header-left img {
+      height: 40px;
+    }
+    .header-left h1 {
+      color: white;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .header-nav {
+      display: flex;
+      gap: 15px;
+    }
+    .header-nav a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      transition: background 0.3s;
+    }
+    .header-nav a:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .page-container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin-bottom: 30px;
+    }
+    .profile-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+      margin-bottom: 25px;
+    }
+    .card-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      padding: 20px;
+      color: white;
+    }
+    .card-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .card-body {
+      padding: 25px;
+    }
+    .user-summary {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .user-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #D9232D 0%, #ff6b6b 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      font-weight: 700;
+    }
+    .user-info h3 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+    }
+    .user-info p {
+      color: #666;
+      font-size: 14px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-top: 5px;
+    }
+    .status-aprobado {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-pendiente {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .tipo-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .tipo-mayorista {
+      background: #d4edda;
+      color: #155724;
+    }
+    .tipo-negocio {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .tipo-persona_natural {
+      background: #cce5ff;
+      color: #004085;
+    }
+    .form-section {
+      margin-bottom: 20px;
+    }
+    .form-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    @media (max-width: 600px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #444;
+      margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Poppins', sans-serif;
+      transition: all 0.3s;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+    .form-group input:disabled {
+      background: #f5f5f5;
+      color: #888;
+    }
+    .info-text {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(30, 58, 138, 0.3);
+    }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .btn-danger {
+      background: #D9232D;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+    }
+    .message.error {
+      background: #fee2e2;
+      color: #dc2626;
+      display: block;
+    }
+    .message.success {
+      background: #dcfce7;
+      color: #16a34a;
+      display: block;
+    }
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #e0e0e0;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .quick-links {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .quick-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px;
+      background: #f8fafc;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #333;
+      transition: all 0.3s;
+    }
+    .quick-link:hover {
+      background: #e0e7ff;
+    }
+    .quick-link-icon {
+      font-size: 24px;
+    }
+    .quick-link-text {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .loader {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-content">
+      <div class="header-left">
+        <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+        <h1>ENAR B2B</h1>
+      </div>
+      <nav class="header-nav">
+        <a href="/">Catálogo</a>
+        <a href="mis-ordenes.html">Mis Órdenes</a>
+        <a href="#" id="logoutLink">Cerrar Sesión</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="page-container">
+    <!-- Loading -->
+    <div id="loading" class="loading">
+      <div class="loading-spinner"></div>
+      <p>Cargando perfil...</p>
+    </div>
+
+    <!-- Profile Content -->
+    <div id="profileContent" style="display: none;">
+      <h1 class="page-title">Mi Perfil</h1>
+
+      <!-- Message -->
+      <div id="message" class="message"></div>
+
+      <!-- User Summary Card -->
+      <div class="profile-card">
+        <div class="card-header">
+          <h2>Resumen de Cuenta</h2>
+        </div>
+        <div class="card-body">
+          <div class="user-summary">
+            <div class="user-avatar" id="userAvatar">U</div>
+            <div class="user-info">
+              <h3 id="userName">Usuario</h3>
+              <p id="userEmail">email@ejemplo.com</p>
+              <span class="status-badge" id="userStatus">Estado</span>
+              <span class="tipo-badge" id="userTipo">Tipo</span>
+            </div>
+          </div>
+
+          <div class="quick-links">
+            <a href="mis-ordenes.html" class="quick-link">
+              <span class="quick-link-icon">📦</span>
+              <span class="quick-link-text">Ver mis órdenes</span>
+            </a>
+            <a href="/" class="quick-link">
+              <span class="quick-link-icon">🛒</span>
+              <span class="quick-link-text">Ir al catálogo</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Form -->
+      <form id="profileForm">
+        <!-- Datos Personales -->
+        <div class="profile-card">
+          <div class="card-header">
+            <h2>Datos Personales</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label for="email">Correo Electrónico</label>
+                <input type="email" id="email" disabled>
+                <p class="info-text">El correo no puede ser modificado</p>
+              </div>
+              <div class="form-group full-width">
+                <label for="nombre">Nombre Completo</label>
+                <input type="text" id="nombre" required>
+              </div>
+              <div class="form-group full-width">
+                <label for="telefono">Teléfono</label>
+                <input type="tel" id="telefono" required>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Datos de Empresa -->
+        <div class="profile-card" id="empresaCard" style="display: none;">
+          <div class="card-header">
+            <h2>Datos de Empresa</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label for="razonSocial">Razón Social</label>
+                <input type="text" id="razonSocial">
+              </div>
+              <div class="form-group full-width">
+                <label for="nit">NIT</label>
+                <input type="text" id="nit">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dirección -->
+        <div class="profile-card">
+          <div class="card-header">
+            <h2>Dirección de Entrega</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label for="direccion">Dirección</label>
+                <input type="text" id="direccion" required>
+              </div>
+              <div class="form-group">
+                <label for="ciudad">Ciudad</label>
+                <input type="text" id="ciudad" required>
+              </div>
+              <div class="form-group">
+                <label for="departamento">Departamento</label>
+                <select id="departamento" required>
+                  <option value="">Seleccionar...</option>
+                  <option value="Amazonas">Amazonas</option>
+                  <option value="Antioquia">Antioquia</option>
+                  <option value="Arauca">Arauca</option>
+                  <option value="Atlántico">Atlántico</option>
+                  <option value="Bogotá D.C.">Bogotá D.C.</option>
+                  <option value="Bolívar">Bolívar</option>
+                  <option value="Boyacá">Boyacá</option>
+                  <option value="Caldas">Caldas</option>
+                  <option value="Caquetá">Caquetá</option>
+                  <option value="Casanare">Casanare</option>
+                  <option value="Cauca">Cauca</option>
+                  <option value="Cesar">Cesar</option>
+                  <option value="Chocó">Chocó</option>
+                  <option value="Córdoba">Córdoba</option>
+                  <option value="Cundinamarca">Cundinamarca</option>
+                  <option value="Guainía">Guainía</option>
+                  <option value="Guaviare">Guaviare</option>
+                  <option value="Huila">Huila</option>
+                  <option value="La Guajira">La Guajira</option>
+                  <option value="Magdalena">Magdalena</option>
+                  <option value="Meta">Meta</option>
+                  <option value="Nariño">Nariño</option>
+                  <option value="Norte de Santander">Norte de Santander</option>
+                  <option value="Putumayo">Putumayo</option>
+                  <option value="Quindío">Quindío</option>
+                  <option value="Risaralda">Risaralda</option>
+                  <option value="San Andrés y Providencia">San Andrés y Providencia</option>
+                  <option value="Santander">Santander</option>
+                  <option value="Sucre">Sucre</option>
+                  <option value="Tolima">Tolima</option>
+                  <option value="Valle del Cauca">Valle del Cauca</option>
+                  <option value="Vaupés">Vaupés</option>
+                  <option value="Vichada">Vichada</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones -->
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+          <button type="button" class="btn-secondary" onclick="location.reload()">Cancelar</button>
+          <button type="submit" class="btn-primary" id="saveBtn">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script type="module">
+    import { onAuthChange, cerrarSesion, obtenerDatosUsuario } from './js/auth.js';
+    import { actualizarPerfil, TIPOS_CLIENTE } from './js/user-manager.js';
+
+    // Elementos del DOM
+    const loading = document.getElementById('loading');
+    const profileContent = document.getElementById('profileContent');
+    const profileForm = document.getElementById('profileForm');
+    const saveBtn = document.getElementById('saveBtn');
+    const message = document.getElementById('message');
+    const logoutLink = document.getElementById('logoutLink');
+    const empresaCard = document.getElementById('empresaCard');
+
+    let currentUser = null;
+    let userData = null;
+
+    // Textos de tipos
+    const TIPO_TEXTOS = {
+      'mayorista': 'Mayorista',
+      'negocio': 'Negocio',
+      'persona_natural': 'Persona Natural'
+    };
+
+    // Mostrar mensaje
+    function showMessage(texto, tipo) {
+      message.textContent = texto;
+      message.className = `message ${tipo}`;
+      message.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Ocultar mensaje
+    function hideMessage() {
+      message.className = 'message';
+    }
+
+    // Cargar datos del perfil
+    async function cargarPerfil(user) {
+      const resultado = await obtenerDatosUsuario(user.uid);
+
+      if (!resultado.success) {
+        showMessage('Error cargando el perfil', 'error');
+        return;
+      }
+
+      userData = resultado.data;
+
+      // Actualizar resumen
+      document.getElementById('userAvatar').textContent = (userData.nombre || 'U')[0].toUpperCase();
+      document.getElementById('userName').textContent = userData.nombre || 'Usuario';
+      document.getElementById('userEmail').textContent = userData.email;
+
+      // Estado
+      const statusBadge = document.getElementById('userStatus');
+      statusBadge.textContent = userData.estado === 'aprobado' ? 'Aprobado' : 'Pendiente';
+      statusBadge.className = `status-badge status-${userData.estado}`;
+
+      // Tipo
+      const tipoBadge = document.getElementById('userTipo');
+      tipoBadge.textContent = TIPO_TEXTOS[userData.tipo_cliente] || userData.tipo_cliente;
+      tipoBadge.className = `tipo-badge tipo-${userData.tipo_cliente}`;
+
+      // Rellenar formulario
+      document.getElementById('email').value = userData.email || '';
+      document.getElementById('nombre').value = userData.nombre || '';
+      document.getElementById('telefono').value = userData.telefono || '';
+      document.getElementById('direccion').value = userData.direccion || '';
+      document.getElementById('ciudad').value = userData.ciudad || '';
+      document.getElementById('departamento').value = userData.departamento || '';
+
+      // Datos de empresa
+      if (userData.tipo_cliente === 'mayorista' || userData.tipo_cliente === 'negocio') {
+        empresaCard.style.display = 'block';
+        document.getElementById('razonSocial').value = userData.razon_social || '';
+        document.getElementById('nit').value = userData.nit || '';
+      }
+
+      // Mostrar contenido
+      loading.style.display = 'none';
+      profileContent.style.display = 'block';
+    }
+
+    // Guardar cambios
+    profileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideMessage();
+
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="loader"></span>Guardando...';
+
+      const datos = {
+        nombre: document.getElementById('nombre').value.trim(),
+        telefono: document.getElementById('telefono').value.trim(),
+        direccion: document.getElementById('direccion').value.trim(),
+        ciudad: document.getElementById('ciudad').value.trim(),
+        departamento: document.getElementById('departamento').value
+      };
+
+      // Incluir datos de empresa si aplica
+      if (userData.tipo_cliente === 'mayorista' || userData.tipo_cliente === 'negocio') {
+        datos.razonSocial = document.getElementById('razonSocial').value.trim();
+        datos.nit = document.getElementById('nit').value.trim();
+      }
+
+      const resultado = await actualizarPerfil(currentUser.uid, datos);
+
+      if (resultado.success) {
+        showMessage('Perfil actualizado exitosamente', 'success');
+      } else {
+        showMessage(resultado.error || 'Error actualizando el perfil', 'error');
+      }
+
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Guardar Cambios';
+    });
+
+    // Cerrar sesión
+    logoutLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await cerrarSesion();
+      window.location.href = '/login.html';
+    });
+
+    // Verificar autenticación
+    onAuthChange(async (user) => {
+      if (!user) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      currentUser = user;
+      await cargarPerfil(user);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - ENAR B2B</title>
+  <link rel="stylesheet" href="css/styles.css?v=5.0">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+    .admin-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      padding: 15px 20px;
+      position: relative;
+    }
+    .admin-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #D9232D;
+    }
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .header-left img {
+      height: 40px;
+    }
+    .header-left h1 {
+      color: white;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .header-left span {
+      background: #D9232D;
+      color: white;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .header-nav a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      transition: background 0.3s;
+    }
+    .header-nav a:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .admin-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    .admin-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 0;
+    }
+    .admin-tab {
+      padding: 12px 24px;
+      background: none;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      color: #666;
+      cursor: pointer;
+      position: relative;
+      font-family: 'Poppins', sans-serif;
+    }
+    .admin-tab.active {
+      color: #1e3a8a;
+    }
+    .admin-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #D9232D;
+    }
+    .admin-tab .badge {
+      background: #D9232D;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      margin-left: 8px;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1e3a8a;
+    }
+    .stat-number.warning {
+      color: #d97706;
+    }
+    .stat-number.success {
+      color: #10b981;
+    }
+    .stat-number.danger {
+      color: #D9232D;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .admin-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+      margin-bottom: 25px;
+    }
+    .card-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      padding: 15px 20px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .search-box {
+      display: flex;
+      gap: 10px;
+    }
+    .search-box input {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      width: 250px;
+    }
+    .search-box select {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .card-body {
+      padding: 0;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th {
+      background: #f8fafc;
+      padding: 12px 15px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .data-table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+    }
+    .data-table tbody tr:hover {
+      background: #fafafa;
+    }
+    .user-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .user-name {
+      font-weight: 500;
+      color: #333;
+    }
+    .user-email {
+      font-size: 12px;
+      color: #888;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-pendiente {
+      background: #fef3c7;
+      color: #d97706;
+    }
+    .status-aprobado {
+      background: #d1fae5;
+      color: #059669;
+    }
+    .status-rechazado {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .status-suspendido {
+      background: #e5e7eb;
+      color: #6b7280;
+    }
+    .tipo-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .tipo-mayorista {
+      background: #d4edda;
+      color: #155724;
+    }
+    .tipo-negocio {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .tipo-persona_natural {
+      background: #cce5ff;
+      color: #004085;
+    }
+    .action-btns {
+      display: flex;
+      gap: 5px;
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-approve {
+      background: #10b981;
+      color: white;
+    }
+    .btn-approve:hover {
+      background: #059669;
+    }
+    .btn-reject {
+      background: #ef4444;
+      color: white;
+    }
+    .btn-reject:hover {
+      background: #dc2626;
+    }
+    .btn-edit {
+      background: #3b82f6;
+      color: white;
+    }
+    .btn-edit:hover {
+      background: #2563eb;
+    }
+    .btn-view {
+      background: #8b5cf6;
+      color: white;
+    }
+    .btn-view:hover {
+      background: #7c3aed;
+    }
+    .order-status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .estado-pendiente {
+      background: #fef3c7;
+      color: #d97706;
+    }
+    .estado-confirmada {
+      background: #dbeafe;
+      color: #2563eb;
+    }
+    .estado-en_proceso {
+      background: #e0e7ff;
+      color: #4f46e5;
+    }
+    .estado-enviada {
+      background: #d1fae5;
+      color: #059669;
+    }
+    .estado-entregada {
+      background: #dcfce7;
+      color: #16a34a;
+    }
+    .estado-cancelada {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    .no-access {
+      text-align: center;
+      padding: 60px 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+    .no-access h2 {
+      color: #D9232D;
+      margin-bottom: 10px;
+    }
+    .mensaje-exito {
+      background: #d1fae5;
+      color: #059669;
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      padding: 15px 20px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .modal-body {
+      padding: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #444;
+      margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: 'Poppins', sans-serif;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn-cancel {
+      flex: 1;
+      padding: 10px;
+      background: #f3f4f6;
+      color: #374151;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .btn-save {
+      flex: 1;
+      padding: 10px;
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .empty-message {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+    @media (max-width: 900px) {
+      .data-table {
+        font-size: 12px;
+      }
+      .data-table th,
+      .data-table td {
+        padding: 8px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="admin-header">
+    <div class="header-content">
+      <div class="header-left">
+        <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+        <h1>ENAR B2B</h1>
+        <span>ADMIN</span>
+      </div>
+      <nav class="header-nav">
+        <a href="/">Ir al Catálogo</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="admin-container">
+    <!-- Loading -->
+    <div id="loading" class="loading">
+      <p>Verificando permisos...</p>
+    </div>
+
+    <!-- No Access -->
+    <div id="noAccess" class="no-access" style="display: none;">
+      <h2>Acceso Denegado</h2>
+      <p>No tienes permisos para acceder a esta sección.</p>
+      <br>
+      <a href="/" style="color: #1e3a8a;">Volver al Catálogo</a>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" style="display: none;">
+      <!-- Mensaje de éxito -->
+      <div id="mensajeExito" class="mensaje-exito"></div>
+
+      <!-- Tabs -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="usuarios">
+          Usuarios
+          <span class="badge" id="pendientesBadge">0</span>
+        </button>
+        <button class="admin-tab" data-tab="ordenes">
+          Órdenes
+          <span class="badge" id="ordenesBadge">0</span>
+        </button>
+      </div>
+
+      <!-- Tab: Usuarios -->
+      <div class="tab-content active" id="tab-usuarios">
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="totalUsuarios">0</div>
+            <div class="stat-label">Total Usuarios</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number warning" id="totalPendientes">0</div>
+            <div class="stat-label">Pendientes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number success" id="totalAprobados">0</div>
+            <div class="stat-label">Aprobados</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="totalMayoristas">0</div>
+            <div class="stat-label">Mayoristas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="totalNegocios">0</div>
+            <div class="stat-label">Negocios</div>
+          </div>
+        </div>
+
+        <!-- Usuarios Table -->
+        <div class="admin-card">
+          <div class="card-header">
+            <h2>Gestión de Usuarios</h2>
+            <div class="search-box">
+              <input type="text" id="buscarUsuario" placeholder="Buscar por email o nombre...">
+              <select id="filtroEstado">
+                <option value="">Todos los estados</option>
+                <option value="pendiente">Pendientes</option>
+                <option value="aprobado">Aprobados</option>
+                <option value="rechazado">Rechazados</option>
+                <option value="suspendido">Suspendidos</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Tipo</th>
+                  <th>Empresa</th>
+                  <th>Estado</th>
+                  <th>Fecha Registro</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usuariosBody">
+                <tr>
+                  <td colspan="6" class="empty-message">Cargando usuarios...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Órdenes -->
+      <div class="tab-content" id="tab-ordenes">
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="totalOrdenes">0</div>
+            <div class="stat-label">Total Órdenes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number warning" id="ordenesPendientes">0</div>
+            <div class="stat-label">Pendientes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="ordenesEnProceso">0</div>
+            <div class="stat-label">En Proceso</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number success" id="ordenesEntregadas">0</div>
+            <div class="stat-label">Entregadas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number danger" id="montoTotal">$0</div>
+            <div class="stat-label">Monto Total</div>
+          </div>
+        </div>
+
+        <!-- Órdenes Table -->
+        <div class="admin-card">
+          <div class="card-header">
+            <h2>Gestión de Órdenes</h2>
+            <div class="search-box">
+              <input type="text" id="buscarOrden" placeholder="Buscar por número o cliente...">
+              <select id="filtroEstadoOrden">
+                <option value="">Todos los estados</option>
+                <option value="pendiente">Pendientes</option>
+                <option value="confirmada">Confirmadas</option>
+                <option value="en_proceso">En Proceso</option>
+                <option value="enviada">Enviadas</option>
+                <option value="entregada">Entregadas</option>
+                <option value="cancelada">Canceladas</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Orden</th>
+                  <th>Cliente</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="ordenesBody">
+                <tr>
+                  <td colspan="7" class="empty-message">Cargando órdenes...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Aprobar Usuario -->
+  <div class="modal-overlay" id="modalAprobar">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Aprobar Usuario</h3>
+        <button class="modal-close" onclick="cerrarModal('modalAprobar')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 15px;">Usuario: <strong id="aprobarNombre">-</strong></p>
+
+        <div class="form-group">
+          <label for="aprobarTipo">Tipo de Cliente</label>
+          <select id="aprobarTipo">
+            <option value="persona_natural">Persona Natural</option>
+            <option value="negocio">Negocio</option>
+            <option value="mayorista">Mayorista</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalAprobar')">Cancelar</button>
+          <button class="btn-save" id="btnConfirmarAprobar">Aprobar Usuario</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Rechazar Usuario -->
+  <div class="modal-overlay" id="modalRechazar">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Rechazar Usuario</h3>
+        <button class="modal-close" onclick="cerrarModal('modalRechazar')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 15px;">Usuario: <strong id="rechazarNombre">-</strong></p>
+
+        <div class="form-group">
+          <label for="rechazarMotivo">Motivo del rechazo (opcional)</label>
+          <textarea id="rechazarMotivo" rows="3" placeholder="Explica el motivo del rechazo..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalRechazar')">Cancelar</button>
+          <button class="btn-save" style="background: #ef4444;" id="btnConfirmarRechazar">Rechazar Usuario</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Estado Orden -->
+  <div class="modal-overlay" id="modalOrden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Actualizar Estado</h3>
+        <button class="modal-close" onclick="cerrarModal('modalOrden')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 15px;">Orden: <strong id="ordenNumero">-</strong></p>
+
+        <div class="form-group">
+          <label for="nuevoEstado">Nuevo Estado</label>
+          <select id="nuevoEstado">
+            <option value="confirmada">Confirmada</option>
+            <option value="en_proceso">En Proceso</option>
+            <option value="enviada">Enviada</option>
+            <option value="entregada">Entregada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="estadoNota">Nota (opcional)</label>
+          <textarea id="estadoNota" rows="2" placeholder="Agregar nota..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalOrden')">Cancelar</button>
+          <button class="btn-save" id="btnActualizarEstado">Actualizar Estado</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import {
+      esAdmin,
+      obtenerTodosLosUsuarios,
+      aprobarUsuario,
+      rechazarUsuario,
+      ESTADOS_USUARIO,
+      TIPOS_CLIENTE
+    } from './js/user-manager.js';
+    import {
+      obtenerTodasLasOrdenes,
+      actualizarEstadoOrden,
+      formatearPrecio,
+      textoEstado,
+      claseEstado
+    } from './js/ordenes.js';
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMPflYHuPnAWaUhv90wi3uBOhP9AoA8e0",
+      authDomain: "enar-b2b.firebaseapp.com",
+      projectId: "enar-b2b",
+      storageBucket: "enar-b2b.firebasestorage.app",
+      messagingSenderId: "903832444518",
+      appId: "1:903832444518:web:f76cb209febc9281a497a7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Estado
+    let usuarios = [];
+    let ordenes = [];
+    let usuarioSeleccionado = null;
+    let ordenSeleccionada = null;
+
+    // Elementos DOM
+    const loading = document.getElementById('loading');
+    const noAccess = document.getElementById('noAccess');
+    const adminPanel = document.getElementById('adminPanel');
+    const mensajeExito = document.getElementById('mensajeExito');
+
+    // Textos
+    const TIPO_TEXTOS = {
+      'mayorista': 'Mayorista',
+      'negocio': 'Negocio',
+      'persona_natural': 'Persona Natural'
+    };
+
+    // Tabs
+    document.querySelectorAll('.admin-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+      });
+    });
+
+    // Cerrar modal
+    window.cerrarModal = function(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    };
+
+    // Mostrar mensaje
+    function mostrarMensaje(texto) {
+      mensajeExito.textContent = texto;
+      mensajeExito.style.display = 'block';
+      setTimeout(() => {
+        mensajeExito.style.display = 'none';
+      }, 3000);
+    }
+
+    // Formatear fecha
+    function formatearFecha(fechaStr) {
+      if (!fechaStr) return '-';
+      const fecha = new Date(fechaStr);
+      return fecha.toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+
+    // Cargar usuarios
+    async function cargarUsuarios() {
+      const resultado = await obtenerTodosLosUsuarios();
+
+      if (resultado.success) {
+        usuarios = resultado.usuarios;
+        actualizarStatsUsuarios();
+        renderizarUsuarios();
+      }
+    }
+
+    // Actualizar stats usuarios
+    function actualizarStatsUsuarios() {
+      const stats = {
+        total: usuarios.length,
+        pendientes: usuarios.filter(u => u.estado === 'pendiente').length,
+        aprobados: usuarios.filter(u => u.estado === 'aprobado').length,
+        mayoristas: usuarios.filter(u => u.tipo_cliente === 'mayorista' && u.estado === 'aprobado').length,
+        negocios: usuarios.filter(u => u.tipo_cliente === 'negocio' && u.estado === 'aprobado').length
+      };
+
+      document.getElementById('totalUsuarios').textContent = stats.total;
+      document.getElementById('totalPendientes').textContent = stats.pendientes;
+      document.getElementById('totalAprobados').textContent = stats.aprobados;
+      document.getElementById('totalMayoristas').textContent = stats.mayoristas;
+      document.getElementById('totalNegocios').textContent = stats.negocios;
+      document.getElementById('pendientesBadge').textContent = stats.pendientes;
+    }
+
+    // Renderizar usuarios
+    function renderizarUsuarios() {
+      const busqueda = document.getElementById('buscarUsuario').value.toLowerCase();
+      const filtroEstado = document.getElementById('filtroEstado').value;
+
+      let usuariosFiltrados = usuarios.filter(u => {
+        const matchBusqueda = !busqueda ||
+          (u.email || '').toLowerCase().includes(busqueda) ||
+          (u.nombre || '').toLowerCase().includes(busqueda);
+        const matchEstado = !filtroEstado || u.estado === filtroEstado;
+        return matchBusqueda && matchEstado;
+      });
+
+      const tbody = document.getElementById('usuariosBody');
+
+      if (usuariosFiltrados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-message">No se encontraron usuarios</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = usuariosFiltrados.map(u => `
+        <tr>
+          <td>
+            <div class="user-info">
+              <span class="user-name">${u.nombre || '-'}</span>
+              <span class="user-email">${u.email}</span>
+            </div>
+          </td>
+          <td><span class="tipo-badge tipo-${u.tipo_cliente}">${TIPO_TEXTOS[u.tipo_cliente] || u.tipo_cliente}</span></td>
+          <td>${u.razon_social || '-'}</td>
+          <td><span class="status-badge status-${u.estado}">${u.estado}</span></td>
+          <td>${formatearFecha(u.created_at)}</td>
+          <td>
+            <div class="action-btns">
+              ${u.estado === 'pendiente' ? `
+                <button class="btn-sm btn-approve" onclick="abrirAprobar('${u.uid}')">Aprobar</button>
+                <button class="btn-sm btn-reject" onclick="abrirRechazar('${u.uid}')">Rechazar</button>
+              ` : ''}
+              ${u.estado === 'aprobado' ? `
+                <button class="btn-sm btn-edit" onclick="abrirAprobar('${u.uid}')">Editar</button>
+              ` : ''}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Abrir modal aprobar
+    window.abrirAprobar = function(uid) {
+      usuarioSeleccionado = usuarios.find(u => u.uid === uid);
+      if (!usuarioSeleccionado) return;
+
+      document.getElementById('aprobarNombre').textContent = `${usuarioSeleccionado.nombre} (${usuarioSeleccionado.email})`;
+      document.getElementById('aprobarTipo').value = usuarioSeleccionado.tipo_cliente || 'persona_natural';
+      document.getElementById('modalAprobar').classList.add('active');
+    };
+
+    // Abrir modal rechazar
+    window.abrirRechazar = function(uid) {
+      usuarioSeleccionado = usuarios.find(u => u.uid === uid);
+      if (!usuarioSeleccionado) return;
+
+      document.getElementById('rechazarNombre').textContent = `${usuarioSeleccionado.nombre} (${usuarioSeleccionado.email})`;
+      document.getElementById('rechazarMotivo').value = '';
+      document.getElementById('modalRechazar').classList.add('active');
+    };
+
+    // Confirmar aprobar
+    document.getElementById('btnConfirmarAprobar').addEventListener('click', async () => {
+      if (!usuarioSeleccionado) return;
+
+      const tipoCliente = document.getElementById('aprobarTipo').value;
+      const resultado = await aprobarUsuario(usuarioSeleccionado.uid, tipoCliente);
+
+      if (resultado.success) {
+        cerrarModal('modalAprobar');
+        mostrarMensaje('Usuario aprobado exitosamente');
+        await cargarUsuarios();
+      }
+    });
+
+    // Confirmar rechazar
+    document.getElementById('btnConfirmarRechazar').addEventListener('click', async () => {
+      if (!usuarioSeleccionado) return;
+
+      const motivo = document.getElementById('rechazarMotivo').value;
+      const resultado = await rechazarUsuario(usuarioSeleccionado.uid, motivo);
+
+      if (resultado.success) {
+        cerrarModal('modalRechazar');
+        mostrarMensaje('Usuario rechazado');
+        await cargarUsuarios();
+      }
+    });
+
+    // Cargar órdenes
+    async function cargarOrdenes() {
+      const resultado = await obtenerTodasLasOrdenes();
+
+      if (resultado.success) {
+        ordenes = resultado.ordenes;
+        actualizarStatsOrdenes();
+        renderizarOrdenes();
+      }
+    }
+
+    // Actualizar stats órdenes
+    function actualizarStatsOrdenes() {
+      const stats = {
+        total: ordenes.length,
+        pendientes: ordenes.filter(o => o.estado === 'pendiente').length,
+        enProceso: ordenes.filter(o => o.estado === 'en_proceso' || o.estado === 'confirmada').length,
+        entregadas: ordenes.filter(o => o.estado === 'entregada').length,
+        monto: ordenes.reduce((sum, o) => sum + (o.total || 0), 0)
+      };
+
+      document.getElementById('totalOrdenes').textContent = stats.total;
+      document.getElementById('ordenesPendientes').textContent = stats.pendientes;
+      document.getElementById('ordenesEnProceso').textContent = stats.enProceso;
+      document.getElementById('ordenesEntregadas').textContent = stats.entregadas;
+      document.getElementById('montoTotal').textContent = formatearPrecio(stats.monto);
+      document.getElementById('ordenesBadge').textContent = stats.pendientes;
+    }
+
+    // Renderizar órdenes
+    function renderizarOrdenes() {
+      const busqueda = document.getElementById('buscarOrden').value.toLowerCase();
+      const filtroEstado = document.getElementById('filtroEstadoOrden').value;
+
+      let ordenesFiltradas = ordenes.filter(o => {
+        const matchBusqueda = !busqueda ||
+          (o.numero_orden || '').toLowerCase().includes(busqueda) ||
+          (o.cliente?.nombre || '').toLowerCase().includes(busqueda) ||
+          (o.cliente?.email || '').toLowerCase().includes(busqueda);
+        const matchEstado = !filtroEstado || o.estado === filtroEstado;
+        return matchBusqueda && matchEstado;
+      });
+
+      const tbody = document.getElementById('ordenesBody');
+
+      if (ordenesFiltradas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-message">No se encontraron órdenes</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = ordenesFiltradas.map(o => `
+        <tr>
+          <td><strong>${o.numero_orden}</strong></td>
+          <td>
+            <div class="user-info">
+              <span class="user-name">${o.cliente?.nombre || '-'}</span>
+              <span class="user-email">${o.cliente?.email || ''}</span>
+            </div>
+          </td>
+          <td>${o.cantidad_items} producto(s)</td>
+          <td><strong style="color: #D9232D;">${formatearPrecio(o.total)}</strong></td>
+          <td><span class="order-status ${claseEstado(o.estado)}">${textoEstado(o.estado)}</span></td>
+          <td>${formatearFecha(o.created_at)}</td>
+          <td>
+            <div class="action-btns">
+              <button class="btn-sm btn-edit" onclick="abrirEstadoOrden('${o.id}')">Estado</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Abrir modal estado orden
+    window.abrirEstadoOrden = function(ordenId) {
+      ordenSeleccionada = ordenes.find(o => o.id === ordenId);
+      if (!ordenSeleccionada) return;
+
+      document.getElementById('ordenNumero').textContent = ordenSeleccionada.numero_orden;
+      document.getElementById('nuevoEstado').value = ordenSeleccionada.estado;
+      document.getElementById('estadoNota').value = '';
+      document.getElementById('modalOrden').classList.add('active');
+    };
+
+    // Actualizar estado orden
+    document.getElementById('btnActualizarEstado').addEventListener('click', async () => {
+      if (!ordenSeleccionada) return;
+
+      const nuevoEstado = document.getElementById('nuevoEstado').value;
+      const nota = document.getElementById('estadoNota').value;
+
+      const resultado = await actualizarEstadoOrden(ordenSeleccionada.id, nuevoEstado, nota);
+
+      if (resultado.success) {
+        cerrarModal('modalOrden');
+        mostrarMensaje('Estado de orden actualizado');
+        await cargarOrdenes();
+      }
+    });
+
+    // Filtros
+    document.getElementById('buscarUsuario').addEventListener('input', renderizarUsuarios);
+    document.getElementById('filtroEstado').addEventListener('change', renderizarUsuarios);
+    document.getElementById('buscarOrden').addEventListener('input', renderizarOrdenes);
+    document.getElementById('filtroEstadoOrden').addEventListener('change', renderizarOrdenes);
+
+    // Verificar autenticación
+    onAuthStateChanged(auth, async (user) => {
+      loading.style.display = 'none';
+
+      if (!user) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      if (!esAdmin(user)) {
+        noAccess.style.display = 'block';
+        return;
+      }
+
+      adminPanel.style.display = 'block';
+      await cargarUsuarios();
+      await cargarOrdenes();
+    });
+  </script>
+</body>
+</html>

@@ -8,21 +8,25 @@
 
 /**
  * Índices de las columnas en la hoja de productos
- * Basado en la estructura definida (columnas A-L)
+ * Estructura ENAR (columnas A-P)
  */
 const COLUMNAS = {
-  COD_INTERNO: 0,        // A
-  TITULO: 1,             // B
-  CANTIDAD: 2,           // C
-  P_REAL: 3,             // D
-  P_CORRIENTE: 4,        // E
-  IMPUESTO: 5,           // F
-  EAN: 6,                // G
-  MARCA: 7,              // H
-  LABORATORIO: 8,        // I
-  INDICACION: 9,         // J
-  PRINCIPIO_ACTIVO: 10,  // K
-  IMAGEN_PRINCIPAL: 11   // L
+  COD_INTERNO: 0,            // A
+  TITULO: 1,                 // B
+  CANTIDAD: 2,               // C
+  PRECIO_MAYORISTA: 3,       // D
+  PRECIO_NEGOCIO: 4,         // E
+  PRECIO_PERSONA_NATURAL: 5, // F
+  PRECIO_LISTA: 6,           // G
+  EMBALAJE: 7,               // H
+  PESO: 8,                   // I
+  IMPUESTO: 9,               // J
+  EAN: 10,                   // K
+  MARCA: 11,                 // L
+  CATEGORIA: 12,             // M
+  IMAGEN_PRINCIPAL: 13,      // N
+  FICHA_TECNICA: 14,         // O
+  ACTIVO: 15                 // P
 };
 
 /**
@@ -57,7 +61,7 @@ function leerProductosDeHoja() {
     const codInterno = fila[COLUMNAS.COD_INTERNO];
     // Excluir filas vacías y posibles encabezados duplicados
     return codInterno &&
-           codInterno !== 'Cod_Interno' &&
+           codInterno !== 'COD_INTERNO' &&
            codInterno !== 'cod_interno';
   });
 
@@ -72,6 +76,12 @@ function leerProductosDeHoja() {
       // Validar que la fila tiene datos (columna A no vacía)
       if (!fila[COLUMNAS.COD_INTERNO]) {
         return; // Saltar fila vacía
+      }
+
+      // Verificar si el producto está activo
+      const activo = fila[COLUMNAS.ACTIVO];
+      if (activo === false || activo === 'NO' || activo === 'No' || activo === 'no' || activo === 0) {
+        return; // Saltar productos inactivos
       }
 
       // Transformar fila a objeto producto
@@ -107,15 +117,20 @@ function transformarFilaAProducto(fila, timestamp) {
     titulo: limpiarTexto(fila[COLUMNAS.TITULO]),
     ean: limpiarTexto(fila[COLUMNAS.EAN]),
     marca: limpiarTexto(fila[COLUMNAS.MARCA]),
-    laboratorio: limpiarTexto(fila[COLUMNAS.LABORATORIO]),
-    indicacion: limpiarTexto(fila[COLUMNAS.INDICACION]),
-    principio_activo: limpiarTexto(fila[COLUMNAS.PRINCIPIO_ACTIVO]),
+    categoria: limpiarTexto(fila[COLUMNAS.CATEGORIA]),
     imagen_principal: limpiarTexto(fila[COLUMNAS.IMAGEN_PRINCIPAL]),
+    ficha_tecnica: limpiarTexto(fila[COLUMNAS.FICHA_TECNICA]),
 
-    // Campos numéricos - convertir a número
+    // Campos numéricos - precios
+    precio_mayorista: convertirANumero(fila[COLUMNAS.PRECIO_MAYORISTA], 0),
+    precio_negocio: convertirANumero(fila[COLUMNAS.PRECIO_NEGOCIO], 0),
+    precio_persona_natural: convertirANumero(fila[COLUMNAS.PRECIO_PERSONA_NATURAL], 0),
+    precio_lista: convertirANumero(fila[COLUMNAS.PRECIO_LISTA], 0),
+
+    // Campos numéricos - otros
     cantidad: convertirANumero(fila[COLUMNAS.CANTIDAD], 0),
-    p_real: convertirANumero(fila[COLUMNAS.P_REAL], 0),
-    p_corriente: convertirANumero(fila[COLUMNAS.P_CORRIENTE], 0),
+    embalaje: convertirANumero(fila[COLUMNAS.EMBALAJE], 1),
+    peso: convertirANumero(fila[COLUMNAS.PESO], 0),
     impuesto: convertirANumero(fila[COLUMNAS.IMPUESTO], 0.19),
 
     // Campos adicionales para Firestore
@@ -148,7 +163,6 @@ function validarProducto(producto, numeroFila) {
   // Validar que el código interno no tenga caracteres problemáticos para Firestore
   if (producto.cod_interno.includes('/')) {
     Logger.log(`Fila ${numeroFila}: Advertencia - código interno contiene '/', puede causar problemas`);
-    // Podríamos reemplazar o rechazar, por ahora solo advertimos
   }
 
   return true;
