@@ -26,12 +26,12 @@ import {
  * Estos valores se obtienen de Firebase Console > Configuración del proyecto
  */
 const firebaseConfig = {
-  apiKey: "AIzaSyCKZdRRrG_p71bb0fzLQRPluF-jgbkeOtA",
+  apiKey: "AIzaSyCMPflYHuPnAWaUhv90wi3uBOhP9AoA8e0",
   authDomain: "enar-b2b.firebaseapp.com",
   projectId: "enar-b2b",
-  storageBucket: "enar-b2b.appspot.com",
-  messagingSenderId: "",
-  appId: ""
+  storageBucket: "enar-b2b.firebasestorage.app",
+  messagingSenderId: "903832444518",
+  appId: "1:903832444518:web:f76cb209febc9281a497a7"
 };
 
 // Inicializar Firebase

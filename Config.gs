@@ -11,7 +11,7 @@
  * Obtener estos valores desde Firebase Console > Configuración del proyecto
  */
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCKZdRRrG_p71bb0fzLQRPluF-jgbkeOtA",
+  apiKey: "AIzaSyCMPflYHuPnAWaUhv90wi3uBOhP9AoA8e0",
   projectId: "enar-b2b"
 };
 
