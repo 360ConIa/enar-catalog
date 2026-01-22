@@ -15,7 +15,9 @@ import {
   signOut,
   sendPasswordResetEmail,
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
   getFirestore,
@@ -38,6 +40,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
+
+// Emails de administradores (pueden acceder sin documento en Firestore)
+const ADMIN_EMAILS = [
+  'sebastianbumq@enarapp.com'
+];
 
 // Estados de usuario
 const ESTADOS_USUARIO = {
@@ -124,6 +132,84 @@ async function iniciarSesion(email, password) {
       case 'auth/invalid-credential':
         mensaje = 'Credenciales inválidas. Verifica tu email y contraseña';
         break;
+    }
+
+    return {
+      success: false,
+      error: mensaje,
+      code: error.code
+    };
+  }
+}
+
+/**
+ * Inicia sesión con Google
+ */
+async function iniciarSesionConGoogle() {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+
+    // Si es admin, permitir acceso directo
+    if (ADMIN_EMAILS.includes(user.email)) {
+      return {
+        success: true,
+        user: user,
+        esAdmin: true,
+        mensaje: 'Inicio de sesión como administrador exitoso'
+      };
+    }
+
+    // Para usuarios normales, verificar estado en Firestore
+    const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
+
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+
+      if (userData.estado === ESTADOS_USUARIO.PENDIENTE) {
+        await signOut(auth);
+        return {
+          success: false,
+          error: 'Tu cuenta está pendiente de aprobación.',
+          code: 'pending-approval'
+        };
+      }
+
+      if (userData.estado === ESTADOS_USUARIO.RECHAZADO) {
+        await signOut(auth);
+        return {
+          success: false,
+          error: 'Tu solicitud de cuenta ha sido rechazada.',
+          code: 'rejected'
+        };
+      }
+
+      if (userData.estado === ESTADOS_USUARIO.SUSPENDIDO) {
+        await signOut(auth);
+        return {
+          success: false,
+          error: 'Tu cuenta ha sido suspendida.',
+          code: 'suspended'
+        };
+      }
+    }
+
+    return {
+      success: true,
+      user: user,
+      esAdmin: false,
+      mensaje: 'Inicio de sesión exitoso'
+    };
+
+  } catch (error) {
+    console.error('Error en login con Google:', error);
+
+    let mensaje = 'Error al iniciar sesión con Google';
+
+    if (error.code === 'auth/popup-closed-by-user') {
+      mensaje = 'Inicio de sesión cancelado';
+    } else if (error.code === 'auth/popup-blocked') {
+      mensaje = 'El navegador bloqueó la ventana emergente. Permite popups para este sitio.';
     }
 
     return {
@@ -343,6 +429,7 @@ export {
   auth,
   db,
   iniciarSesion,
+  iniciarSesionConGoogle,
   registrarUsuario,
   cerrarSesion,
   recuperarPassword,
@@ -351,5 +438,6 @@ export {
   obtenerDatosUsuario,
   verificarAcceso,
   ESTADOS_USUARIO,
-  TIPOS_CLIENTE
+  TIPOS_CLIENTE,
+  ADMIN_EMAILS
 };

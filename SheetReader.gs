@@ -25,8 +25,8 @@ const COLUMNAS = {
   MARCA: 11,                 // L
   CATEGORIA: 12,             // M
   IMAGEN_PRINCIPAL: 13,      // N
-  FICHA_TECNICA: 14,         // O
-  ACTIVO: 15                 // P
+  ACTIVO: 14,                // O
+  FICHA_TECNICA: 15          // P
 };
 
 /**

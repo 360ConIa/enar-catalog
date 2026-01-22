@@ -59,12 +59,12 @@ export function getTipoCliente() {
 export function getEtiquetaTipoCliente() {
   switch (usuarioState.tipoCliente) {
     case TIPOS_CLIENTE.MAYORISTA:
-      return 'Mayorista';
+      return 'P. MAYORISTA';
     case TIPOS_CLIENTE.NEGOCIO:
-      return 'Negocio';
+      return 'P. NEGOCIOS';
     case TIPOS_CLIENTE.PERSONA_NATURAL:
     default:
-      return 'Persona Natural';
+      return 'P. PERSONAS';
   }
 }
 

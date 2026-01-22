@@ -190,6 +190,13 @@ function crearDocumentoConfiguracion(datos) {
 }
 
 /**
+ * Campos que NO deben sobrescribirse si están vacíos
+ * Estos campos pueden ser actualizados por sincronizaciones separadas (imágenes, fichas técnicas)
+ * y no queremos que la sincronización de productos los borre
+ */
+const CAMPOS_PROTEGIDOS = ['imagen_principal', 'ficha_tecnica_url', 'imagenes', 'total_imagenes'];
+
+/**
  * Convierte un objeto JavaScript al formato de campos de Firestore
  * Firestore REST API requiere que cada campo tenga su tipo especificado
  *
@@ -206,6 +213,12 @@ function convertirAFirestoreFields(obj) {
   for (const [key, value] of Object.entries(obj)) {
     // Ignorar valores nulos o indefinidos
     if (value === null || value === undefined) continue;
+
+    // Campos protegidos: no incluir si están vacíos (para no sobrescribir valores existentes)
+    if (CAMPOS_PROTEGIDOS.includes(key)) {
+      if (typeof value === 'string' && value.trim() === '') continue;
+      if (Array.isArray(value) && value.length === 0) continue;
+    }
 
     // Detectar tipo de dato y formatear según Firestore
     if (typeof value === 'string') {

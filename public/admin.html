@@ -468,6 +468,25 @@
       padding: 40px;
       color: #888;
     }
+    .btn-crear-usuario {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .btn-crear-usuario:hover {
+      background: #059669;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
     @media (max-width: 900px) {
       .data-table {
         font-size: 12px;
@@ -557,6 +576,7 @@
           <div class="card-header">
             <h2>Gestión de Usuarios</h2>
             <div class="search-box">
+              <button class="btn-crear-usuario" onclick="abrirCrearUsuario()">+ Crear Usuario</button>
               <input type="text" id="buscarUsuario" placeholder="Buscar por email o nombre...">
               <select id="filtroEstado">
                 <option value="">Todos los estados</option>
@@ -741,9 +761,95 @@
     </div>
   </div>
 
+  <!-- Modal Crear Usuario -->
+  <div class="modal-overlay" id="modalCrearUsuario">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>Crear Nuevo Usuario</h3>
+        <button class="modal-close" onclick="cerrarModal('modalCrearUsuario')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="crearUsuarioError" style="background:#fee2e2;color:#dc2626;padding:10px;border-radius:6px;margin-bottom:15px;display:none;"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nuevoEmail">Email *</label>
+            <input type="email" id="nuevoEmail" placeholder="usuario@empresa.com" required>
+          </div>
+          <div class="form-group">
+            <label for="nuevoPassword">Contraseña *</label>
+            <input type="password" id="nuevoPassword" placeholder="Mínimo 6 caracteres" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nuevoNombre">Nombre Completo *</label>
+            <input type="text" id="nuevoNombre" placeholder="Nombre del usuario" required>
+          </div>
+          <div class="form-group">
+            <label for="nuevoTelefono">Teléfono</label>
+            <input type="tel" id="nuevoTelefono" placeholder="300 123 4567">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nuevoTipoCliente">Tipo de Cliente *</label>
+            <select id="nuevoTipoCliente">
+              <option value="persona_natural">Persona Natural</option>
+              <option value="negocio">Negocio</option>
+              <option value="mayorista">Mayorista</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="nuevoEstadoUsuario">Estado *</label>
+            <select id="nuevoEstadoUsuario">
+              <option value="aprobado">Aprobado</option>
+              <option value="pendiente">Pendiente</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nuevoRazonSocial">Razón Social</label>
+            <input type="text" id="nuevoRazonSocial" placeholder="Empresa S.A.S">
+          </div>
+          <div class="form-group">
+            <label for="nuevoNit">NIT</label>
+            <input type="text" id="nuevoNit" placeholder="900.123.456-7">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="nuevoDireccion">Dirección</label>
+          <input type="text" id="nuevoDireccion" placeholder="Calle 123 # 45-67">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nuevoCiudad">Ciudad</label>
+            <input type="text" id="nuevoCiudad" placeholder="Bogotá">
+          </div>
+          <div class="form-group">
+            <label for="nuevoDepartamento">Departamento</label>
+            <input type="text" id="nuevoDepartamento" placeholder="Cundinamarca">
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalCrearUsuario')">Cancelar</button>
+          <button class="btn-save" id="btnCrearUsuario">Crear Usuario</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import {
       esAdmin,
       obtenerTodosLosUsuarios,
@@ -772,6 +878,7 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
     // Estado
     let usuarios = [];
@@ -894,7 +1001,7 @@
                 <button class="btn-sm btn-approve" onclick="abrirAprobar('${u.uid}')">Aprobar</button>
                 <button class="btn-sm btn-reject" onclick="abrirRechazar('${u.uid}')">Rechazar</button>
               ` : ''}
-              ${u.estado === 'aprobado' ? `
+              ${(u.estado === 'aprobado' || !u.estado) ? `
                 <button class="btn-sm btn-edit" onclick="abrirAprobar('${u.uid}')">Editar</button>
               ` : ''}
             </div>
@@ -948,6 +1055,110 @@
         cerrarModal('modalRechazar');
         mostrarMensaje('Usuario rechazado');
         await cargarUsuarios();
+      }
+    });
+
+    // Abrir modal crear usuario
+    window.abrirCrearUsuario = function() {
+      // Limpiar formulario
+      document.getElementById('nuevoEmail').value = '';
+      document.getElementById('nuevoPassword').value = '';
+      document.getElementById('nuevoNombre').value = '';
+      document.getElementById('nuevoTelefono').value = '';
+      document.getElementById('nuevoTipoCliente').value = 'persona_natural';
+      document.getElementById('nuevoEstadoUsuario').value = 'aprobado';
+      document.getElementById('nuevoRazonSocial').value = '';
+      document.getElementById('nuevoNit').value = '';
+      document.getElementById('nuevoDireccion').value = '';
+      document.getElementById('nuevoCiudad').value = '';
+      document.getElementById('nuevoDepartamento').value = '';
+      document.getElementById('crearUsuarioError').style.display = 'none';
+      document.getElementById('modalCrearUsuario').classList.add('active');
+    };
+
+    // Crear usuario
+    document.getElementById('btnCrearUsuario').addEventListener('click', async () => {
+      const errorDiv = document.getElementById('crearUsuarioError');
+      errorDiv.style.display = 'none';
+
+      const email = document.getElementById('nuevoEmail').value.trim();
+      const password = document.getElementById('nuevoPassword').value;
+      const nombre = document.getElementById('nuevoNombre').value.trim();
+      const telefono = document.getElementById('nuevoTelefono').value.trim();
+      const tipoCliente = document.getElementById('nuevoTipoCliente').value;
+      const estado = document.getElementById('nuevoEstadoUsuario').value;
+      const razonSocial = document.getElementById('nuevoRazonSocial').value.trim();
+      const nit = document.getElementById('nuevoNit').value.trim();
+      const direccion = document.getElementById('nuevoDireccion').value.trim();
+      const ciudad = document.getElementById('nuevoCiudad').value.trim();
+      const departamento = document.getElementById('nuevoDepartamento').value.trim();
+
+      // Validaciones
+      if (!email || !password || !nombre) {
+        errorDiv.textContent = 'Email, contraseña y nombre son obligatorios';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      if (password.length < 6) {
+        errorDiv.textContent = 'La contraseña debe tener al menos 6 caracteres';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      const btn = document.getElementById('btnCrearUsuario');
+      btn.disabled = true;
+      btn.textContent = 'Creando...';
+
+      try {
+        // Crear usuario en Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCredential.user.uid;
+
+        // Crear documento en Firestore
+        const userData = {
+          uid: uid,
+          email: email,
+          nombre: nombre,
+          telefono: telefono,
+          tipo_cliente: tipoCliente,
+          estado: estado,
+          razon_social: razonSocial,
+          nit: nit,
+          direccion: direccion,
+          ciudad: ciudad,
+          departamento: departamento,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          limite_credito: 0,
+          plazo_pago: 0,
+          descuento_adicional: 0
+        };
+
+        if (estado === 'aprobado') {
+          userData.aprobado_en = new Date().toISOString();
+        }
+
+        await setDoc(doc(db, 'usuarios', uid), userData);
+
+        cerrarModal('modalCrearUsuario');
+        mostrarMensaje(`Usuario ${email} creado exitosamente`);
+        await cargarUsuarios();
+      } catch (error) {
+        console.error('Error creando usuario:', error);
+        let mensaje = 'Error al crear usuario';
+        if (error.code === 'auth/email-already-in-use') {
+          mensaje = 'Ya existe un usuario con este email';
+        } else if (error.code === 'auth/invalid-email') {
+          mensaje = 'Email inválido';
+        } else if (error.code === 'auth/weak-password') {
+          mensaje = 'Contraseña muy débil';
+        }
+        errorDiv.textContent = mensaje;
+        errorDiv.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Crear Usuario';
       }
     });
 

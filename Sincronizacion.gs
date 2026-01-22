@@ -719,7 +719,8 @@ function enviarBatchAFirestore(productos) {
 
 /**
  * Convierte un producto al formato Firestore fields
- * No incluye imagen_principal si está vacío (para no sobrescribir existente)
+ * No incluye campos protegidos si están vacíos (para no sobrescribir valores existentes)
+ * Campos protegidos: imagen_principal, ficha_tecnica_url, imagenes, total_imagenes
  */
 function convertirProductoAFields(producto) {
   const timestamp = new Date().toISOString();
@@ -728,18 +729,25 @@ function convertirProductoAFields(producto) {
     cod_interno: { stringValue: String(producto.cod_interno) },
     titulo: { stringValue: String(producto.titulo || '') },
     cantidad: { integerValue: String(producto.cantidad || 0) },
-    p_real: { doubleValue: producto.p_real || 0 },
-    p_corriente: { doubleValue: producto.p_corriente || 0 },
+    precio_mayorista: { doubleValue: producto.precio_mayorista || 0 },
+    precio_negocio: { doubleValue: producto.precio_negocio || 0 },
+    precio_persona_natural: { doubleValue: producto.precio_persona_natural || 0 },
+    precio_lista: { doubleValue: producto.precio_lista || 0 },
+    embalaje: { integerValue: String(producto.embalaje || 1) },
+    peso: { doubleValue: producto.peso || 0 },
     impuesto: { doubleValue: producto.impuesto || 0.19 },
     ean: { stringValue: String(producto.ean || '') },
     marca: { stringValue: String(producto.marca || '') },
-    laboratorio: { stringValue: String(producto.laboratorio || '') },
-    indicacion: { stringValue: String(producto.indicacion || '') },
-    principio_activo: { stringValue: String(producto.principio_activo || '') },
+    categoria: { stringValue: String(producto.categoria || '') },
     activo: { booleanValue: true },
     sync_at: { timestampValue: timestamp },
     updated_at: { timestampValue: timestamp }
   };
+
+  // Solo incluir ficha_tecnica si tiene valor (no sobrescribir existente)
+  if (producto.ficha_tecnica && producto.ficha_tecnica.trim() !== '') {
+    fields.ficha_tecnica = { stringValue: String(producto.ficha_tecnica) };
+  }
 
   // Solo incluir imagen_principal si tiene valor (no sobrescribir existente)
   if (producto.imagen_principal && producto.imagen_principal.trim() !== '') {

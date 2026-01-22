@@ -6,7 +6,7 @@
   <title>ENAR B2B - Catálogo de Productos</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="css/styles.css?v=5.0">
+  <link rel="stylesheet" href="css/styles.css?v=6.0">
 
   <!-- Select2 para dropdowns con búsqueda -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -110,7 +110,7 @@
               <th>Cantidad</th>
               <th>Producto</th>
               <th>Stock</th>
-              <th id="thPrecioCliente">Tu Precio</th>
+              <th id="thPrecioCliente">P. PERSONAS</th>
               <th>P. Lista</th>
               <th>Categoría</th>
               <th>Marca</th>
@@ -348,7 +348,7 @@
       <div class="modal__body">
         <div class="producto-detalle">
           <div class="producto-detalle__imagen">
-            <img id="modalProductoImagen" src="" alt="Imagen del producto">
+            <img id="modalProductoImagen" src="" alt="Imagen del producto" referrerpolicy="no-referrer">
             <div id="modalProductoSinImagen" class="producto-detalle__sin-imagen" style="display: none;">
               Sin imagen disponible
             </div>
@@ -363,20 +363,8 @@
               <span id="modalProductoSku" class="producto-detalle__valor"></span>
             </div>
             <div class="producto-detalle__campo">
-              <span class="producto-detalle__label">Laboratorio:</span>
-              <span id="modalProductoLab" class="producto-detalle__valor"></span>
-            </div>
-            <div class="producto-detalle__campo">
               <span class="producto-detalle__label">Marca:</span>
               <span id="modalProductoMarca" class="producto-detalle__valor"></span>
-            </div>
-            <div class="producto-detalle__campo">
-              <span class="producto-detalle__label">Principio Activo:</span>
-              <span id="modalProductoPrincipio" class="producto-detalle__valor"></span>
-            </div>
-            <div class="producto-detalle__campo">
-              <span class="producto-detalle__label">Indicación:</span>
-              <span id="modalProductoIndicacion" class="producto-detalle__valor"></span>
             </div>
             <div class="producto-detalle__campo">
               <span class="producto-detalle__label">EAN:</span>
@@ -388,11 +376,11 @@
             </div>
             <div class="producto-detalle__precios">
               <div class="producto-detalle__precio">
-                <span class="producto-detalle__label">Precio:</span>
+                <span id="modalPrecioLabel" class="producto-detalle__label">Tu Precio:</span>
                 <span id="modalProductoPrecio" class="producto-detalle__valor producto-detalle__valor--precio"></span>
               </div>
               <div class="producto-detalle__precio-regular">
-                <span class="producto-detalle__label">P. Regular:</span>
+                <span class="producto-detalle__label">P. Lista:</span>
                 <span id="modalProductoPrecioReg" class="producto-detalle__valor"></span>
               </div>
             </div>
@@ -402,6 +390,11 @@
               <button id="btnAgregarDesdeModal" class="btn btn--primario">
                 Agregar al carrito
               </button>
+            </div>
+            <div class="producto-detalle__ficha" id="fichaContainer" style="display: none;">
+              <a id="btnDescargarFicha" href="#" target="_blank" class="btn btn--secundario btn--ficha">
+                📄 Descargar Ficha Técnica
+              </a>
             </div>
           </div>
         </div>
@@ -422,7 +415,7 @@
       <!-- Imagen principal -->
       <div class="galeria__principal">
         <button id="btnGaleriaPrev" class="galeria__nav galeria__nav--prev">&#8249;</button>
-        <img id="galeriaImagenPrincipal" src="" alt="Imagen del producto" class="galeria__imagen-principal">
+        <img id="galeriaImagenPrincipal" src="" alt="Imagen del producto" class="galeria__imagen-principal" referrerpolicy="no-referrer">
         <button id="btnGaleriaNext" class="galeria__nav galeria__nav--next">&#8250;</button>
       </div>
 
@@ -441,7 +434,7 @@
   <script type="module" src="js/utils.js"></script>
   <script type="module" src="js/carrito.js"></script>
   <script type="module" src="js/cotizacion.js"></script>
-  <script type="module" src="js/productos.js"></script>
+  <script type="module" src="js/productos.js?v=7"></script>
 
   <!-- Auth Navigation Handler -->
   <script type="module">

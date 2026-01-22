@@ -37,7 +37,7 @@ import {
   getEtiquetaTipoCliente,
   onUsuarioChange,
   estaAutenticado
-} from './usuario.js';
+} from './usuario.js?v=2';
 
 // ============================================
 // CONSTANTES Y ESTADO
@@ -99,10 +99,7 @@ const elementos = {
   modalProductoImagen: document.getElementById('modalProductoImagen'),
   modalProductoSinImagen: document.getElementById('modalProductoSinImagen'),
   modalProductoSku: document.getElementById('modalProductoSku'),
-  modalProductoLab: document.getElementById('modalProductoLab'),
   modalProductoMarca: document.getElementById('modalProductoMarca'),
-  modalProductoPrincipio: document.getElementById('modalProductoPrincipio'),
-  modalProductoIndicacion: document.getElementById('modalProductoIndicacion'),
   modalProductoEan: document.getElementById('modalProductoEan'),
   modalProductoStock: document.getElementById('modalProductoStock'),
   modalProductoPrecio: document.getElementById('modalProductoPrecio'),
@@ -158,6 +155,12 @@ async function cargarTodosLosProductos() {
 
     snapshot.forEach(doc => {
       const producto = { id: doc.id, ...doc.data() };
+
+      // Filtrar registros de encabezado que se importaron por error
+      if (producto.cod_interno === 'COD_INTERNO' || producto.titulo === 'TITULO') {
+        return; // Saltar este registro
+      }
+
       estado.productos.push(producto);
 
       // Agregar categoría y marca a las listas únicas
@@ -476,6 +479,7 @@ function renderizarFila(producto) {
       <div class="imagen-container" data-producto='${productoDataStr}'>
         <img src="${imagenUrl}" alt="${tituloTexto}"
              class="tabla-thumbnail ${tieneMultiples ? 'tabla-thumbnail-clickeable' : ''}"
+             referrerpolicy="no-referrer"
              onerror="this.style.display='none';this.parentElement.querySelector('.tabla-placeholder').style.display='flex';">
         <div class="tabla-placeholder" style="display:none;">Sin img</div>
         ${badgeHtml}
@@ -507,12 +511,12 @@ function renderizarFila(producto) {
       <td><span class="${stockClass}">${cantidadStock}</span></td>
       <td class="td-precio-cliente">${formatearPrecio(precioCliente)}</td>
       <td class="td-precio-lista ${tieneDescuento ? 'precio-tachado' : ''}">${formatearPrecio(precioLista)}</td>
-      <td>${producto.categoria || '-'}</td>
       <td>${producto.marca || '-'}</td>
+      <td>${producto.categoria || '-'}</td>
       <td class="td-imagen">${imagenHtml}</td>
       <td>
         <button class="btn-ver-detalles" data-producto='${productoDataStr}'>
-          Ver
+          Detalles
         </button>
       </td>
     </tr>
@@ -635,16 +639,34 @@ function abrirModalProducto(producto) {
   // Llenar datos del modal
   elementos.modalProductoTitulo.textContent = producto.titulo || 'Sin nombre';
   elementos.modalProductoSku.textContent = producto.cod_interno || '-';
-  elementos.modalProductoLab.textContent = producto.laboratorio || '-';
   elementos.modalProductoMarca.textContent = producto.marca || '-';
-  elementos.modalProductoPrincipio.textContent = producto.principio_activo || '-';
-  elementos.modalProductoIndicacion.textContent = producto.indicacion || '-';
   elementos.modalProductoEan.textContent = producto.ean || '-';
   elementos.modalProductoStock.textContent = producto.cantidad || 0;
-  elementos.modalProductoPrecio.textContent = formatearPrecio(producto.p_real);
-  elementos.modalProductoPrecioReg.textContent = formatearPrecio(producto.p_corriente);
+
+  // Precios según tipo de cliente
+  const precioCliente = obtenerPrecioCliente(producto);
+  const precioLista = producto.precio_lista || 0;
+  elementos.modalProductoPrecio.textContent = formatearPrecio(precioCliente);
+  elementos.modalProductoPrecioReg.textContent = formatearPrecio(precioLista);
+
+  // Actualizar label del precio con tipo de cliente
+  const labelPrecio = document.getElementById('modalPrecioLabel');
+  if (labelPrecio) {
+    labelPrecio.textContent = getEtiquetaTipoCliente() + ':';
+  }
+
   elementos.modalProductoCantidad.value = 1;
   elementos.modalProductoCantidad.max = producto.cantidad || 0;
+
+  // Ficha técnica - mostrar botón si existe
+  const fichaContainer = document.getElementById('fichaContainer');
+  const btnDescargarFicha = document.getElementById('btnDescargarFicha');
+  if (producto.ficha_tecnica_url) {
+    fichaContainer.style.display = 'block';
+    btnDescargarFicha.href = producto.ficha_tecnica_url;
+  } else {
+    fichaContainer.style.display = 'none';
+  }
 
   // Imagen - con soporte para galería
   const totalImagenes = producto.total_imagenes || (producto.imagenes ? producto.imagenes.length : 0);
@@ -680,13 +702,16 @@ function abrirModalProducto(producto) {
       elementos.modalImagenOverlay.style.display = 'none';
     };
   } else if (esUrlImagenValida(producto.imagen_principal)) {
-    // Una sola imagen: mostrar sin galería
+    // Una sola imagen: clickeable para ampliar en modal
     elementos.modalProductoImagen.src = producto.imagen_principal;
     elementos.modalProductoImagen.style.display = 'block';
-    elementos.modalProductoImagen.style.cursor = 'default';
-    elementos.modalProductoImagen.classList.remove('modal-imagen-galeria');
-    elementos.modalProductoImagen.title = '';
-    elementos.modalProductoImagen.onclick = null;
+    elementos.modalProductoImagen.style.cursor = 'zoom-in';
+    elementos.modalProductoImagen.classList.add('modal-imagen-ampliable');
+    elementos.modalProductoImagen.title = 'Click para ampliar';
+    elementos.modalProductoImagen.onclick = () => {
+      // Usar el modal de galería para mostrar imagen ampliada
+      abrirGaleria(producto);
+    };
     elementos.modalProductoSinImagen.style.display = 'none';
     elementos.modalProductoImagen.onerror = () => {
       elementos.modalProductoImagen.style.display = 'none';
@@ -1007,7 +1032,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Actualizar cabecera de la tabla con el tipo de cliente
     const thPrecio = document.getElementById('thPrecioCliente');
     if (thPrecio) {
-      thPrecio.textContent = `Tu Precio (${getEtiquetaTipoCliente()})`;
+      thPrecio.textContent = getEtiquetaTipoCliente();
     }
 
     // Re-renderizar tabla si ya hay productos cargados

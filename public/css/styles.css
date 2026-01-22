@@ -491,6 +491,27 @@ body {
   background-color: #5a6268;
 }
 
+/* Botón Ficha Técnica */
+.producto-detalle__ficha {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.btn--ficha {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn--ficha:hover {
+  background-color: #138496;
+  color: white;
+}
+
 /* Botón Limpiar filtros */
 .btn-limpiar {
   padding: 6px 14px;
