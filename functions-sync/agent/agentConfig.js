@@ -1,25 +1,25 @@
 /**
  * Configuración del Agente IA - Asesor Comercial ENAR
- * Integra Vertex AI + Gemini + MCP Tools
+ * Integra Google AI Studio + Gemini + Tools
+ * v2.0 - 2026-02-03 - Migrado a @google/generative-ai SDK
  */
 
-const { VertexAI } = require('@google-cloud/aiplatform');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const SYSTEM_PROMPT = require('./systemPrompt');
 const { toolDefinitions, executeTool } = require('./tools');
 
-// Configuración del proyecto
-const PROJECT_ID = 'enar-b2b';
-const LOCATION = 'us-central1';
-const MODEL = 'gemini-1.5-pro';
+// API Key de Google AI Studio
+const API_KEY = 'AIzaSyA1jpW6PwFY8hXDQURDYrDTxlQPVkW71MM';
+const MODEL = 'gemini-2.5-flash';
 
-// Inicializar Vertex AI
-const vertexAI = new VertexAI({
-  project: PROJECT_ID,
-  location: LOCATION
-});
+// Límite de historial para optimizar costos (últimos N mensajes)
+const MAX_HISTORY_MESSAGES = 10;
+
+// Inicializar Google Generative AI
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Obtener modelo generativo
-const generativeModel = vertexAI.getGenerativeModel({
+const generativeModel = genAI.getGenerativeModel({
   model: MODEL,
   systemInstruction: SYSTEM_PROMPT,
   generationConfig: {
@@ -34,12 +34,19 @@ const generativeModel = vertexAI.getGenerativeModel({
  *
  * @param {string} mensaje - Mensaje del usuario
  * @param {Array} historial - Historial de la conversación (opcional)
+ * @param {string} userId - ID del usuario autenticado (para crear órdenes)
  * @returns {Promise<Object>} Respuesta del agente y herramientas usadas
  */
-async function procesarMensaje(mensaje, historial = []) {
+async function procesarMensaje(mensaje, historial = [], userId = null) {
+  // Guardar userId en contexto global para las herramientas
+  global.currentUserId = userId;
+
   try {
+    // Limitar historial para optimizar costos (últimos N mensajes)
+    const historialLimitado = historial.slice(-MAX_HISTORY_MESSAGES);
+
     // Construir contenido del chat
-    const chatHistory = historial.map(msg => ({
+    const chatHistory = historialLimitado.map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }]
     }));
@@ -58,15 +65,23 @@ async function procesarMensaje(mensaje, historial = []) {
     let finalText = '';
 
     // Procesar respuesta y llamadas a herramientas
-    while (response.functionCalls && response.functionCalls.length > 0) {
+    let functionCalls = response.functionCalls ? response.functionCalls() : null;
+
+    while (functionCalls && functionCalls.length > 0) {
       const functionResponses = [];
 
       // Ejecutar cada herramienta solicitada
-      for (const call of response.functionCalls) {
+      for (const call of functionCalls) {
         console.log(`Ejecutando herramienta: ${call.name}`, call.args);
 
         try {
-          const toolResult = await executeTool(call.name, call.args);
+          // Inyectar user_id automáticamente para crear_orden
+          let args = call.args;
+          if (call.name === 'crear_orden' && userId) {
+            args = { ...args, user_id: userId };
+          }
+
+          const toolResult = await executeTool(call.name, args);
 
           toolCalls.push({
             tool: call.name,
@@ -94,17 +109,11 @@ async function procesarMensaje(mensaje, historial = []) {
       // Enviar resultados de herramientas de vuelta al modelo
       result = await chat.sendMessage(functionResponses);
       response = result.response;
+      functionCalls = response.functionCalls ? response.functionCalls() : null;
     }
 
     // Obtener texto final de la respuesta
-    if (response.candidates && response.candidates[0]) {
-      const candidate = response.candidates[0];
-      if (candidate.content && candidate.content.parts) {
-        finalText = candidate.content.parts
-          .map(part => part.text || '')
-          .join('');
-      }
-    }
+    finalText = response.text();
 
     return {
       respuesta: finalText || 'Lo siento, no pude generar una respuesta.',

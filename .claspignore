@@ -5,3 +5,7 @@ functions-sync/**
 firebase.json
 .firebaserc
 .gitignore
+ENAR_MIGRACION/**
+*.md
+*.json
+.claude/**

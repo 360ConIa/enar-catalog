@@ -224,9 +224,19 @@ body {
   font-size: 13px;
   font-weight: 500;
   padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #D9232D;
   border-radius: 6px;
   white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Clases para ocultar/mostrar navegación (con !important para sobreescribir Bootstrap) */
+.nav-hidden {
+  display: none !important;
+}
+
+.nav-visible {
+  display: flex !important;
 }
 
 /* Header responsive */
@@ -323,7 +333,7 @@ body {
    SELECT2 - ESTILOS PERSONALIZADOS
    ============================================ */
 .select2-container {
-  width: 220px !important;
+  width: 100% !important;
 }
 
 .select2-container--default .select2-selection--single {
@@ -448,7 +458,131 @@ body {
 }
 
 .input-busqueda::placeholder {
-  color: var(--color-texto-claro);
+  color: #bbb;
+  font-style: italic;
+}
+
+/* Contenedor de búsqueda/filtro con botón limpiar */
+.busqueda-container,
+.filtro-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.busqueda-container .input-busqueda {
+  padding-left: 28px; /* Espacio para el botón X */
+  padding-right: 32px; /* Espacio para el ícono de ayuda */
+}
+
+/* Ícono de ayuda en búsqueda */
+.busqueda-ayuda {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: help;
+  z-index: 5;
+}
+
+.busqueda-ayuda-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #999;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  font-style: italic;
+  font-family: Georgia, serif;
+  transition: background-color 0.2s;
+}
+
+.busqueda-ayuda:hover .busqueda-ayuda-icono {
+  background-color: #666;
+}
+
+/* Tooltip personalizado (sin duplicar con title nativo) */
+.busqueda-ayuda[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background-color: #333;
+  color: white;
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: 6px;
+  white-space: normal;
+  width: 280px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.busqueda-ayuda[data-tooltip]:hover::before {
+  content: '';
+  position: absolute;
+  right: 4px;
+  top: 100%;
+  margin-top: 2px;
+  border: 6px solid transparent;
+  border-bottom-color: #333;
+  z-index: 101;
+}
+
+/* Botón X limpiar - estilo unificado */
+.btn-limpiar-campo {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: none;
+  background-color: #dc3545;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, transform 0.2s;
+  z-index: 10;
+  padding: 0;
+}
+
+.btn-limpiar-campo:hover {
+  background-color: #c82333;
+  transform: translateY(-50%) scale(1.15);
+}
+
+.btn-limpiar-campo:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Ajuste para Select2 con botón limpiar dentro */
+.filtro-container .select2-container {
+  width: 100% !important;
+}
+
+/* Espacio interno en Select2 para el botón X */
+.filtro-container .select2-container .select2-selection--single {
+  padding-left: 26px;
+}
+
+/* Botón limpiar en filtros - dentro de la caja */
+.filtro-container .btn-limpiar-campo {
+  left: 8px;
+  z-index: 15;
 }
 
 /* Filtro ofertas */
@@ -511,6 +645,39 @@ body {
   background-color: #138496;
   color: white;
 }
+
+/* Modal Ficha Técnica - Visor PDF */
+.modal__contenido--ficha {
+  width: 50% !important;
+  max-width: 50% !important;
+  height: 90vh !important;
+  max-height: 90vh !important;
+  margin: auto !important;
+  border-radius: 8px !important;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 992px) {
+  .modal__contenido--ficha {
+    width: 90% !important;
+    max-width: 90% !important;
+  }
+}
+
+.modal__body--ficha {
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ficha-viewer {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background-color: #f5f5f5;
+}
+
 
 /* Botón Limpiar filtros */
 .btn-limpiar {
@@ -1130,6 +1297,34 @@ body {
   border-top: 2px solid var(--color-primario);
 }
 
+.carrito-resumen__conteo {
+  display: flex;
+  justify-content: center;
+  gap: var(--espaciado-md);
+  margin-bottom: var(--espaciado-md);
+  padding: var(--espaciado-sm) var(--espaciado-md);
+  background-color: var(--color-fondo);
+  border-radius: var(--radio-borde-sm);
+  font-size: 0.9rem;
+  color: var(--color-texto-claro);
+}
+
+.carrito-resumen__conteo strong {
+  color: var(--color-primario);
+  font-size: 1.1rem;
+}
+
+.carrito-resumen__separador {
+  color: var(--color-borde);
+}
+
+.carrito-item__marca {
+  font-size: 0.75rem;
+  color: var(--color-texto-claro);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 /* ============================================
    FORMULARIO COTIZACIÓN
    ============================================ */
@@ -1353,9 +1548,15 @@ body {
 
 @media (min-width: 992px) {
   .filtros__grid--tabla {
-    grid-template-columns: 1fr auto auto auto auto;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
     gap: 12px;
     align-items: end;
+  }
+
+  .filtros__categoria,
+  .filtros__marca,
+  .filtros__ofertas {
+    min-width: 180px;
   }
 
   .filtros__acciones {
@@ -1420,6 +1621,44 @@ body {
   white-space: nowrap;
 }
 
+/* Cabeceras ordenables */
+.th-ordenable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+}
+
+.th-ordenable:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.th-ordenable .sort-icon {
+  display: inline-block;
+  margin-left: 4px;
+  opacity: 0.5;
+  font-size: 0.7rem;
+}
+
+.th-ordenable .sort-icon::after {
+  content: '⇅';
+}
+
+.th-ordenable.sort-asc .sort-icon {
+  opacity: 1;
+}
+
+.th-ordenable.sort-asc .sort-icon::after {
+  content: '▲';
+}
+
+.th-ordenable.sort-desc .sort-icon {
+  opacity: 1;
+}
+
+.th-ordenable.sort-desc .sort-icon::after {
+  content: '▼';
+}
+
 .tabla-productos td {
   padding: var(--espaciado-sm) var(--espaciado-md);
   font-size: 0.9rem;
@@ -1427,17 +1666,20 @@ body {
   vertical-align: middle;
 }
 
-/* Filas alternas (zebra striping) */
-.tabla-productos tbody tr:nth-child(odd) {
-  background-color: #f9f9f9;
+/* Filas alternas (zebra striping) - aplicado a celdas para sobrescribir Bootstrap */
+#tablaProductos tbody tr:nth-child(odd) td,
+.tabla-productos tbody tr:nth-child(odd) td {
+  background-color: #e3eef5 !important;
 }
 
-.tabla-productos tbody tr:nth-child(even) {
-  background-color: white;
+#tablaProductos tbody tr:nth-child(even) td,
+.tabla-productos tbody tr:nth-child(even) td {
+  background-color: #ffffff !important;
 }
 
-.tabla-productos tbody tr:hover {
-  background-color: #fde8e8;
+#tablaProductos tbody tr:hover td,
+.tabla-productos tbody tr:hover td {
+  background-color: #fde8e8 !important;
 }
 
 .tabla-productos__fila:hover {
@@ -1838,21 +2080,46 @@ body {
 #tablaProductos th:nth-child(9) { width: 70px; }   /* Imagen */
 #tablaProductos th:nth-child(10) { width: 80px; }  /* Acciones */
 
-/* Botón ver detalles */
+/* Columna acciones */
+.td-acciones {
+  text-align: center;
+  width: 50px;
+}
+
+/* Botón ver detalles - Ícono tres puntos */
 .btn-ver-detalles {
-  background-color: #1e3a8a;
-  color: white;
+  background-color: transparent;
   border: none;
-  padding: 6px 16px;
-  border-radius: 4px;
+  padding: 0;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.2s;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, transform 0.15s;
 }
 
 .btn-ver-detalles:hover {
-  background-color: #152a66;
+  background-color: var(--color-primario);
+  transform: scale(1.1);
+}
+
+.btn-ver-detalles:active {
+  transform: scale(0.95);
+}
+
+.icono-tres-puntos {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1e3a8a;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.btn-ver-detalles:hover .icono-tres-puntos {
+  color: white;
 }
 
 /* Input cantidad en tabla */
@@ -1914,6 +2181,19 @@ body {
 }
 
 /* ============================================
+   CÓDIGO INTERNO
+   ============================================ */
+.td-codigo {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.8rem;
+  color: #333;
+  background-color: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* ============================================
    PRECIOS - CLIENTE Y LISTA
    ============================================ */
 .td-precio-cliente {
@@ -1936,22 +2216,27 @@ body {
    IMAGEN THUMBNAIL EN TABLA
    ============================================ */
 .td-imagen {
-  width: 60px;
-  text-align: center;
+  width: 70px;
+  text-align: center !important;
   padding: 4px !important;
+  vertical-align: middle;
 }
 
 .tabla-thumbnail {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   object-fit: contain;
   border-radius: 4px;
-  background-color: #f5f5f5;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  display: block;
+  margin: 0 auto;
 }
 
 .tabla-placeholder {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1960,6 +2245,7 @@ body {
   font-size: 0.65rem;
   border-radius: 4px;
   text-align: center;
+  margin: 0 auto;
 }
 
 /* ============================================
@@ -1967,7 +2253,9 @@ body {
    ============================================ */
 .imagen-container {
   position: relative;
-  display: inline-block;
+  display: block;
+  margin: 0 auto;
+  width: fit-content;
   cursor: pointer;
 }
 
@@ -2317,5 +2605,407 @@ body {
   .galeria__titulo {
     font-size: 1rem;
     padding: 0 30px;
+  }
+}
+
+/* ============================================
+   BOOTSTRAP 5 - ESTILOS PERSONALIZADOS ENAR
+   ============================================ */
+
+/* Header/Navbar con gradiente ENAR */
+.navbar.header-principal {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+  padding: 0.75rem 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.navbar.header-principal::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #D9232D, #ff4757, #D9232D);
+  background-size: 200% 100%;
+  animation: gradientMove 3s ease infinite;
+}
+
+.navbar .logo-img {
+  height: 45px;
+  width: auto;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.navbar .header-titulo {
+  color: white;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.navbar .header-tagline {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+/* Navbar links */
+.navbar-dark .nav-link {
+  color: rgba(255,255,255,0.9) !important;
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem !important;
+}
+
+.navbar-dark .nav-link:hover {
+  color: white !important;
+  background: rgba(255,255,255,0.1);
+  border-radius: 0.375rem;
+}
+
+/* Filtros sticky con fondo rosa ENAR */
+.filtros.controles-tabla {
+  background-color: #fde8e8;
+  border-bottom: 1px solid #f5c6c6;
+  z-index: 1020;
+  padding: 12px 0;
+}
+
+/* Labels de filtros */
+.filtros .filtro-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+@media (max-width: 767.98px) {
+  .filtros .filtro-label {
+    font-size: 0.7rem;
+    margin-bottom: 2px;
+  }
+}
+
+/* Botón limpiar campo - ajustes Bootstrap */
+.filtro-container .btn-limpiar-campo,
+.busqueda-container .btn-limpiar-campo {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+/* Input de búsqueda con espacio para botón X */
+.busqueda-container .form-control {
+  padding-left: 30px;
+  padding-right: 35px;
+}
+
+/* Tabla responsive */
+.tabla-productos {
+  min-width: 600px;
+  margin-bottom: 0;
+}
+
+/* Header de tabla con gradiente azul ENAR */
+.tabla-productos thead,
+.table.tabla-productos thead,
+table.tabla-productos thead,
+.tabla-productos > thead,
+.tabla-productos thead tr {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+}
+
+.tabla-productos thead th,
+.table.tabla-productos thead th,
+table.tabla-productos > thead > tr > th,
+.tabla-productos > thead > tr > th {
+  color: white !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 12px 8px;
+  white-space: nowrap;
+  border: none !important;
+  border-bottom: none !important;
+  vertical-align: middle;
+  letter-spacing: 0.5px;
+}
+
+/* Asegurar que Bootstrap no sobrescriba el header */
+.table.tabla-productos > thead {
+  border-color: transparent !important;
+}
+
+.table.tabla-productos > :not(caption) > * > * {
+  border-bottom-width: 0;
+}
+
+/* Clase para mantener case original (no uppercase) */
+.text-normal-case {
+  text-transform: none !important;
+}
+
+/* Botón Limpiar filtros - estilo corporativo */
+#btnLimpiarFiltros {
+  background-color: #D9232D;
+  border-color: #D9232D;
+  color: white;
+  font-weight: 500;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+#btnLimpiarFiltros:hover {
+  background-color: #b91c25;
+  border-color: #b91c25;
+}
+
+#btnLimpiarFiltros:focus {
+  box-shadow: 0 0 0 0.2rem rgba(217, 35, 45, 0.4);
+}
+
+#btnLimpiarFiltros:active {
+  background-color: #9a171f;
+  border-color: #9a171f;
+}
+
+.tabla-productos tbody td {
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  vertical-align: middle;
+}
+
+/* Columnas específicas - anchos */
+.th-cantidad { width: 70px; text-align: center; }
+.th-imagen { width: 50px; text-align: center; }
+.th-acciones { width: 50px; text-align: center; }
+.th-producto { min-width: 150px; }
+
+/* Inputs de cantidad en tabla */
+.input-cantidad-tabla {
+  width: 60px;
+  text-align: center;
+  padding: 0.25rem;
+  font-size: 0.875rem;
+}
+
+/* Thumbnails en tabla */
+.tabla-thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 0;
+}
+
+/* Botón ver detalles (tres puntos) */
+.btn-ver-detalles {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: #1e3a8a;
+  font-size: 1.25rem;
+  line-height: 1;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-ver-detalles:hover {
+  background-color: #D9232D;
+  color: white;
+}
+
+/* Carrito flotante */
+.carrito-flotante {
+  position: fixed !important;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 56px;
+  height: 56px;
+  z-index: 1050;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+}
+
+/* Paginación */
+.paginacion-container {
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.input-pagina {
+  text-align: center;
+}
+
+/* Botones de paginación con colores corporativos - ROJO por defecto */
+.paginacion-controles .btn-outline-secondary {
+  border-color: #D9232D;
+  color: #D9232D;
+  background-color: transparent;
+}
+
+.paginacion-controles .btn-outline-secondary:hover {
+  background-color: #D9232D;
+  border-color: #D9232D;
+  color: white;
+}
+
+.paginacion-controles .btn-outline-secondary:focus {
+  box-shadow: 0 0 0 0.2rem rgba(217, 35, 45, 0.25);
+  border-color: #D9232D;
+}
+
+.paginacion-controles .btn-outline-secondary:disabled {
+  border-color: #f5a5a9;
+  color: #f5a5a9;
+  background-color: transparent;
+}
+
+/* Select por página */
+.paginacion-controles .form-select:focus {
+  border-color: #D9232D;
+  box-shadow: 0 0 0 0.2rem rgba(217, 35, 45, 0.25);
+}
+
+/* Select2 con Bootstrap 5 */
+.select2-container--bootstrap-5 .select2-selection {
+  border-color: #dee2e6;
+}
+
+.select2-container--bootstrap-5.select2-container--focus .select2-selection {
+  border-color: #D9232D;
+  box-shadow: 0 0 0 0.2rem rgba(217, 35, 45, 0.25);
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE FIRST
+   ============================================ */
+
+/* Extra small devices (portrait phones, less than 576px) */
+@media (max-width: 575.98px) {
+  .navbar .logo-img {
+    height: 35px;
+  }
+
+  .navbar .header-titulo {
+    font-size: 1rem;
+  }
+
+  .tabla-productos {
+    min-width: 500px;
+    font-size: 0.8rem;
+  }
+
+  .tabla-productos thead th {
+    font-size: 0.65rem;
+    padding: 0.5rem 0.25rem;
+  }
+
+  .tabla-productos tbody td {
+    padding: 0.35rem 0.25rem;
+  }
+
+  .input-cantidad-tabla {
+    width: 50px;
+    font-size: 0.8rem;
+  }
+
+  .tabla-thumbnail {
+    width: 45px;
+    height: 45px;
+  }
+
+  .btn-ver-detalles {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+
+  .carrito-flotante {
+    bottom: 1rem;
+    right: 1rem;
+    width: 50px;
+    height: 50px;
+  }
+
+  /* Hacer precio más visible en mobile */
+  .td-precio {
+    font-weight: 600;
+    color: #D9232D;
+  }
+}
+
+/* Small devices (landscape phones, 576px and up) */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .tabla-productos {
+    min-width: 550px;
+  }
+}
+
+/* Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .tabla-productos {
+    min-width: 700px;
+  }
+}
+
+/* Large devices (desktops, 992px and up) */
+@media (min-width: 992px) {
+  .tabla-productos {
+    min-width: 900px;
+  }
+
+  .filtros.controles-tabla {
+    padding: 0.75rem 0;
+  }
+}
+
+/* Extra large devices (large desktops, 1200px and up) */
+@media (min-width: 1200px) {
+  .tabla-productos {
+    min-width: 1100px;
+  }
+}
+
+/* Ocultar columnas según tamaño de pantalla (ya usando clases Bootstrap d-*-table-cell) */
+
+/* Estilos para hacer la tabla más legible en tablets */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .tabla-productos tbody td {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Mejoras visuales para touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .btn-ver-detalles {
+    width: 40px;
+    height: 40px;
+  }
+
+  .tabla-productos tbody tr:active {
+    background-color: #fde8e8;
+  }
+
+  .btn-paginacion {
+    min-width: 44px;
+    min-height: 44px;
   }
 }

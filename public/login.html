@@ -4,24 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Iniciar Sesión - ENAR B2B</title>
-  <link rel="stylesheet" href="css/styles.css?v=5.0">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
     body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
       min-height: 100vh;
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+    }
+    .login-card {
+      max-width: 440px;
+      width: 100%;
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
     }
     .login-header {
       background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-      padding: 15px 20px;
+      color: white;
+      padding: 2rem;
       text-align: center;
       position: relative;
     }
@@ -31,117 +39,84 @@
       bottom: 0;
       left: 0;
       right: 0;
-      height: 3px;
+      height: 4px;
       background: #D9232D;
     }
-    .login-header h1 {
-      color: white;
-      font-size: 24px;
-      font-weight: 700;
+    .login-header img {
+      max-width: 100px;
+      margin-bottom: 1rem;
     }
-    .login-container {
-      flex: 1;
+    .login-header h4 {
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .login-header p {
+      opacity: 0.9;
+      font-size: 0.9rem;
+    }
+    .login-body {
+      padding: 2rem;
+    }
+    .form-control {
+      padding: 0.75rem 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 15px;
+    }
+    .form-control:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.15);
+    }
+    .form-label {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+    .btn-login {
+      background: linear-gradient(135deg, #D9232D 0%, #ff6b6b 100%);
+      border: none;
+      padding: 0.85rem;
+      font-weight: 600;
+      font-size: 16px;
+      transition: all 0.3s;
+      color: white;
+      border-radius: 10px;
+    }
+    .btn-login:hover {
+      background: linear-gradient(135deg, #c82333 0%, #ff5252 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(220, 53, 69, 0.4);
+      color: white;
+    }
+    .btn-login:disabled {
+      background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+      transform: none;
+      box-shadow: none;
+    }
+    .btn-google {
+      background: white;
+      border: 2px solid #e0e0e0;
+      padding: 0.75rem;
+      font-weight: 500;
+      transition: all 0.3s;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 40px 20px;
+      gap: 10px;
     }
-    .login-card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 420px;
-      padding: 40px;
+    .btn-google:hover {
+      background: #f8f9fa;
+      border-color: #ccc;
     }
-    .login-title {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .login-title h2 {
-      font-size: 28px;
-      font-weight: 700;
-      color: #1e3a8a;
-      margin-bottom: 8px;
-    }
-    .login-title p {
-      color: #666;
-      font-size: 14px;
-    }
-    .logo-container {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .logo-container img {
-      height: 60px;
-      width: auto;
-    }
-    .form-group {
-      margin-bottom: 20px;
-    }
-    .form-group label {
-      display: block;
-      font-size: 14px;
-      font-weight: 500;
-      color: #333;
-      margin-bottom: 8px;
-    }
-    .form-group input {
-      width: 100%;
-      padding: 14px 16px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 15px;
-      font-family: 'Poppins', sans-serif;
-      transition: all 0.3s ease;
-    }
-    .form-group input:focus {
-      outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-    .form-group input::placeholder {
-      color: #aaa;
-    }
-    .forgot-password {
-      text-align: right;
-      margin-top: -10px;
-      margin-bottom: 20px;
-    }
-    .forgot-password a {
-      color: #D9232D;
-      font-size: 13px;
-      text-decoration: none;
-    }
-    .forgot-password a:hover {
-      text-decoration: underline;
-    }
-    .btn-login {
-      width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 600;
-      font-family: 'Poppins', sans-serif;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-    .btn-login:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 20px rgba(30, 58, 138, 0.4);
-    }
-    .btn-login:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-      transform: none;
+    .btn-google svg {
+      width: 20px;
+      height: 20px;
     }
     .divider {
       display: flex;
       align-items: center;
-      margin: 25px 0;
+      margin: 1.5rem 0;
     }
     .divider::before,
     .divider::after {
@@ -152,214 +127,82 @@
     }
     .divider span {
       padding: 0 15px;
-      color: #999;
+      color: #888;
       font-size: 13px;
     }
-    .register-link {
-      text-align: center;
-    }
-    .register-link p {
-      color: #666;
-      font-size: 14px;
-    }
-    .register-link a {
+    .forgot-link {
       color: #D9232D;
-      font-weight: 600;
       text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
     }
-    .register-link a:hover {
+    .forgot-link:hover {
+      color: #a71d2a;
       text-decoration: underline;
     }
-    .message {
-      padding: 12px 16px;
-      border-radius: 8px;
-      margin-bottom: 20px;
+    .register-link {
+      color: #D9232D;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .register-link:hover {
+      color: #a71d2a;
+      text-decoration: underline;
+    }
+    .back-link {
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .back-link:hover {
+      color: white;
+    }
+    .alert {
+      border-radius: 10px;
       font-size: 14px;
-      display: none;
     }
-    .message.error {
-      background: #fee2e2;
-      color: #dc2626;
-      border: 1px solid #fecaca;
-      display: block;
-    }
-    .message.success {
-      background: #dcfce7;
-      color: #16a34a;
-      border: 1px solid #bbf7d0;
-      display: block;
-    }
-    .message.warning {
-      background: #fef3c7;
-      color: #d97706;
-      border: 1px solid #fde68a;
-      display: block;
-    }
-    .message.info {
-      background: #dbeafe;
-      color: #2563eb;
-      border: 1px solid #bfdbfe;
-      display: block;
-    }
-    /* Modal de recuperación de contraseña */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-overlay.active {
-      display: flex;
-    }
+    /* Modal */
     .modal-content {
-      background: white;
-      border-radius: 12px;
-      padding: 30px;
-      max-width: 400px;
-      width: 90%;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+      border-radius: 16px;
+      border: none;
     }
     .modal-header {
-      margin-bottom: 20px;
-    }
-    .modal-header h3 {
-      font-size: 20px;
-      font-weight: 600;
-      color: #1e3a8a;
-    }
-    .modal-header p {
-      color: #666;
-      font-size: 14px;
-      margin-top: 5px;
-    }
-    .modal-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    .btn-cancel {
-      flex: 1;
-      padding: 12px;
-      background: #f3f4f6;
-      color: #374151;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      border-radius: 16px 16px 0 0;
       border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
+    }
+    .modal-header .btn-close {
+      filter: brightness(0) invert(1);
     }
     .btn-send {
-      flex: 1;
-      padding: 12px;
       background: #D9232D;
-      color: white;
       border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
+      color: white;
     }
-    .loader {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-right: 8px;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    .back-to-catalog {
-      text-align: center;
-      margin-top: 20px;
-    }
-    .back-to-catalog a {
-      color: #666;
-      font-size: 13px;
-      text-decoration: none;
-    }
-    .back-to-catalog a:hover {
-      color: #1e3a8a;
-    }
-    .btn-google {
-      width: 100%;
-      padding: 14px;
-      background: white;
-      color: #333;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: 500;
-      font-family: 'Poppins', sans-serif;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-    .btn-google:hover {
-      background: #f8f9fa;
-      border-color: #ccc;
-    }
-    .btn-google svg {
-      width: 20px;
-      height: 20px;
-    }
-    .divider-or {
-      display: flex;
-      align-items: center;
-      margin: 20px 0;
-    }
-    .divider-or::before,
-    .divider-or::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: #e0e0e0;
-    }
-    .divider-or span {
-      padding: 0 15px;
-      color: #999;
-      font-size: 13px;
+    .btn-send:hover {
+      background: #c82333;
+      color: white;
     }
   </style>
 </head>
 <body>
-  <!-- Header -->
-  <header class="login-header">
-    <h1>ENAR B2B</h1>
-  </header>
+  <div class="login-card">
+    <div class="login-header">
+      <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+      <h4>ENAR B2B</h4>
+      <p class="mb-0">Plataforma de Pedidos Empresariales</p>
+    </div>
 
-  <!-- Login Container -->
-  <div class="login-container">
-    <div class="login-card">
-      <!-- Logo -->
-      <div class="logo-container">
-        <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+    <div class="login-body">
+      <!-- Mensaje de error/éxito -->
+      <div id="message" class="alert" style="display: none;">
+        <i class="bi bi-exclamation-circle me-2"></i>
+        <span id="message-text"></span>
       </div>
 
-      <!-- Title -->
-      <div class="login-title">
-        <h2>Iniciar Sesión</h2>
-        <p>Accede a tu cuenta B2B</p>
-      </div>
-
-      <!-- Message -->
-      <div id="message" class="message"></div>
-
-      <!-- Google Sign In -->
-      <button type="button" class="btn-google" id="googleBtn">
+      <!-- Botón Google -->
+      <button type="button" class="btn btn-google w-100 mb-3" id="googleBtn">
         <svg viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -369,93 +212,102 @@
         Continuar con Google
       </button>
 
-      <div class="divider-or">
+      <div class="divider">
         <span>o usa tu email</span>
       </div>
 
-      <!-- Login Form -->
+      <!-- Formulario de Login -->
       <form id="loginForm">
-        <div class="form-group">
-          <label for="email">Correo Electrónico</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            required
-            placeholder="tu@empresa.com"
-            autocomplete="email"
-          >
+        <div class="mb-3">
+          <label class="form-label">
+            <i class="bi bi-envelope me-2"></i>Correo Electrónico
+          </label>
+          <input type="email" class="form-control" id="email" name="email"
+                 placeholder="tu@empresa.com" required autocomplete="email">
         </div>
 
-        <div class="form-group">
-          <label for="password">Contraseña</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            required
-            placeholder="••••••••"
-            autocomplete="current-password"
-          >
+        <div class="mb-3">
+          <label class="form-label">
+            <i class="bi bi-lock me-2"></i>Contraseña
+          </label>
+          <input type="password" class="form-control" id="password" name="password"
+                 placeholder="Ingresa tu contraseña" required autocomplete="current-password">
         </div>
 
-        <div class="forgot-password">
-          <a href="#" id="forgotPasswordLink">¿Olvidaste tu contraseña?</a>
+        <div class="d-flex justify-content-end mb-4">
+          <a href="#" class="forgot-link" data-bs-toggle="modal" data-bs-target="#recoveryModal">
+            ¿Olvidaste tu contraseña?
+          </a>
         </div>
 
-        <button type="submit" class="btn-login" id="loginBtn">
+        <button type="submit" class="btn btn-login w-100" id="loginBtn">
+          <i class="bi bi-box-arrow-in-right me-2"></i>
           Iniciar Sesión
         </button>
       </form>
 
-      <!-- Divider -->
       <div class="divider">
         <span>¿Nuevo cliente?</span>
       </div>
 
-      <!-- Register Link -->
-      <div class="register-link">
-        <p>
-          <a href="registro.html">Crea tu cuenta B2B aquí</a>
-        </p>
+      <div class="text-center">
+        <a href="registro.html" class="register-link">
+          <i class="bi bi-person-plus me-1"></i>
+          Crea tu cuenta B2B aquí
+        </a>
       </div>
 
-      <!-- Back to Catalog -->
-      <div class="back-to-catalog">
-        <a href="/">← Volver al catálogo</a>
+      <div class="text-center mt-4">
+        <a href="/" class="back-link" style="color: #666;">
+          <i class="bi bi-arrow-left me-1"></i>
+          Volver al catálogo
+        </a>
+      </div>
+
+      <div class="text-center mt-3">
+        <small class="text-muted">v2.0 © 2025 ENAR</small>
       </div>
     </div>
   </div>
 
   <!-- Modal de Recuperación de Contraseña -->
-  <div class="modal-overlay" id="forgotPasswordModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Recuperar Contraseña</h3>
-        <p>Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.</p>
+  <div class="modal fade" id="recoveryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-key me-2"></i>Recuperar Contraseña
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-3">
+            Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.
+          </p>
+
+          <div id="recoveryMessage" class="alert" style="display: none;">
+            <span id="recovery-message-text"></span>
+          </div>
+
+          <form id="recoveryForm">
+            <div class="mb-3">
+              <label class="form-label">Correo Electrónico</label>
+              <input type="email" class="form-control" id="recoveryEmail"
+                     placeholder="tu@empresa.com" required>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-send" id="sendRecoveryBtn">
+            <i class="bi bi-send me-1"></i>Enviar
+          </button>
+        </div>
       </div>
-
-      <div id="recoveryMessage" class="message"></div>
-
-      <form id="recoveryForm">
-        <div class="form-group">
-          <label for="recoveryEmail">Correo Electrónico</label>
-          <input
-            type="email"
-            id="recoveryEmail"
-            name="recoveryEmail"
-            required
-            placeholder="tu@empresa.com"
-          >
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" class="btn-cancel" id="cancelRecovery">Cancelar</button>
-          <button type="submit" class="btn-send" id="sendRecoveryBtn">Enviar</button>
-        </div>
-      </form>
     </div>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script type="module">
     import {
@@ -471,26 +323,26 @@
     const loginBtn = document.getElementById('loginBtn');
     const googleBtn = document.getElementById('googleBtn');
     const message = document.getElementById('message');
-    const forgotPasswordLink = document.getElementById('forgotPasswordLink');
-    const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+    const messageText = document.getElementById('message-text');
     const recoveryForm = document.getElementById('recoveryForm');
-    const cancelRecovery = document.getElementById('cancelRecovery');
     const sendRecoveryBtn = document.getElementById('sendRecoveryBtn');
     const recoveryMessage = document.getElementById('recoveryMessage');
+    const recoveryMessageText = document.getElementById('recovery-message-text');
+    const recoveryModal = new bootstrap.Modal(document.getElementById('recoveryModal'));
 
     // Mostrar mensaje
-    function showMessage(elemento, texto, tipo) {
-      elemento.textContent = texto;
-      elemento.className = `message ${tipo}`;
+    function showMessage(elemento, textoEl, texto, tipo) {
+      textoEl.textContent = texto;
+      elemento.className = `alert alert-${tipo === 'error' ? 'danger' : tipo === 'warning' ? 'warning' : tipo === 'success' ? 'success' : 'info'}`;
+      elemento.style.display = 'block';
     }
 
     // Ocultar mensaje
     function hideMessage(elemento) {
-      elemento.className = 'message';
-      elemento.textContent = '';
+      elemento.style.display = 'none';
     }
 
-    // Login
+    // Login con email/password
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       hideMessage(message);
@@ -499,24 +351,24 @@
       const password = document.getElementById('password').value;
 
       if (!email || !password) {
-        showMessage(message, 'Por favor completa todos los campos', 'error');
+        showMessage(message, messageText, 'Por favor completa todos los campos', 'error');
         return;
       }
 
       loginBtn.disabled = true;
-      loginBtn.innerHTML = '<span class="loader"></span>Iniciando sesión...';
+      loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Ingresando...';
 
       const resultado = await iniciarSesion(email, password);
 
       if (resultado.success) {
-        showMessage(message, '¡Bienvenido! Redirigiendo...', 'success');
+        showMessage(message, messageText, '¡Bienvenido! Redirigiendo...', 'success');
         setTimeout(() => {
           window.location.href = '/';
         }, 1000);
       } else {
-        showMessage(message, resultado.error, resultado.code === 'pending-approval' ? 'warning' : 'error');
+        showMessage(message, messageText, resultado.error, resultado.code === 'pending-approval' ? 'warning' : 'error');
         loginBtn.disabled = false;
-        loginBtn.textContent = 'Iniciar Sesión';
+        loginBtn.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión';
       }
     });
 
@@ -524,14 +376,13 @@
     googleBtn.addEventListener('click', async () => {
       hideMessage(message);
       googleBtn.disabled = true;
-      googleBtn.innerHTML = '<span class="loader" style="border-color: rgba(0,0,0,0.2); border-top-color: #333;"></span>Conectando...';
+      googleBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Conectando...';
 
       const resultado = await iniciarSesionConGoogle();
 
       if (resultado.success) {
-        showMessage(message, '¡Bienvenido! Redirigiendo...', 'success');
+        showMessage(message, messageText, '¡Bienvenido! Redirigiendo...', 'success');
         setTimeout(() => {
-          // Si es admin, redirigir al panel admin
           if (resultado.esAdmin) {
             window.location.href = '/admin.html';
           } else {
@@ -539,7 +390,7 @@
           }
         }, 1000);
       } else {
-        showMessage(message, resultado.error, resultado.code === 'pending-approval' ? 'warning' : 'error');
+        showMessage(message, messageText, resultado.error, resultado.code === 'pending-approval' ? 'warning' : 'error');
         googleBtn.disabled = false;
         googleBtn.innerHTML = `<svg viewBox="0 0 24 24" style="width:20px;height:20px">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -550,54 +401,39 @@
       }
     });
 
-    // Abrir modal de recuperación
-    forgotPasswordLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      forgotPasswordModal.classList.add('active');
-      hideMessage(recoveryMessage);
-      document.getElementById('recoveryEmail').value = document.getElementById('email').value;
-    });
-
-    // Cerrar modal
-    cancelRecovery.addEventListener('click', () => {
-      forgotPasswordModal.classList.remove('active');
-    });
-
-    // Cerrar modal al hacer clic fuera
-    forgotPasswordModal.addEventListener('click', (e) => {
-      if (e.target === forgotPasswordModal) {
-        forgotPasswordModal.classList.remove('active');
-      }
-    });
-
-    // Enviar recuperación
-    recoveryForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
+    // Enviar recuperación de contraseña
+    sendRecoveryBtn.addEventListener('click', async () => {
       hideMessage(recoveryMessage);
 
       const email = document.getElementById('recoveryEmail').value.trim();
 
       if (!email) {
-        showMessage(recoveryMessage, 'Por favor ingresa tu correo', 'error');
+        showMessage(recoveryMessage, recoveryMessageText, 'Por favor ingresa tu correo', 'error');
         return;
       }
 
       sendRecoveryBtn.disabled = true;
-      sendRecoveryBtn.innerHTML = '<span class="loader"></span>Enviando...';
+      sendRecoveryBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
 
       const resultado = await recuperarPassword(email);
 
       if (resultado.success) {
-        showMessage(recoveryMessage, resultado.mensaje, 'success');
+        showMessage(recoveryMessage, recoveryMessageText, resultado.mensaje, 'success');
         setTimeout(() => {
-          forgotPasswordModal.classList.remove('active');
+          recoveryModal.hide();
+          hideMessage(recoveryMessage);
         }, 3000);
       } else {
-        showMessage(recoveryMessage, resultado.error, 'error');
+        showMessage(recoveryMessage, recoveryMessageText, resultado.error, 'error');
       }
 
       sendRecoveryBtn.disabled = false;
-      sendRecoveryBtn.textContent = 'Enviar';
+      sendRecoveryBtn.innerHTML = '<i class="bi bi-send me-1"></i>Enviar';
+    });
+
+    // Pre-llenar email en modal de recuperación
+    document.getElementById('recoveryModal').addEventListener('show.bs.modal', () => {
+      document.getElementById('recoveryEmail').value = document.getElementById('email').value;
     });
 
     // Verificar si ya está autenticado

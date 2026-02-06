@@ -39,14 +39,23 @@ async function verificarStock({ sku, cantidad_requerida }) {
     const stock_actual = data.cantidad || 0;
     const disponible = stock_actual >= cantidad_requerida;
     const faltante = Math.max(0, cantidad_requerida - stock_actual);
+    const embalaje = data.embalaje || 1;
 
     return {
       sku: sku,
       nombre: data.titulo,
+      categoria: data.categoria,
       disponible: disponible,
       stock_actual: stock_actual,
       cantidad_requerida: cantidad_requerida,
       faltante: faltante,
+      embalaje: embalaje,
+      // Precios para cotización
+      precio_mayorista: data.precio_mayorista || 0,
+      precio_negocio: data.precio_negocio || 0,
+      precio_persona_natural: data.precio_persona_natural || 0,
+      impuesto: data.impuesto || 0.19,
+      tiene_ficha_tecnica: !!(data.ficha_tecnica_url || data.ficha_tecnica),
       mensaje: disponible
         ? `✅ Disponible: ${stock_actual} unidades en stock`
         : `⚠️ Stock insuficiente: solo ${stock_actual} de ${cantidad_requerida} solicitadas (faltan ${faltante})`

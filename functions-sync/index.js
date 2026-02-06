@@ -1,8 +1,15 @@
-const { onRequest, onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onRequest } = require('firebase-functions/v2/https');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { setGlobalOptions } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
 
 admin.initializeApp();
 const db = admin.firestore();
+
+// Configurar opciones globales
+setGlobalOptions({
+  region: 'us-central1'
+});
 
 /**
  * Función HTTP para sincronizar productos desde Apps Script
@@ -11,11 +18,9 @@ exports.syncProductos = onRequest(
   {
     timeoutSeconds: 540,
     memory: '1GiB',
-    region: 'us-central1',
     cors: true
   },
   async (req, res) => {
-
     // Verificar método POST
     if (req.method !== 'POST') {
       return res.status(405).send('Method not allowed');
@@ -100,7 +105,8 @@ exports.chatAgent = onCall(
   {
     timeoutSeconds: 60,
     memory: '512MiB',
-    region: 'us-central1'
+    // Permitir invocaciones públicas (autenticación se verifica en el código)
+    invoker: 'public'
   },
   async (request) => {
     // Verificar autenticación (automática con onCall)
@@ -122,8 +128,8 @@ exports.chatAgent = onCall(
       // Importar agente
       const { procesarMensaje } = require('./agent/agentConfig');
 
-      // Procesar mensaje con el agente
-      const resultado = await procesarMensaje(mensaje, historial || []);
+      // Procesar mensaje con el agente, pasando el user_id para crear órdenes
+      const resultado = await procesarMensaje(mensaje, historial || [], uid);
 
       return {
         success: true,

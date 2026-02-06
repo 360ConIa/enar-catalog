@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fix User - ENAR B2B</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; }
+    h2 { color: #1e3a8a; }
+    button { background: #1e3a8a; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; margin: 5px; }
+    button:hover { background: #3b82f6; }
+    button.green { background: #10b981; }
+    button.green:hover { background: #059669; }
+    pre { background: #f5f5f5; padding: 20px; border-radius: 8px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+    .error { color: #dc2626; }
+    .success { color: #10b981; }
+    .warning { color: #d97706; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #f8f9fa; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    .badge-success { background: #d1fae5; color: #059669; }
+    .badge-warning { background: #fef3c7; color: #d97706; }
+    .badge-error { background: #fee2e2; color: #dc2626; }
+  </style>
+</head>
+<body>
+  <h2>Herramienta de Administración - ENAR B2B</h2>
+
+  <div id="authSection">
+    <button onclick="loginWithGoogle()">Iniciar Sesión con Google</button>
+    <span id="userStatus" style="margin-left: 15px;"></span>
+  </div>
+
+  <div id="actionsSection" style="display:none; margin-top: 20px;">
+    <button onclick="listUsers()">Ver Usuarios</button>
+    <button class="green" onclick="fixAllUndefined()">Corregir Todos los Undefined</button>
+  </div>
+
+  <div id="usersTable" style="display:none;"></div>
+  <pre id="log">Inicia sesión para continuar...</pre>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyCMPflYHuPnAWaUhv90wi3uBOhP9AoA8e0",
+      authDomain: "enar-b2b.firebaseapp.com",
+      projectId: "enar-b2b",
+      storageBucket: "enar-b2b.firebasestorage.app",
+      messagingSenderId: "903832444518",
+      appId: "1:903832444518:web:f76cb209febc9281a497a7"
+    });
+
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const log = document.getElementById('log');
+    let allUsers = [];
+
+    function addLog(msg, type = '') {
+      const span = document.createElement('span');
+      span.className = type;
+      span.textContent = msg + '\n';
+      log.appendChild(span);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog() { log.innerHTML = ''; }
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById('userStatus').innerHTML = `<span class="success">✓ ${user.email}</span>`;
+        document.getElementById('actionsSection').style.display = 'block';
+        clearLog();
+        addLog('Listo. Usa los botones para administrar usuarios.', 'success');
+      } else {
+        document.getElementById('userStatus').innerHTML = '<span class="warning">No conectado</span>';
+        document.getElementById('actionsSection').style.display = 'none';
+        document.getElementById('usersTable').style.display = 'none';
+      }
+    });
+
+    async function loginWithGoogle() {
+      try {
+        clearLog();
+        addLog('Abriendo ventana de Google...');
+        await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+      } catch (error) {
+        addLog('Error: ' + error.message, 'error');
+      }
+    }
+
+    async function listUsers() {
+      clearLog();
+      addLog('Cargando usuarios...');
+
+      try {
+        const snapshot = await db.collection('usuarios').get();
+        allUsers = [];
+
+        snapshot.forEach(doc => {
+          allUsers.push({ id: doc.id, ...doc.data() });
+        });
+
+        let html = `<h3>Usuarios (${allUsers.length})</h3><table>
+          <tr><th>Email</th><th>Nombre</th><th>Estado</th><th>Tipo</th><th>Acción</th></tr>`;
+
+        allUsers.forEach(u => {
+          const estado = u.estado || 'UNDEFINED';
+          const badgeClass = estado === 'aprobado' ? 'badge-success' :
+                            (estado === 'UNDEFINED' ? 'badge-error' : 'badge-warning');
+
+          html += `<tr>
+            <td>${u.email || 'N/A'}</td>
+            <td>${u.nombre || 'N/A'}</td>
+            <td><span class="badge ${badgeClass}">${estado}</span></td>
+            <td>${u.tipo_cliente || 'N/A'}</td>
+            <td>${(!u.estado || u.estado === 'undefined') ?
+              `<button onclick="fixUser('${u.id}', '${u.email}')" style="padding:5px 10px;font-size:12px;">Corregir</button>` :
+              '-'}</td>
+          </tr>`;
+        });
+
+        html += '</table>';
+        document.getElementById('usersTable').innerHTML = html;
+        document.getElementById('usersTable').style.display = 'block';
+
+        clearLog();
+        const undefined_count = allUsers.filter(u => !u.estado || u.estado === 'undefined').length;
+        if (undefined_count > 0) {
+          addLog(`⚠ ${undefined_count} usuario(s) con estado undefined`, 'warning');
+        } else {
+          addLog('✓ Todos los usuarios tienen estado válido', 'success');
+        }
+      } catch (error) {
+        addLog('Error: ' + error.message, 'error');
+        console.error(error);
+      }
+    }
+
+    async function fixUser(uid, email) {
+      addLog(`Corrigiendo ${email}...`);
+      try {
+        await db.collection('usuarios').doc(uid).update({
+          estado: 'aprobado',
+          tipo_cliente: 'mayorista',
+          updated_at: new Date().toISOString(),
+          aprobado_en: new Date().toISOString()
+        });
+        addLog(`✓ ${email} corregido a "aprobado"`, 'success');
+        await listUsers();
+      } catch (error) {
+        addLog('Error: ' + error.message, 'error');
+      }
+    }
+
+    async function fixAllUndefined() {
+      clearLog();
+      addLog('Buscando usuarios con estado undefined...');
+
+      try {
+        const snapshot = await db.collection('usuarios').get();
+        let fixed = 0;
+
+        for (const doc of snapshot.docs) {
+          const data = doc.data();
+          if (!data.estado || data.estado === 'undefined' || data.estado === '') {
+            addLog(`Corrigiendo: ${data.email || doc.id}...`);
+
+            await db.collection('usuarios').doc(doc.id).update({
+              estado: 'aprobado',
+              tipo_cliente: data.tipo_cliente || 'mayorista',
+              updated_at: new Date().toISOString(),
+              aprobado_en: new Date().toISOString()
+            });
+
+            addLog(`  ✓ Corregido`, 'success');
+            fixed++;
+          }
+        }
+
+        if (fixed === 0) {
+          addLog('\n✓ No hay usuarios con estado undefined', 'success');
+        } else {
+          addLog(`\n✓ ${fixed} usuario(s) corregido(s)!`, 'success');
+        }
+
+        await listUsers();
+      } catch (error) {
+        addLog('Error: ' + error.message, 'error');
+        console.error(error);
+      }
+    }
+  </script>
+</body>
+</html>

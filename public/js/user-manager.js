@@ -73,18 +73,33 @@ function esAdmin(user) {
 async function obtenerTodosLosUsuarios() {
   try {
     const usuariosRef = collection(db, 'usuarios');
-    const q = query(usuariosRef, orderBy('created_at', 'desc'));
-    const snapshot = await getDocs(q);
+
+    // Intentar con orderBy, si falla, obtener sin ordenar
+    let snapshot;
+    try {
+      const q = query(usuariosRef, orderBy('created_at', 'desc'));
+      snapshot = await getDocs(q);
+    } catch (orderError) {
+      // Si falla el orderBy, obtener todos sin ordenar
+      snapshot = await getDocs(usuariosRef);
+    }
 
     const usuarios = [];
     snapshot.forEach(doc => {
       usuarios.push({ uid: doc.id, ...doc.data() });
     });
 
+    // Ordenar manualmente por created_at si existe
+    usuarios.sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+      const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
+      return dateB - dateA;
+    });
+
     return { success: true, usuarios };
   } catch (error) {
     console.error('Error obteniendo usuarios:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message, usuarios: [] };
   }
 }
 

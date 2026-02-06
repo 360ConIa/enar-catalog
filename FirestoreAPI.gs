@@ -89,12 +89,29 @@ function crearProducto(producto) {
 }
 
 /**
+ * Campos que se actualizan desde la hoja de cálculo
+ * NUNCA incluye: imagen_principal, ficha_tecnica_url, imagenes, total_imagenes
+ * Esos campos se manejan SOLO desde ImageSync.gs
+ */
+const CAMPOS_PRODUCTO_SHEET = [
+  'cod_interno', 'titulo', 'cantidad',
+  'precio_mayorista', 'precio_negocio', 'precio_persona_natural', 'precio_lista',
+  'embalaje', 'peso', 'impuesto',
+  'ean', 'marca', 'categoria', 'ficha_tecnica',
+  'activo', 'sync_at', 'updated_at'
+];
+
+/**
  * Actualiza un producto existente en Firestore
+ * USA updateMask para NUNCA sobrescribir campos de ImageSync
  * @param {Object} producto - Objeto con los datos del producto
  * @throws {Error} - Si hay un error en la actualización
  */
 function actualizarProducto(producto) {
-  const url = `${FIRESTORE_URL}/${COLECCIONES.productos}/${encodeURIComponent(producto.cod_interno)}`;
+  // Construir URL con updateMask para proteger campos de ImageSync
+  const baseUrl = `${FIRESTORE_URL}/${COLECCIONES.productos}/${encodeURIComponent(producto.cod_interno)}`;
+  const updateMaskParams = CAMPOS_PRODUCTO_SHEET.map(f => `updateMask.fieldPaths=${f}`).join('&');
+  const url = `${baseUrl}?${updateMaskParams}`;
 
   const payload = {
     fields: convertirAFirestoreFields(producto)

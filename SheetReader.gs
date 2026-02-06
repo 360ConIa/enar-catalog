@@ -22,8 +22,8 @@ const COLUMNAS = {
   PESO: 8,                   // I
   IMPUESTO: 9,               // J
   EAN: 10,                   // K
-  MARCA: 11,                 // L
-  CATEGORIA: 12,             // M
+  CATEGORIA: 11,             // L
+  MARCA: 12,                 // M
   IMAGEN_PRINCIPAL: 13,      // N
   ACTIVO: 14,                // O
   FICHA_TECNICA: 15          // P
@@ -243,3 +243,4 @@ function obtenerResumenHoja() {
     encabezados: values[0] || []
   };
 }
+

@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ENAR - Portal de Aplicaciones</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --enar-blue: #1e3a8a;
+      --enar-blue-light: #3b82f6;
+      --enar-red: #D9232D;
+      --enar-red-light: #ff6b6b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%);
+      min-height: 100vh;
+      color: white;
+      overflow-x: hidden;
+    }
+
+    /* Animated background */
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .bg-animation::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+      animation: rotate 30s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Header */
+    .portal-header {
+      padding: 30px 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .logo-container {
+      margin-bottom: 20px;
+    }
+
+    .logo-container img {
+      height: 80px;
+      filter: drop-shadow(0 4px 20px rgba(0,0,0,0.3));
+    }
+
+    .portal-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .portal-title span {
+      background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .portal-subtitle {
+      font-size: 1.1rem;
+      color: rgba(255,255,255,0.7);
+      font-weight: 300;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Main container */
+    .portal-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Section title */
+    .section-title {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .section-title h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 10px;
+    }
+
+    .section-title .badge-count {
+      background: linear-gradient(135deg, var(--enar-red) 0%, var(--enar-red-light) 100%);
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    /* Apps grid */
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 25px;
+      margin-bottom: 50px;
+    }
+
+    /* App card */
+    .app-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+      display: block;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .app-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--enar-blue-light), var(--enar-red));
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+
+    .app-card:hover {
+      transform: translateY(-10px);
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      color: white;
+    }
+
+    .app-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .app-card.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .app-card.disabled:hover {
+      transform: none;
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: none;
+    }
+
+    .app-icon {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+
+    .app-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .app-card:hover .app-icon {
+      transform: scale(1.1);
+    }
+
+    .app-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .app-description {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 15px;
+      line-height: 1.5;
+    }
+
+    .app-status {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-active {
+      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+      color: white;
+    }
+
+    .status-coming {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255,255,255,0.5);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .status-development {
+      background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+      color: #1e3a8a;
+    }
+
+    /* Coming soon section */
+    .coming-soon-section {
+      margin-top: 60px;
+      padding-top: 40px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .coming-soon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+    }
+
+    .coming-soon-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 25px 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .coming-soon-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .coming-soon-icon {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 15px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: rgba(255,255,255,0.3);
+    }
+
+    .coming-soon-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 5px;
+    }
+
+    .coming-soon-tag {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.3);
+      text-transform: uppercase;
+    }
+
+    /* Footer */
+    .portal-footer {
+      text-align: center;
+      padding: 40px 20px;
+      color: rgba(255,255,255,0.4);
+      font-size: 0.85rem;
+    }
+
+    .portal-footer a {
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+    }
+
+    .portal-footer a:hover {
+      color: white;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .portal-title {
+        font-size: 1.8rem;
+      }
+
+      .portal-subtitle {
+        font-size: 1rem;
+        padding: 0 20px;
+      }
+
+      .apps-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .coming-soon-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Tooltip for disabled cards */
+    .app-card.disabled::after {
+      content: 'Próximamente';
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .app-card.disabled:hover::after {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-animation"></div>
+
+  <!-- Header -->
+  <header class="portal-header">
+    <div class="logo-container">
+      <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+    </div>
+    <h1 class="portal-title"><span>ENAR</span></h1>
+    <p class="portal-subtitle">
+      Suite de aplicaciones para la gestión integral de fabricación y distribución
+    </p>
+  </header>
+
+  <!-- Main Content -->
+  <main class="portal-container">
+    <!-- Active Apps Section -->
+    <section class="active-apps">
+      <div class="section-title">
+        <h2><i class="bi bi-grid-3x3-gap me-2"></i>Aplicaciones Disponibles</h2>
+        <span class="badge-count">3 de 9 apps</span>
+      </div>
+
+      <div class="apps-grid">
+        <!-- App 1: Gestión Comercial -->
+        <a href="https://script.google.com/macros/s/AKfycbxjv5GjrYXFWccoHIPCHVkDO20K286gDfxaxASkFN4I7I0fOPYF_nzRzlf-1S6bLQwtTQ/exec" class="app-card" id="app-gestion" target="_blank">
+          <div class="app-icon">
+            <img src="img/icons/gestion-comercial.png" alt="Gestión Comercial"
+                 onerror="this.parentElement.innerHTML='<i class=\'bi bi-graph-up-arrow\'></i>'">
+          </div>
+          <h3 class="app-name">Gestión Comercial</h3>
+          <p class="app-description">
+            Control de ventas, seguimiento de clientes distribuidores y reportes comerciales.
+          </p>
+          <span class="app-status status-active">
+            <i class="bi bi-check-circle me-1"></i>Activo
+          </span>
+        </a>
+
+        <!-- App 2: Despachos -->
+        <a href="#" class="app-card" id="app-despachos">
+          <div class="app-icon">
+            <img src="img/icons/despachos.png" alt="Despachos"
+                 onerror="this.parentElement.innerHTML='<i class=\'bi bi-truck\'></i>'">
+          </div>
+          <h3 class="app-name">Despachos</h3>
+          <p class="app-description">
+            Programación de entregas, rutas de distribución y confirmación de recepción.
+          </p>
+          <span class="app-status status-active">
+            <i class="bi bi-check-circle me-1"></i>Activo
+          </span>
+        </a>
+
+        <!-- App 3: Pedidos Empresariales (B2B) -->
+        <a href="/" class="app-card" id="app-b2b">
+          <div class="app-icon">
+            <img src="img/icons/pedidos-b2b.png" alt="Pedidos B2B"
+                 onerror="this.parentElement.innerHTML='<i class=\'bi bi-cart-check\'></i>'">
+          </div>
+          <h3 class="app-name">Pedidos B2B</h3>
+          <p class="app-description">
+            Catálogo de productos, pedidos mayoristas y órdenes de compra para distribuidores.
+          </p>
+          <span class="app-status status-active">
+            <i class="bi bi-check-circle me-1"></i>Activo
+          </span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Coming Soon Section -->
+    <section class="coming-soon-section">
+      <div class="section-title">
+        <h2><i class="bi bi-rocket-takeoff me-2"></i>Próximamente</h2>
+      </div>
+
+      <div class="coming-soon-grid">
+        <!-- App 4: Producción -->
+        <div class="coming-soon-card">
+          <div class="coming-soon-icon">
+            <i class="bi bi-gear-wide-connected"></i>
+          </div>
+          <div class="coming-soon-name">Producción</div>
+          <div class="coming-soon-tag">En desarrollo</div>
+        </div>
+
+        <!-- App 5: Inventario y Almacén -->
+        <div class="coming-soon-card">
+          <div class="coming-soon-icon">
+            <i class="bi bi-box-seam"></i>
+          </div>
+          <div class="coming-soon-name">Inventario</div>
+          <div class="coming-soon-tag">Planificado</div>
+        </div>
+
+        <!-- App 6: Facturación Electrónica -->
+        <div class="coming-soon-card">
+          <div class="coming-soon-icon">
+            <i class="bi bi-receipt"></i>
+          </div>
+          <div class="coming-soon-name">Facturación</div>
+          <div class="coming-soon-tag">Planificado</div>
+        </div>
+
+        <!-- App 7: Cartera y Cobranzas -->
+        <div class="coming-soon-card">
+          <div class="coming-soon-icon">
+            <i class="bi bi-cash-coin"></i>
+          </div>
+          <div class="coming-soon-name">Cartera</div>
+          <div class="coming-soon-tag">Planificado</div>
+        </div>
+
+        <!-- App 8: Compras y Proveedores -->
+        <div class="coming-soon-card">
+          <div class="coming-soon-icon">
+            <i class="bi bi-cart-plus"></i>
+          </div>
+          <div class="coming-soon-name">Compras</div>
+          <div class="coming-soon-tag">Planificado</div>
+        </div>
+
+        <!-- App 9: Reportes y Analítica -->
+        <div class="coming-soon-card">
+          <div class="coming-soon-icon">
+            <i class="bi bi-graph-up-arrow"></i>
+          </div>
+          <div class="coming-soon-name">Reportes</div>
+          <div class="coming-soon-tag">Planificado</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="portal-footer">
+    <p>
+      <strong>ENAR</strong> - Suite Empresarial<br>
+      <small>v1.0 © 2025 | <a href="mailto:soporte@enarapp.com">soporte@enarapp.com</a></small>
+    </p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

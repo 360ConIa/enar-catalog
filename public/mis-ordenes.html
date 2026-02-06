@@ -554,7 +554,7 @@
 
             <div class="order-meta">
               <div class="order-total">${formatearPrecio(orden.total)}</div>
-              <div class="order-item-count">${orden.cantidad_items} producto(s)</div>
+              <div class="order-item-count">${orden.cantidad_productos || orden.cantidad_items || orden.items.length} producto(s)</div>
             </div>
           </div>
 

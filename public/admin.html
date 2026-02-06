@@ -6,6 +6,8 @@
   <title>Admin - ENAR B2B</title>
   <link rel="stylesheet" href="css/styles.css?v=5.0">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -65,10 +67,26 @@
       font-size: 14px;
       padding: 8px 16px;
       border-radius: 6px;
-      transition: background 0.3s;
+      transition: all 0.3s;
     }
     .header-nav a:hover {
       background: rgba(255, 255, 255, 0.1);
+    }
+    .btn-catalogo {
+      background: #D9232D;
+      color: white !important;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(217, 35, 45, 0.3);
+    }
+    .btn-catalogo:hover {
+      background: #b91c25;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(217, 35, 45, 0.4);
     }
     .admin-container {
       max-width: 1400px;
@@ -230,7 +248,6 @@
       border-radius: 12px;
       font-size: 11px;
       font-weight: 600;
-      text-transform: uppercase;
     }
     .status-pendiente {
       background: #fef3c7;
@@ -314,32 +331,167 @@
       border-radius: 12px;
       font-size: 11px;
       font-weight: 600;
-      text-transform: uppercase;
     }
+    /* Estados de Órdenes - Colores corporativos ENAR */
     .estado-pendiente {
-      background: #fef3c7;
-      color: #d97706;
+      background: #ffff00;
+      color: #000000;
     }
-    .estado-confirmada {
-      background: #dbeafe;
-      color: #2563eb;
+    .estado-alistamiento {
+      background: #3bb6ff;
+      color: #FFFFFF;
     }
-    .estado-en_proceso {
-      background: #e0e7ff;
-      color: #4f46e5;
+    .estado-completo {
+      background: #2e9b00;
+      color: #FFFFFF;
     }
-    .estado-enviada {
-      background: #d1fae5;
-      color: #059669;
+    .estado-parcial {
+      background: #ffd800;
+      color: #000000;
     }
-    .estado-entregada {
-      background: #dcfce7;
-      color: #16a34a;
+    .estado-en_espera {
+      background: #ff8c00;
+      color: #FFFFFF;
     }
     .estado-cancelada {
-      background: #fee2e2;
-      color: #dc2626;
+      background: #cc0000;
+      color: #FFFFFF;
     }
+
+    /* Custom Dropdown para Estados */
+    .custom-dropdown {
+      position: relative;
+      width: 100%;
+    }
+    .custom-dropdown-selected {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: 'Poppins', sans-serif;
+    }
+    .custom-dropdown-selected:hover {
+      border-color: #3b82f6;
+    }
+    .custom-dropdown-selected .estado-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .custom-dropdown-arrow {
+      font-size: 10px;
+      color: #666;
+      transition: transform 0.2s;
+    }
+    .custom-dropdown.open .custom-dropdown-arrow {
+      transform: rotate(180deg);
+    }
+    .custom-dropdown-options {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .custom-dropdown.open .custom-dropdown-options {
+      display: block;
+    }
+    .custom-dropdown-option {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .custom-dropdown-option:hover {
+      background: #f5f5f5;
+    }
+    .custom-dropdown-option .estado-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* Badges para dropdown de estados en tabla */
+    .badge-pendiente { color: #ffff00; }
+    .badge-alistamiento { color: #3bb6ff; }
+    .badge-completo { color: #2e9b00; }
+    .badge-parcial { color: #ffd800; }
+    .badge-en_espera { color: #ff8c00; }
+    .badge-cancelada { color: #cc0000; }
+
+    /* Botón rojo ENAR corporativo */
+    .btn-outline-enar {
+      --bs-btn-color: #D9232D;
+      --bs-btn-border-color: #D9232D;
+      --bs-btn-hover-color: #fff;
+      --bs-btn-hover-bg: #D9232D;
+      --bs-btn-hover-border-color: #D9232D;
+      --bs-btn-active-color: #fff;
+      --bs-btn-active-bg: #b91c25;
+      --bs-btn-active-border-color: #b91c25;
+    }
+
+    /* Ajustes para btn-group en tabla */
+    .data-table .btn-group {
+      flex-wrap: nowrap;
+    }
+    .data-table .btn-group .btn {
+      padding: 4px 8px;
+      font-size: 14px;
+    }
+    .data-table .dropdown-menu {
+      min-width: 160px;
+      font-size: 13px;
+    }
+    .data-table .dropdown-item {
+      padding: 8px 12px;
+    }
+    .data-table .dropdown-item:hover {
+      background: #f0f0f0;
+    }
+
+    /* Flecha roja y más grande en todos los dropdowns */
+    .dropdown-toggle::after {
+      color: #D9232D !important;
+      border-top-color: #D9232D !important;
+      border-top-width: 0.4em !important;
+      border-right-width: 0.4em !important;
+      border-left-width: 0.4em !important;
+    }
+
+    /* Dropdown filtro de estados */
+    .search-box .dropdown {
+      display: inline-block;
+    }
+    .search-box .dropdown-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-family: 'Poppins', sans-serif;
+    }
+    .search-box .dropdown-menu {
+      min-width: 180px;
+    }
+    .search-box .dropdown-item {
+      padding: 8px 12px;
+    }
+
     .loading {
       text-align: center;
       padding: 40px;
@@ -508,7 +660,7 @@
         <span>ADMIN</span>
       </div>
       <nav class="header-nav">
-        <a href="/">Ir al Catálogo</a>
+        <a href="/" class="btn-catalogo"><i class="bi bi-grid-3x3-gap-fill"></i> Ir al Catálogo</a>
       </nav>
     </div>
   </header>
@@ -577,14 +729,32 @@
             <h2>Gestión de Usuarios</h2>
             <div class="search-box">
               <button class="btn-crear-usuario" onclick="abrirCrearUsuario()">+ Crear Usuario</button>
+              <a href="admin-import-users.html" class="btn-crear-usuario" style="background:#8b5cf6;text-decoration:none;">📥 Importar Masivo</a>
               <input type="text" id="buscarUsuario" placeholder="Buscar por email o nombre...">
-              <select id="filtroEstado">
-                <option value="">Todos los estados</option>
-                <option value="pendiente">Pendientes</option>
-                <option value="aprobado">Aprobados</option>
-                <option value="rechazado">Rechazados</option>
-                <option value="suspendido">Suspendidos</option>
-              </select>
+              <input type="hidden" id="filtroEstado" value="">
+              <div class="dropdown">
+                <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" style="min-width: 160px; text-align: left;">
+                  <span id="filtroEstadoUsuarioTexto">Todos los estados</span>
+                </button>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="#" onclick="filtrarUsuariosPorEstado('', 'Todos los estados'); return false;">
+                    Todos los estados
+                  </a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarUsuariosPorEstado('pendiente', 'Pendientes'); return false;">
+                    <span class="status-badge status-pendiente">Pendiente</span>
+                  </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarUsuariosPorEstado('aprobado', 'Aprobados'); return false;">
+                    <span class="status-badge status-aprobado">Aprobado</span>
+                  </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarUsuariosPorEstado('rechazado', 'Rechazados'); return false;">
+                    <span class="status-badge status-rechazado">Rechazado</span>
+                  </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarUsuariosPorEstado('suspendido', 'Suspendidos'); return false;">
+                    <span class="status-badge status-suspendido">Suspendido</span>
+                  </a></li>
+                </ul>
+              </div>
             </div>
           </div>
           <div class="card-body">
@@ -596,7 +766,7 @@
                   <th>Empresa</th>
                   <th>Estado</th>
                   <th>Fecha Registro</th>
-                  <th>Acciones</th>
+                  <th class="text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody id="usuariosBody">
@@ -641,15 +811,37 @@
             <h2>Gestión de Órdenes</h2>
             <div class="search-box">
               <input type="text" id="buscarOrden" placeholder="Buscar por número o cliente...">
-              <select id="filtroEstadoOrden">
-                <option value="">Todos los estados</option>
-                <option value="pendiente">Pendientes</option>
-                <option value="confirmada">Confirmadas</option>
-                <option value="en_proceso">En Proceso</option>
-                <option value="enviada">Enviadas</option>
-                <option value="entregada">Entregadas</option>
-                <option value="cancelada">Canceladas</option>
-              </select>
+              <input type="hidden" id="filtroEstadoOrden" value="">
+              <div class="dropdown">
+                <button class="btn btn-light dropdown-toggle" type="button" id="filtroEstadoBtn" data-bs-toggle="dropdown" style="min-width: 160px; text-align: left;">
+                  <span id="filtroEstadoTexto">Todos los estados</span>
+                </button>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('', 'Todos los estados'); return false;">
+                    Todos los estados
+                  </a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('pendiente', 'Pendiente'); return false;">
+                    <span class="order-status estado-pendiente">Pendiente</span>
+                  </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('alistamiento', 'Alistamiento'); return false;">
+                    <span class="order-status estado-alistamiento">Alistamiento</span>
+                  </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('completo', 'Completo'); return false;">
+                    <span class="order-status estado-completo">Completo</span>
+                  </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('parcial', 'Parcial'); return false;">
+                    <span class="order-status estado-parcial">Parcial</span>
+                  </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('en_espera', 'En Espera'); return false;">
+                    <span class="order-status estado-en_espera">En Espera</span>
+                  </a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('cancelada', 'Cancelada'); return false;">
+                    <span class="order-status estado-cancelada">Cancelada</span>
+                  </a></li>
+                </ul>
+              </div>
             </div>
           </div>
           <div class="card-body">
@@ -662,7 +854,7 @@
                   <th>Total</th>
                   <th>Estado</th>
                   <th>Fecha</th>
-                  <th>Acciones</th>
+                  <th class="text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody id="ordenesBody">
@@ -738,14 +930,34 @@
         <p style="margin-bottom: 15px;">Orden: <strong id="ordenNumero">-</strong></p>
 
         <div class="form-group">
-          <label for="nuevoEstado">Nuevo Estado</label>
-          <select id="nuevoEstado">
-            <option value="confirmada">Confirmada</option>
-            <option value="en_proceso">En Proceso</option>
-            <option value="enviada">Enviada</option>
-            <option value="entregada">Entregada</option>
-            <option value="cancelada">Cancelada</option>
-          </select>
+          <label>Nuevo Estado</label>
+          <input type="hidden" id="nuevoEstado" value="pendiente">
+          <div class="custom-dropdown" id="estadoDropdown">
+            <div class="custom-dropdown-selected">
+              <span class="estado-badge estado-pendiente" id="selectedEstadoBadge">Pendiente</span>
+              <span class="custom-dropdown-arrow">▼</span>
+            </div>
+            <div class="custom-dropdown-options">
+              <div class="custom-dropdown-option" data-value="pendiente">
+                <span class="estado-badge estado-pendiente">Pendiente</span>
+              </div>
+              <div class="custom-dropdown-option" data-value="alistamiento">
+                <span class="estado-badge estado-alistamiento">Alistamiento</span>
+              </div>
+              <div class="custom-dropdown-option" data-value="completo">
+                <span class="estado-badge estado-completo">Completo</span>
+              </div>
+              <div class="custom-dropdown-option" data-value="parcial">
+                <span class="estado-badge estado-parcial">Parcial</span>
+              </div>
+              <div class="custom-dropdown-option" data-value="en_espera">
+                <span class="estado-badge estado-en_espera">En Espera</span>
+              </div>
+              <div class="custom-dropdown-option" data-value="cancelada">
+                <span class="estado-badge estado-cancelada">Cancelada</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -756,6 +968,116 @@
         <div class="modal-actions">
           <button class="btn-cancel" onclick="cerrarModal('modalOrden')">Cancelar</button>
           <button class="btn-save" id="btnActualizarEstado">Actualizar Estado</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Eliminar Orden -->
+  <div class="modal-overlay" id="modalEliminarOrden">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);">
+        <h3>Eliminar Orden</h3>
+        <button class="modal-close" onclick="cerrarModal('modalEliminarOrden')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <i class="bi bi-exclamation-triangle" style="font-size: 48px; color: #dc2626;"></i>
+        </div>
+        <p style="text-align: center; margin-bottom: 15px;">
+          ¿Está seguro que desea eliminar la orden <strong id="eliminarOrdenNumero">-</strong>?
+        </p>
+        <p style="text-align: center; color: #666; font-size: 14px;">
+          Esta acción no se puede deshacer.
+        </p>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalEliminarOrden')">Cancelar</button>
+          <button class="btn-save" style="background: #dc2626;" id="btnConfirmarEliminar">Eliminar Orden</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle Orden -->
+  <div class="modal-overlay" id="modalDetalleOrden">
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-header">
+        <h3>Detalle de Orden <span id="detalleOrdenNumero">-</span></h3>
+        <button class="modal-close" onclick="cerrarModal('modalDetalleOrden')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Info Cliente -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+          <div>
+            <h4 style="font-size: 14px; color: #666; margin-bottom: 10px;">Cliente</h4>
+            <p style="margin: 4px 0;"><strong id="detalleClienteNombre">-</strong></p>
+            <p style="margin: 4px 0; font-size: 13px; color: #666;" id="detalleClienteEmail">-</p>
+            <p style="margin: 4px 0; font-size: 13px; color: #666;" id="detalleClienteTelefono">-</p>
+            <p style="margin: 4px 0;"><span class="tipo-badge" id="detalleClienteTipo">-</span></p>
+          </div>
+          <div>
+            <h4 style="font-size: 14px; color: #666; margin-bottom: 10px;">Entrega</h4>
+            <p style="margin: 4px 0; font-size: 13px;" id="detalleDireccion">-</p>
+            <p style="margin: 4px 0; font-size: 13px;" id="detalleCiudad">-</p>
+            <p style="margin: 4px 0; font-size: 13px;" id="detalleContacto">-</p>
+          </div>
+        </div>
+
+        <!-- Estado y Fecha -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 20px;">
+          <div>
+            <span style="font-size: 12px; color: #666;">Estado:</span>
+            <span class="order-status" id="detalleEstado">-</span>
+          </div>
+          <div style="text-align: right;">
+            <span style="font-size: 12px; color: #666;">Fecha:</span>
+            <span style="font-size: 13px; font-weight: 500;" id="detalleFecha">-</span>
+          </div>
+        </div>
+
+        <!-- Productos -->
+        <h4 style="font-size: 14px; color: #666; margin-bottom: 10px;">Productos</h4>
+        <div style="max-height: 250px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <table class="data-table" style="margin: 0;">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th style="text-align: center;">Cant.</th>
+                <th style="text-align: right;">Precio</th>
+                <th style="text-align: right;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody id="detalleProductosBody">
+              <tr><td colspan="4" class="empty-message">Sin productos</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Totales -->
+        <div style="margin-top: 15px; padding: 15px; background: #f8fafc; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: #666;">Subtotal:</span>
+            <span id="detalleSubtotal">$0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="color: #666;">IVA (19%):</span>
+            <span id="detalleIva">$0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; color: #D9232D; border-top: 2px solid #e0e0e0; padding-top: 10px; margin-top: 10px;">
+            <span>Total:</span>
+            <span id="detalleTotal">$0</span>
+          </div>
+        </div>
+
+        <!-- Observaciones -->
+        <div id="detalleObservacionesContainer" style="margin-top: 15px; display: none;">
+          <h4 style="font-size: 14px; color: #666; margin-bottom: 8px;">Observaciones</h4>
+          <p style="font-size: 13px; padding: 10px; background: #fffbeb; border-radius: 6px; border-left: 3px solid #f59e0b;" id="detalleObservaciones">-</p>
+        </div>
+
+        <div class="modal-actions" style="margin-top: 20px;">
+          <button class="btn-cancel" onclick="cerrarModal('modalDetalleOrden')">Cerrar</button>
         </div>
       </div>
     </div>
@@ -846,10 +1168,13 @@
     </div>
   </div>
 
+  <!-- Bootstrap JS for dropdown -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-    import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getFirestore, doc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import {
       esAdmin,
       obtenerTodosLosUsuarios,
@@ -923,23 +1248,24 @@
       }, 3000);
     }
 
-    // Formatear fecha
+    // Formatear fecha: "30 ene 15:56 hs"
     function formatearFecha(fechaStr) {
       if (!fechaStr) return '-';
       const fecha = new Date(fechaStr);
-      return fecha.toLocaleDateString('es-CO', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      const dia = fecha.getDate();
+      const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      const mes = meses[fecha.getMonth()];
+      const hora = fecha.getHours().toString().padStart(2, '0');
+      const min = fecha.getMinutes().toString().padStart(2, '0');
+      return `${dia} ${mes} ${hora}:${min} hs`;
     }
 
     // Cargar usuarios
     async function cargarUsuarios() {
       const resultado = await obtenerTodosLosUsuarios();
 
-      if (resultado.success) {
-        usuarios = resultado.usuarios;
+      if (resultado.success || resultado.usuarios) {
+        usuarios = resultado.usuarios || [];
         actualizarStatsUsuarios();
         renderizarUsuarios();
       }
@@ -995,14 +1321,20 @@
           <td>${u.razon_social || '-'}</td>
           <td><span class="status-badge status-${u.estado}">${u.estado}</span></td>
           <td>${formatearFecha(u.created_at)}</td>
-          <td>
-            <div class="action-btns">
+          <td class="text-center">
+            <div class="btn-group btn-group-sm" style="justify-content: center;">
               ${u.estado === 'pendiente' ? `
-                <button class="btn-sm btn-approve" onclick="abrirAprobar('${u.uid}')">Aprobar</button>
-                <button class="btn-sm btn-reject" onclick="abrirRechazar('${u.uid}')">Rechazar</button>
+                <button class="btn btn-outline-success" onclick="abrirAprobar('${u.uid}')" title="Aprobar">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button class="btn btn-outline-danger" onclick="abrirRechazar('${u.uid}')" title="Rechazar">
+                  <i class="bi bi-x-lg"></i>
+                </button>
               ` : ''}
               ${(u.estado === 'aprobado' || !u.estado) ? `
-                <button class="btn-sm btn-edit" onclick="abrirAprobar('${u.uid}')">Editar</button>
+                <button class="btn btn-outline-enar" onclick="abrirAprobar('${u.uid}')" title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
               ` : ''}
             </div>
           </td>
@@ -1221,18 +1553,186 @@
               <span class="user-email">${o.cliente?.email || ''}</span>
             </div>
           </td>
-          <td>${o.cantidad_items} producto(s)</td>
+          <td>${o.items?.length || o.cantidad_items || 0}</td>
           <td><strong style="color: #D9232D;">${formatearPrecio(o.total)}</strong></td>
           <td><span class="order-status ${claseEstado(o.estado)}">${textoEstado(o.estado)}</span></td>
           <td>${formatearFecha(o.created_at)}</td>
-          <td>
-            <div class="action-btns">
-              <button class="btn-sm btn-edit" onclick="abrirEstadoOrden('${o.id}')">Estado</button>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-enar" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">
+                <i class="bi bi-eye"></i>
+              </button>
+              <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" title="Cambiar estado">
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'pendiente'); return false;">
+                    <span class="order-status estado-pendiente">Pendiente</span>
+                  </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'alistamiento'); return false;">
+                    <span class="order-status estado-alistamiento">Alistamiento</span>
+                  </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'completo'); return false;">
+                    <span class="order-status estado-completo">Completo</span>
+                  </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'parcial'); return false;">
+                    <span class="order-status estado-parcial">Parcial</span>
+                  </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'en_espera'); return false;">
+                    <span class="order-status estado-en_espera">En Espera</span>
+                  </a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'cancelada'); return false;">
+                    <span class="order-status estado-cancelada">Cancelada</span>
+                  </a></li>
+                </ul>
+              </div>
+              <button class="btn btn-outline-danger" onclick="abrirEliminarOrden('${o.id}')" title="Eliminar orden">
+                <i class="bi bi-trash"></i>
+              </button>
             </div>
           </td>
         </tr>
       `).join('');
     }
+
+    // Custom dropdown para estados
+    const estadoDropdown = document.getElementById('estadoDropdown');
+    const estadoHiddenInput = document.getElementById('nuevoEstado');
+    const selectedEstadoBadge = document.getElementById('selectedEstadoBadge');
+
+    // Colores corporativos ENAR (sincronizados con VistaDespachos)
+    const ESTADOS_CONFIG = {
+      'pendiente': { texto: 'Pendiente', clase: 'estado-pendiente', bg: '#ffff00', color: '#000000' },
+      'alistamiento': { texto: 'Alistamiento', clase: 'estado-alistamiento', bg: '#3bb6ff', color: '#FFFFFF' },
+      'completo': { texto: 'Completo', clase: 'estado-completo', bg: '#2e9b00', color: '#FFFFFF' },
+      'parcial': { texto: 'Parcial', clase: 'estado-parcial', bg: '#ffd800', color: '#000000' },
+      'en_espera': { texto: 'En Espera', clase: 'estado-en_espera', bg: '#ff8c00', color: '#FFFFFF' },
+      'cancelada': { texto: 'Cancelada', clase: 'estado-cancelada', bg: '#cc0000', color: '#FFFFFF' }
+    };
+
+    // Toggle dropdown
+    estadoDropdown.querySelector('.custom-dropdown-selected').addEventListener('click', (e) => {
+      e.stopPropagation();
+      estadoDropdown.classList.toggle('open');
+    });
+
+    // Handle option selection
+    estadoDropdown.querySelectorAll('.custom-dropdown-option').forEach(option => {
+      option.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const value = option.dataset.value;
+        const config = ESTADOS_CONFIG[value];
+
+        // Update hidden input
+        estadoHiddenInput.value = value;
+
+        // Update selected badge
+        selectedEstadoBadge.textContent = config.texto;
+        selectedEstadoBadge.className = 'estado-badge ' + config.clase;
+
+        // Close dropdown
+        estadoDropdown.classList.remove('open');
+      });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+      estadoDropdown.classList.remove('open');
+    });
+
+    // Function to set dropdown value programmatically
+    function setEstadoDropdownValue(value) {
+      const config = ESTADOS_CONFIG[value] || ESTADOS_CONFIG['pendiente'];
+      estadoHiddenInput.value = value;
+      selectedEstadoBadge.textContent = config.texto;
+      selectedEstadoBadge.className = 'estado-badge ' + config.clase;
+    }
+
+    // Ver detalle de orden
+    window.verDetalleOrden = function(ordenId) {
+      const orden = ordenes.find(o => o.id === ordenId);
+      if (!orden) return;
+
+      // Info orden
+      document.getElementById('detalleOrdenNumero').textContent = orden.numero_orden;
+
+      // Info cliente
+      document.getElementById('detalleClienteNombre').textContent = orden.cliente?.nombre || '-';
+      document.getElementById('detalleClienteEmail').textContent = orden.cliente?.email || '-';
+      document.getElementById('detalleClienteTelefono').textContent = orden.cliente?.telefono || '-';
+
+      const tipoCliente = orden.cliente?.tipo_cliente || '';
+      const tipoEl = document.getElementById('detalleClienteTipo');
+      tipoEl.textContent = TIPO_TEXTOS[tipoCliente] || tipoCliente;
+      tipoEl.className = 'tipo-badge tipo-' + tipoCliente;
+
+      // Info entrega
+      const direccion = orden.direccion_entrega || {};
+      document.getElementById('detalleDireccion').textContent = direccion.direccion || '-';
+      document.getElementById('detalleCiudad').textContent = `${direccion.ciudad || ''}, ${direccion.departamento || ''}`;
+      document.getElementById('detalleContacto').textContent = `${direccion.contacto || ''} - ${direccion.telefono_contacto || ''}`;
+
+      // Estado
+      const estadoEl = document.getElementById('detalleEstado');
+      estadoEl.textContent = textoEstado(orden.estado);
+      estadoEl.className = 'order-status ' + claseEstado(orden.estado);
+
+      // Fecha
+      document.getElementById('detalleFecha').textContent = formatearFecha(orden.created_at);
+
+      // Productos
+      const items = orden.items || [];
+      const tbody = document.getElementById('detalleProductosBody');
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-message">Sin productos</td></tr>';
+      } else {
+        tbody.innerHTML = items.map(item => `
+          <tr>
+            <td>
+              <div style="font-weight: 500;">${item.titulo || '-'}</div>
+              <div style="font-size: 11px; color: #888;">${item.cod_interno || ''}</div>
+            </td>
+            <td style="text-align: center;">${item.cantidad}</td>
+            <td style="text-align: right;">${formatearPrecio(item.precio_unitario)}</td>
+            <td style="text-align: right;">${formatearPrecio(item.subtotal || item.precio_unitario * item.cantidad)}</td>
+          </tr>
+        `).join('');
+      }
+
+      // Totales
+      document.getElementById('detalleSubtotal').textContent = formatearPrecio(orden.subtotal || 0);
+      document.getElementById('detalleIva').textContent = formatearPrecio(orden.iva || 0);
+      document.getElementById('detalleTotal').textContent = formatearPrecio(orden.total || 0);
+
+      // Observaciones
+      const obsContainer = document.getElementById('detalleObservacionesContainer');
+      if (orden.observaciones) {
+        document.getElementById('detalleObservaciones').textContent = orden.observaciones;
+        obsContainer.style.display = 'block';
+      } else {
+        obsContainer.style.display = 'none';
+      }
+
+      // Mostrar modal
+      document.getElementById('modalDetalleOrden').classList.add('active');
+    };
+
+    // Cambiar estado rápido desde dropdown
+    window.cambiarEstadoRapido = async function(ordenId, nuevoEstado) {
+      const orden = ordenes.find(o => o.id === ordenId);
+      if (!orden) return;
+
+      const resultado = await actualizarEstadoOrden(ordenId, nuevoEstado);
+
+      if (resultado.success) {
+        mostrarMensaje(`Orden ${orden.numero_orden} actualizada a "${ESTADOS_CONFIG[nuevoEstado]?.texto || nuevoEstado}"`);
+        await cargarOrdenes();
+      } else {
+        alert('Error al actualizar el estado');
+      }
+    };
 
     // Abrir modal estado orden
     window.abrirEstadoOrden = function(ordenId) {
@@ -1240,7 +1740,7 @@
       if (!ordenSeleccionada) return;
 
       document.getElementById('ordenNumero').textContent = ordenSeleccionada.numero_orden;
-      document.getElementById('nuevoEstado').value = ordenSeleccionada.estado;
+      setEstadoDropdownValue(ordenSeleccionada.estado);
       document.getElementById('estadoNota').value = '';
       document.getElementById('modalOrden').classList.add('active');
     };
@@ -1261,11 +1761,64 @@
       }
     });
 
+    // Abrir modal eliminar orden
+    window.abrirEliminarOrden = function(ordenId) {
+      ordenSeleccionada = ordenes.find(o => o.id === ordenId);
+      if (!ordenSeleccionada) return;
+
+      document.getElementById('eliminarOrdenNumero').textContent = ordenSeleccionada.numero_orden;
+      document.getElementById('modalEliminarOrden').classList.add('active');
+    };
+
+    // Confirmar eliminar orden
+    document.getElementById('btnConfirmarEliminar').addEventListener('click', async () => {
+      if (!ordenSeleccionada) return;
+
+      const btn = document.getElementById('btnConfirmarEliminar');
+      btn.disabled = true;
+      btn.textContent = 'Eliminando...';
+
+      try {
+        await deleteDoc(doc(db, 'ordenes', ordenSeleccionada.id));
+        cerrarModal('modalEliminarOrden');
+        mostrarMensaje(`Orden ${ordenSeleccionada.numero_orden} eliminada`);
+        await cargarOrdenes();
+      } catch (error) {
+        console.error('Error eliminando orden:', error);
+        alert('Error al eliminar la orden: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Eliminar Orden';
+      }
+    });
+
+    // Filtrar usuarios por estado (dropdown personalizado)
+    window.filtrarUsuariosPorEstado = function(estado, texto) {
+      document.getElementById('filtroEstado').value = estado;
+      const btnTexto = document.getElementById('filtroEstadoUsuarioTexto');
+      if (estado) {
+        btnTexto.innerHTML = `<span class="status-badge status-${estado}">${texto}</span>`;
+      } else {
+        btnTexto.textContent = texto;
+      }
+      renderizarUsuarios();
+    };
+
+    // Filtrar órdenes por estado (dropdown personalizado)
+    window.filtrarPorEstado = function(estado, texto) {
+      document.getElementById('filtroEstadoOrden').value = estado;
+      const btnTexto = document.getElementById('filtroEstadoTexto');
+      if (estado) {
+        btnTexto.innerHTML = `<span class="order-status estado-${estado}">${texto}</span>`;
+      } else {
+        btnTexto.textContent = texto;
+      }
+      renderizarOrdenes();
+    };
+
     // Filtros
     document.getElementById('buscarUsuario').addEventListener('input', renderizarUsuarios);
-    document.getElementById('filtroEstado').addEventListener('change', renderizarUsuarios);
     document.getElementById('buscarOrden').addEventListener('input', renderizarOrdenes);
-    document.getElementById('filtroEstadoOrden').addEventListener('change', renderizarOrdenes);
 
     // Verificar autenticación
     onAuthStateChanged(auth, async (user) => {

@@ -685,13 +685,44 @@ function sincronizarConBatches() {
 }
 
 /**
+ * Campos que se actualizan desde la hoja de cálculo (NO incluye campos de ImageSync)
+ * Esto asegura que imagen_principal, ficha_tecnica_url, imagenes, total_imagenes
+ * NO sean sobrescritos cuando se sincronizan productos
+ */
+const CAMPOS_DESDE_SHEET = [
+  'cod_interno',
+  'titulo',
+  'cantidad',
+  'precio_mayorista',
+  'precio_negocio',
+  'precio_persona_natural',
+  'precio_lista',
+  'embalaje',
+  'peso',
+  'impuesto',
+  'ean',
+  'marca',
+  'categoria',
+  'ficha_tecnica',
+  'activo',
+  'sync_at',
+  'updated_at'
+];
+
+/**
  * Envía un lote de productos usando Batch Commit API
+ * USA updateMask para NO sobrescribir campos de imágenes y fichas técnicas
  */
 function enviarBatchAFirestore(productos) {
   const writes = productos.map(producto => ({
     update: {
       name: `projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${COLECCIONES.productos}/${producto.cod_interno}`,
       fields: convertirProductoAFields(producto)
+    },
+    // updateMask asegura que SOLO se actualicen estos campos
+    // Los campos de ImageSync (imagen_principal, ficha_tecnica_url, imagenes, total_imagenes) NO se tocan
+    updateMask: {
+      fieldPaths: CAMPOS_DESDE_SHEET
     }
   }));
 
@@ -719,13 +750,14 @@ function enviarBatchAFirestore(productos) {
 
 /**
  * Convierte un producto al formato Firestore fields
- * No incluye campos protegidos si están vacíos (para no sobrescribir valores existentes)
- * Campos protegidos: imagen_principal, ficha_tecnica_url, imagenes, total_imagenes
+ * SOLO incluye campos que vienen del Sheet (definidos en CAMPOS_DESDE_SHEET)
+ * Los campos de ImageSync (imagen_principal, ficha_tecnica_url, imagenes, total_imagenes)
+ * NUNCA se incluyen aquí - se manejan por separado en ImageSync.gs
  */
 function convertirProductoAFields(producto) {
   const timestamp = new Date().toISOString();
 
-  const fields = {
+  return {
     cod_interno: { stringValue: String(producto.cod_interno) },
     titulo: { stringValue: String(producto.titulo || '') },
     cantidad: { integerValue: String(producto.cantidad || 0) },
@@ -739,22 +771,11 @@ function convertirProductoAFields(producto) {
     ean: { stringValue: String(producto.ean || '') },
     marca: { stringValue: String(producto.marca || '') },
     categoria: { stringValue: String(producto.categoria || '') },
+    ficha_tecnica: { stringValue: String(producto.ficha_tecnica || '') },
     activo: { booleanValue: true },
     sync_at: { timestampValue: timestamp },
     updated_at: { timestampValue: timestamp }
   };
-
-  // Solo incluir ficha_tecnica si tiene valor (no sobrescribir existente)
-  if (producto.ficha_tecnica && producto.ficha_tecnica.trim() !== '') {
-    fields.ficha_tecnica = { stringValue: String(producto.ficha_tecnica) };
-  }
-
-  // Solo incluir imagen_principal si tiene valor (no sobrescribir existente)
-  if (producto.imagen_principal && producto.imagen_principal.trim() !== '') {
-    fields.imagen_principal = { stringValue: String(producto.imagen_principal) };
-  }
-
-  return fields;
 }
 
 /**
@@ -766,6 +787,228 @@ function ejecutarSincronizacionBatch() {
     Logger.log("\n🎉 Sincronización completada exitosamente");
   } catch (error) {
     Logger.log(`\n💥 Error fatal: ${error.message}`);
+    throw error;
+  }
+}
+
+// ============================================
+// LIMPIEZA DE PRODUCTOS HUERFANOS
+// ============================================
+// Elimina productos de Firestore que ya no existen en el Sheet
+
+/**
+ * Obtiene todos los productos existentes en Firestore
+ * @returns {Array} Array de cod_interno de productos en Firestore
+ */
+function obtenerProductosDeFirestore() {
+  Logger.log("Obteniendo productos de Firestore...");
+
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/${COLECCIONES.productos}?pageSize=10000`;
+
+  const options = {
+    method: 'get',
+    headers: {
+      'Authorization': 'Bearer ' + ScriptApp.getOAuthToken(),
+      'Content-Type': 'application/json'
+    },
+    muteHttpExceptions: true
+  };
+
+  const productosFirestore = [];
+  let nextPageToken = null;
+
+  do {
+    let urlPaginada = url;
+    if (nextPageToken) {
+      urlPaginada += `&pageToken=${nextPageToken}`;
+    }
+
+    const response = UrlFetchApp.fetch(urlPaginada, options);
+    const code = response.getResponseCode();
+
+    if (code !== 200) {
+      throw new Error(`Error obteniendo productos: HTTP ${code}`);
+    }
+
+    const data = JSON.parse(response.getContentText());
+
+    if (data.documents) {
+      data.documents.forEach(doc => {
+        // Extraer cod_interno del nombre del documento
+        const pathParts = doc.name.split('/');
+        const docId = pathParts[pathParts.length - 1];
+        productosFirestore.push(docId);
+      });
+    }
+
+    nextPageToken = data.nextPageToken;
+
+  } while (nextPageToken);
+
+  Logger.log(`Productos encontrados en Firestore: ${productosFirestore.length}`);
+  return productosFirestore;
+}
+
+/**
+ * Elimina un producto de Firestore por su cod_interno
+ * @param {string} codInterno - Código interno del producto a eliminar
+ */
+function eliminarProductoDeFirestore(codInterno) {
+  const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/${COLECCIONES.productos}/${codInterno}`;
+
+  const options = {
+    method: 'delete',
+    headers: {
+      'Authorization': 'Bearer ' + ScriptApp.getOAuthToken()
+    },
+    muteHttpExceptions: true
+  };
+
+  const response = UrlFetchApp.fetch(url, options);
+  const code = response.getResponseCode();
+
+  if (code !== 200 && code !== 204) {
+    throw new Error(`Error eliminando ${codInterno}: HTTP ${code}`);
+  }
+
+  return true;
+}
+
+/**
+ * Previsualiza los productos huerfanos que se eliminarían
+ * NO elimina nada, solo muestra la lista
+ */
+function previsualizarProductosHuerfanos() {
+  Logger.log("=== PREVISUALIZACIÓN DE PRODUCTOS HUERFANOS ===");
+  Logger.log("(No se eliminará nada, solo se mostrará la lista)\n");
+
+  try {
+    // 1. Obtener productos del Sheet
+    Logger.log("[1/3] Leyendo productos del Sheet...");
+    const productosSheet = leerProductosDeHoja();
+    const codigosSheet = new Set(productosSheet.map(p => String(p.cod_interno)));
+    Logger.log(`Productos en Sheet: ${codigosSheet.size}`);
+
+    // 2. Obtener productos de Firestore
+    Logger.log("\n[2/3] Obteniendo productos de Firestore...");
+    const codigosFirestore = obtenerProductosDeFirestore();
+    Logger.log(`Productos en Firestore: ${codigosFirestore.length}`);
+
+    // 3. Encontrar huerfanos
+    Logger.log("\n[3/3] Identificando productos huerfanos...");
+    const huerfanos = codigosFirestore.filter(cod => !codigosSheet.has(cod));
+
+    Logger.log(`\nProductos huerfanos encontrados: ${huerfanos.length}`);
+
+    if (huerfanos.length > 0) {
+      Logger.log("\nLista de productos huerfanos:");
+      huerfanos.slice(0, 50).forEach((cod, i) => {
+        Logger.log(`  ${i + 1}. ${cod}`);
+      });
+
+      if (huerfanos.length > 50) {
+        Logger.log(`  ... y ${huerfanos.length - 50} productos más`);
+      }
+
+      Logger.log("\nPara eliminar estos productos, ejecuta: eliminarProductosHuerfanos()");
+    } else {
+      Logger.log("No hay productos huerfanos para eliminar.");
+    }
+
+    Logger.log("\n=== FIN PREVISUALIZACIÓN ===");
+
+    return {
+      totalSheet: codigosSheet.size,
+      totalFirestore: codigosFirestore.length,
+      huerfanos: huerfanos.length,
+      listaHuerfanos: huerfanos
+    };
+
+  } catch (error) {
+    Logger.log(`Error: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Elimina todos los productos de Firestore que no existen en el Sheet
+ * CUIDADO: Esta acción es irreversible
+ */
+function eliminarProductosHuerfanos() {
+  Logger.log("╔══════════════════════════════════════════════╗");
+  Logger.log("║  ELIMINACIÓN DE PRODUCTOS HUERFANOS          ║");
+  Logger.log("╚══════════════════════════════════════════════╝");
+  Logger.log(`Fecha/Hora: ${new Date().toLocaleString("es-CO")}\n`);
+
+  try {
+    // 1. Obtener productos del Sheet
+    Logger.log("[1/4] Leyendo productos del Sheet...");
+    const productosSheet = leerProductosDeHoja();
+    const codigosSheet = new Set(productosSheet.map(p => String(p.cod_interno)));
+    Logger.log(`Productos válidos en Sheet: ${codigosSheet.size}`);
+
+    // 2. Obtener productos de Firestore
+    Logger.log("\n[2/4] Obteniendo productos de Firestore...");
+    const codigosFirestore = obtenerProductosDeFirestore();
+    Logger.log(`Productos actuales en Firestore: ${codigosFirestore.length}`);
+
+    // 3. Encontrar huerfanos
+    Logger.log("\n[3/4] Identificando productos huerfanos...");
+    const huerfanos = codigosFirestore.filter(cod => !codigosSheet.has(cod));
+
+    if (huerfanos.length === 0) {
+      Logger.log("No hay productos huerfanos para eliminar.");
+      Logger.log("Todos los productos de Firestore existen en el Sheet.");
+      return { eliminados: 0, errores: 0 };
+    }
+
+    Logger.log(`Productos huerfanos a eliminar: ${huerfanos.length}`);
+
+    // 4. Eliminar huerfanos
+    Logger.log("\n[4/4] Eliminando productos huerfanos...");
+    let eliminados = 0;
+    let errores = 0;
+    const erroresDetalle = [];
+
+    huerfanos.forEach((codInterno, index) => {
+      try {
+        eliminarProductoDeFirestore(codInterno);
+        eliminados++;
+
+        // Log de progreso cada 10 productos
+        if ((index + 1) % 10 === 0 || index === huerfanos.length - 1) {
+          Logger.log(`   Eliminados: ${eliminados}/${huerfanos.length}`);
+        }
+
+      } catch (error) {
+        errores++;
+        erroresDetalle.push({ cod: codInterno, error: error.message });
+        if (erroresDetalle.length <= 5) {
+          Logger.log(`   ERROR eliminando ${codInterno}: ${error.message}`);
+        }
+      }
+    });
+
+    // Resumen
+    Logger.log("\n╔══════════════════════════════════════════════╗");
+    Logger.log("║  RESUMEN DE ELIMINACIÓN                      ║");
+    Logger.log("╠══════════════════════════════════════════════╣");
+    Logger.log(`║  Productos eliminados: ${eliminados}`);
+    Logger.log(`║  Errores: ${errores}`);
+    Logger.log(`║  Productos restantes en Firestore: ${codigosFirestore.length - eliminados}`);
+    Logger.log("╚══════════════════════════════════════════════╝");
+
+    if (erroresDetalle.length > 0) {
+      Logger.log("\nDetalle de errores:");
+      erroresDetalle.forEach((e, i) => {
+        Logger.log(`  ${i + 1}. ${e.cod}: ${e.error}`);
+      });
+    }
+
+    return { eliminados, errores, totalAntes: codigosFirestore.length };
+
+  } catch (error) {
+    Logger.log(`\nERROR CRÍTICO: ${error.message}`);
     throw error;
   }
 }

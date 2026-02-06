@@ -1,24 +1,34 @@
 /**
- * Index de MCP Tools
+ * Index de MCP Tools - Agente Comercial ENAR
  * Exporta todas las herramientas del agente
  */
 
 const { consultarCatalogo, TOOL_DEFINITION: consultarCatalogoDefinition } = require('./consultarCatalogo');
 const { verificarStock, TOOL_DEFINITION: verificarStockDefinition } = require('./verificarStock');
-const { crearCotizacion, TOOL_DEFINITION: crearCotizacionDefinition } = require('./crearCotizacion');
+const { crearOrden, TOOL_DEFINITION: crearOrdenDefinition } = require('./crearOrden');
+const {
+  consultarFichaTecnica,
+  buscarProductosComplementarios,
+  TOOL_DEFINITION_FICHA,
+  TOOL_DEFINITION_COMPLEMENTARIOS
+} = require('./consultarFichaTecnica');
 
 // Funciones de las herramientas
 const tools = {
   consultar_catalogo: consultarCatalogo,
   verificar_stock: verificarStock,
-  crear_cotizacion: crearCotizacion
+  crear_orden: crearOrden,
+  consultar_ficha_tecnica: consultarFichaTecnica,
+  buscar_complementarios: buscarProductosComplementarios
 };
 
 // Definiciones para Vertex AI
 const toolDefinitions = [
   consultarCatalogoDefinition,
   verificarStockDefinition,
-  crearCotizacionDefinition
+  crearOrdenDefinition,
+  TOOL_DEFINITION_FICHA,
+  TOOL_DEFINITION_COMPLEMENTARIOS
 ];
 
 // Ejecutar herramienta por nombre

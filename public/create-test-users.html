@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Crear Usuarios de Prueba - ENAR B2B</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+    h1 { color: #1e3a8a; }
+    .log { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-top: 20px; }
+    .log p { margin: 5px 0; font-family: monospace; }
+    .success { color: #10b981; }
+    .error { color: #dc2626; }
+    .info { color: #3b82f6; }
+    button { background: #1e3a8a; color: white; padding: 15px 30px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; }
+    button:hover { background: #3b82f6; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <h1>Crear Usuarios de Prueba</h1>
+  <p>Este script creará 3 usuarios de prueba con diferentes tipos de cliente.</p>
+
+  <button id="btnCrear" onclick="crearUsuarios()">Crear Usuarios de Prueba</button>
+
+  <div class="log" id="log">
+    <p class="info">Esperando...</p>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMPflYHuPnAWaUhv90wi3uBOhP9AoA8e0",
+      authDomain: "enar-b2b.firebaseapp.com",
+      projectId: "enar-b2b",
+      storageBucket: "enar-b2b.firebasestorage.app",
+      messagingSenderId: "903832444518",
+      appId: "1:903832444518:web:f76cb209febc9281a497a7"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const logDiv = document.getElementById('log');
+    const btnCrear = document.getElementById('btnCrear');
+
+    function log(mensaje, tipo = 'info') {
+      const p = document.createElement('p');
+      p.className = tipo;
+      p.textContent = `[${new Date().toLocaleTimeString()}] ${mensaje}`;
+      logDiv.appendChild(p);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    // Usuarios a crear
+    const usuarios = [
+      {
+        email: 'mayorista@test.com',
+        password: 'test123456',
+        data: {
+          nombre: 'Usuario Mayorista Test',
+          telefono: '300 111 1111',
+          tipo_cliente: 'mayorista',
+          estado: 'aprobado',
+          razon_social: 'Distribuidora Test S.A.S',
+          nit: '900.111.111-1',
+          direccion: 'Calle 100 # 10-20',
+          ciudad: 'Bogotá',
+          departamento: 'Bogotá D.C.',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          aprobado_en: new Date().toISOString(),
+          limite_credito: 50000000,
+          plazo_pago: 30,
+          descuento_adicional: 5
+        }
+      },
+      {
+        email: 'negocio@test.com',
+        password: 'test123456',
+        data: {
+          nombre: 'Usuario Negocio Test',
+          telefono: '300 222 2222',
+          tipo_cliente: 'negocio',
+          estado: 'aprobado',
+          razon_social: 'Ferretería Test',
+          nit: '900.222.222-2',
+          direccion: 'Carrera 50 # 30-40',
+          ciudad: 'Medellín',
+          departamento: 'Antioquia',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          aprobado_en: new Date().toISOString(),
+          limite_credito: 10000000,
+          plazo_pago: 15,
+          descuento_adicional: 2
+        }
+      },
+      {
+        email: 'persona@test.com',
+        password: 'test123456',
+        data: {
+          nombre: 'Usuario Persona Natural Test',
+          telefono: '300 333 3333',
+          tipo_cliente: 'persona_natural',
+          estado: 'aprobado',
+          razon_social: '',
+          nit: '',
+          direccion: 'Avenida 80 # 50-60',
+          ciudad: 'Cali',
+          departamento: 'Valle del Cauca',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          aprobado_en: new Date().toISOString(),
+          limite_credito: 0,
+          plazo_pago: 0,
+          descuento_adicional: 0
+        }
+      }
+    ];
+
+    async function crearUsuario(usuario) {
+      try {
+        log(`Creando usuario: ${usuario.email}...`, 'info');
+
+        // Crear en Firebase Auth
+        const userCredential = await auth.createUserWithEmailAndPassword(usuario.email, usuario.password);
+        const uid = userCredential.user.uid;
+        log(`Auth creado - UID: ${uid}`, 'success');
+
+        // Crear documento en Firestore
+        const userData = {
+          uid: uid,
+          email: usuario.email,
+          ...usuario.data
+        };
+
+        await db.collection('usuarios').doc(uid).set(userData);
+        log(`Firestore documento creado para ${usuario.email}`, 'success');
+
+        // Cerrar sesión para crear el siguiente
+        await auth.signOut();
+
+        return { success: true, uid };
+      } catch (error) {
+        if (error.code === 'auth/email-already-in-use') {
+          log(`Usuario ${usuario.email} ya existe, actualizando Firestore...`, 'info');
+
+          // Intentar iniciar sesión para obtener el UID
+          try {
+            const userCredential = await auth.signInWithEmailAndPassword(usuario.email, usuario.password);
+            const uid = userCredential.user.uid;
+
+            // Actualizar/crear documento en Firestore
+            const userData = {
+              uid: uid,
+              email: usuario.email,
+              ...usuario.data
+            };
+            await db.collection('usuarios').doc(uid).set(userData, { merge: true });
+            log(`Firestore actualizado para ${usuario.email}`, 'success');
+
+            await auth.signOut();
+            return { success: true, uid };
+          } catch (loginError) {
+            log(`Error actualizando ${usuario.email}: ${loginError.message}`, 'error');
+            return { success: false, error: loginError.message };
+          }
+        } else {
+          log(`Error creando ${usuario.email}: ${error.message}`, 'error');
+          return { success: false, error: error.message };
+        }
+      }
+    }
+
+    async function crearUsuarios() {
+      btnCrear.disabled = true;
+      logDiv.innerHTML = '';
+      log('Iniciando creación de usuarios de prueba...', 'info');
+
+      let exitosos = 0;
+      let fallidos = 0;
+
+      for (const usuario of usuarios) {
+        const resultado = await crearUsuario(usuario);
+        if (resultado.success) {
+          exitosos++;
+        } else {
+          fallidos++;
+        }
+        // Pequeña pausa entre usuarios
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      log('', 'info');
+      log('========================================', 'info');
+      log(`Proceso completado: ${exitosos} exitosos, ${fallidos} fallidos`, exitosos === 3 ? 'success' : 'error');
+      log('========================================', 'info');
+      log('', 'info');
+      log('Usuarios creados:', 'info');
+      log('  - mayorista@test.com / test123456 (Mayorista)', 'success');
+      log('  - negocio@test.com / test123456 (Negocio)', 'success');
+      log('  - persona@test.com / test123456 (Persona Natural)', 'success');
+
+      btnCrear.disabled = false;
+      btnCrear.textContent = 'Crear Usuarios de Prueba (Completado)';
+    }
+  </script>
+</body>
+</html>

@@ -496,11 +496,11 @@
 
   <script type="module">
     import { onAuthChange, obtenerDatosUsuario } from './js/auth.js';
-    import {
-      obtenerCarrito,
-      crearOrden,
-      formatearPrecio
-    } from './js/ordenes.js';
+    import { crearOrdenDesdeLocalStorage, formatearPrecio } from './js/ordenes.js';
+
+    // Constantes
+    const STORAGE_KEY = 'enar_carrito';
+    const IVA_PORCENTAJE = 0.19;
 
     // Elementos del DOM
     const loading = document.getElementById('loading');
@@ -515,7 +515,26 @@
 
     let currentUser = null;
     let userData = null;
-    let carrito = null;
+    let carritoItems = [];
+
+    // Leer carrito desde localStorage
+    function leerCarritoLocal() {
+      try {
+        const datos = localStorage.getItem(STORAGE_KEY);
+        return datos ? JSON.parse(datos) : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    // Calcular totales
+    function calcularTotales(items) {
+      const total = items.reduce((sum, item) => sum + (item.precio_unitario * item.cantidad), 0);
+      const subtotal = total / (1 + IVA_PORCENTAJE);
+      const iva = total - subtotal;
+      const unidades = items.reduce((sum, item) => sum + item.cantidad, 0);
+      return { total, subtotal, iva, unidades, productos: items.length };
+    }
 
     // Mostrar mensaje
     function showMessage(texto, tipo) {
@@ -525,18 +544,21 @@
 
     // Renderizar items del carrito
     function renderizarCarrito() {
-      if (!carrito || carrito.items.length === 0) {
+      if (carritoItems.length === 0) {
         loading.style.display = 'none';
         emptyCart.style.display = 'block';
         return;
       }
 
-      cartItemsContainer.innerHTML = carrito.items.map(item => `
+      const totales = calcularTotales(carritoItems);
+
+      cartItemsContainer.innerHTML = carritoItems.map(item => `
         <div class="cart-item">
           <img
             src="${item.imagen || 'img/no-image.png'}"
             alt="${item.titulo}"
             class="cart-item-img"
+            referrerpolicy="no-referrer"
             onerror="this.src='img/no-image.png'"
           >
           <div class="cart-item-info">
@@ -545,14 +567,14 @@
           </div>
           <div class="cart-item-price">
             <div class="cart-item-quantity">${item.cantidad} × ${formatearPrecio(item.precio_unitario)}</div>
-            <div class="cart-item-subtotal">${formatearPrecio(item.subtotal)}</div>
+            <div class="cart-item-subtotal">${formatearPrecio(item.precio_unitario * item.cantidad)}</div>
           </div>
         </div>
       `).join('');
 
-      itemCount.textContent = carrito.cantidad_items;
-      summarySubtotal.textContent = formatearPrecio(carrito.total);
-      summaryTotal.textContent = formatearPrecio(carrito.total);
+      itemCount.textContent = `${totales.productos} productos, ${totales.unidades} unidades`;
+      summarySubtotal.textContent = formatearPrecio(totales.subtotal);
+      summaryTotal.textContent = formatearPrecio(totales.total);
 
       loading.style.display = 'none';
       checkoutContent.style.display = 'block';
@@ -560,12 +582,9 @@
 
     // Cargar datos
     async function cargarDatos(user) {
-      // Obtener datos del usuario
       const resultadoUsuario = await obtenerDatosUsuario(user.uid);
       if (resultadoUsuario.success) {
         userData = resultadoUsuario.data;
-
-        // Pre-llenar campos de dirección
         document.getElementById('direccion').value = userData.direccion || '';
         document.getElementById('ciudad').value = userData.ciudad || '';
         document.getElementById('departamento').value = userData.departamento || '';
@@ -573,20 +592,12 @@
         document.getElementById('telefonoContacto').value = userData.telefono || '';
       }
 
-      // Obtener carrito
-      const resultadoCarrito = await obtenerCarrito(user.uid);
-      if (resultadoCarrito.success) {
-        carrito = resultadoCarrito.carrito;
-        renderizarCarrito();
-      } else {
-        loading.style.display = 'none';
-        emptyCart.style.display = 'block';
-      }
+      carritoItems = leerCarritoLocal();
+      renderizarCarrito();
     }
 
     // Confirmar orden
-    btnConfirm.addEventListener('click', async () => {
-      // Validar campos
+    btnConfirm?.addEventListener('click', async () => {
       const direccion = document.getElementById('direccion').value.trim();
       const ciudad = document.getElementById('ciudad').value.trim();
       const departamento = document.getElementById('departamento').value;
@@ -599,22 +610,32 @@
         return;
       }
 
+      if (carritoItems.length === 0) {
+        showMessage('El carrito está vacío', 'error');
+        return;
+      }
+
       btnConfirm.disabled = true;
       btnConfirm.innerHTML = '<span class="loader"></span>Procesando...';
 
-      const resultado = await crearOrden(currentUser.uid, {
-        direccion,
-        ciudad,
-        departamento,
-        contacto,
-        telefonoContacto
-      }, observaciones);
+      try {
+        const resultado = await crearOrdenDesdeLocalStorage(
+          currentUser.uid,
+          carritoItems,
+          { direccion, ciudad, departamento, contacto, telefonoContacto },
+          observaciones
+        );
 
-      if (resultado.success) {
-        // Redirigir a confirmación
-        window.location.href = `/orden-confirmacion.html?orden=${resultado.orden.id}`;
-      } else {
-        showMessage(resultado.error || 'Error al crear la orden', 'error');
+        if (resultado.success) {
+          localStorage.removeItem(STORAGE_KEY);
+          window.location.href = `/orden-confirmacion.html?orden=${resultado.orden.id}`;
+        } else {
+          showMessage(resultado.error || 'Error al crear la orden', 'error');
+          btnConfirm.disabled = false;
+          btnConfirm.textContent = 'Confirmar Orden';
+        }
+      } catch (error) {
+        showMessage('Error inesperado: ' + error.message, 'error');
         btnConfirm.disabled = false;
         btnConfirm.textContent = 'Confirmar Orden';
       }
@@ -626,7 +647,6 @@
         window.location.href = '/login.html';
         return;
       }
-
       currentUser = user;
       await cargarDatos(user);
     });

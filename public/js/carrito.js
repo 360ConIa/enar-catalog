@@ -9,6 +9,7 @@
  */
 
 import { formatearPrecio } from './utils.js';
+import { obtenerPrecioCliente } from './usuario.js?v=2';
 
 // ============================================
 // CLASE CARRITO
@@ -60,14 +61,18 @@ class Carrito {
       // Incrementar cantidad
       this.items[indice].cantidad += cantidad;
     } else {
+      // Obtener precio según tipo de cliente (ya incluye IVA)
+      const precioConIva = obtenerPrecioCliente(producto);
+
       // Agregar nuevo item
       this.items.push({
         cod_interno: producto.cod_interno,
         titulo: producto.titulo,
-        precio_unitario: producto.p_real || 0,
+        precio_unitario: precioConIva,
         cantidad: cantidad,
         imagen: producto.imagen_principal || '',
-        laboratorio: producto.laboratorio || ''
+        marca: producto.marca || '',
+        embalaje: producto.embalaje || 1
       });
     }
 
@@ -115,37 +120,46 @@ class Carrito {
   }
 
   /**
-   * Calcula el subtotal (sin IVA)
-   * @returns {number} - Subtotal
+   * Calcula el total (los precios ya incluyen IVA)
+   * @returns {number} - Total con IVA
    */
-  obtenerSubtotal() {
+  obtenerTotal() {
     return this.items.reduce((total, item) => {
       return total + (item.precio_unitario * item.cantidad);
     }, 0);
   }
 
   /**
-   * Calcula el IVA
+   * Calcula el subtotal (sin IVA)
+   * Como los precios ya incluyen IVA, extraemos el valor base
+   * @returns {number} - Subtotal sin IVA
+   */
+  obtenerSubtotal() {
+    return this.obtenerTotal() / (1 + this.IVA_PORCENTAJE);
+  }
+
+  /**
+   * Calcula el IVA incluido en los precios
    * @returns {number} - Valor del IVA
    */
   obtenerIVA() {
-    return this.obtenerSubtotal() * this.IVA_PORCENTAJE;
+    return this.obtenerTotal() - this.obtenerSubtotal();
   }
 
   /**
-   * Calcula el total (con IVA)
-   * @returns {number} - Total
-   */
-  obtenerTotal() {
-    return this.obtenerSubtotal() + this.obtenerIVA();
-  }
-
-  /**
-   * Obtiene la cantidad total de items
-   * @returns {number} - Cantidad total
+   * Obtiene la cantidad total de unidades
+   * @returns {number} - Cantidad total de unidades
    */
   obtenerCantidadTotal() {
     return this.items.reduce((total, item) => total + item.cantidad, 0);
+  }
+
+  /**
+   * Obtiene la cantidad de productos diferentes
+   * @returns {number} - Número de productos diferentes
+   */
+  obtenerTotalProductos() {
+    return this.items.length;
   }
 
   /**
@@ -183,6 +197,8 @@ class Carrito {
       subtotal: document.getElementById('carritoSubtotal'),
       iva: document.getElementById('carritoIVA'),
       total: document.getElementById('carritoTotal'),
+      totalProductos: document.getElementById('carritoTotalProductos'),
+      totalUnidades: document.getElementById('carritoTotalUnidades'),
       btnVaciar: document.getElementById('btnVaciarCarrito'),
       btnCotizar: document.getElementById('btnSolicitarCotizacion')
     };
@@ -250,15 +266,15 @@ class Carrito {
       <div class="carrito-item" data-codigo="${item.cod_interno}">
         <div class="carrito-item__imagen">
           ${item.imagen ?
-            `<img src="${item.imagen}" alt="${item.titulo}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23eee%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2212%22>Sin imagen</text></svg>'">` :
+            `<img src="${item.imagen}" alt="${item.titulo}" referrerpolicy="no-referrer" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23eee%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2212%22>Sin imagen</text></svg>'">` :
             '<div class="carrito-item__sin-imagen">Sin imagen</div>'
           }
         </div>
         <div class="carrito-item__info">
-          <span class="carrito-item__laboratorio">${item.laboratorio}</span>
+          <span class="carrito-item__marca">${item.marca || ''}</span>
           <h4 class="carrito-item__titulo">${item.titulo}</h4>
-          <span class="carrito-item__codigo">${item.cod_interno}</span>
-          <span class="carrito-item__precio">${formatearPrecio(item.precio_unitario)}</span>
+          <span class="carrito-item__codigo">${item.cod_interno} ${item.embalaje > 1 ? `· Embalaje: ${item.embalaje} u.` : ''}</span>
+          <span class="carrito-item__precio">${formatearPrecio(item.precio_unitario)} c/u</span>
         </div>
         <div class="carrito-item__cantidad">
           <button class="btn-cantidad" data-accion="restar" data-codigo="${item.cod_interno}">-</button>
@@ -309,6 +325,15 @@ class Carrito {
    * Actualiza los totales en el modal
    */
   actualizarTotales() {
+    // Conteo de productos y unidades
+    if (this.elementos.totalProductos) {
+      this.elementos.totalProductos.textContent = this.obtenerTotalProductos();
+    }
+    if (this.elementos.totalUnidades) {
+      this.elementos.totalUnidades.textContent = this.obtenerCantidadTotal();
+    }
+
+    // Valores monetarios
     if (this.elementos.subtotal) {
       this.elementos.subtotal.textContent = formatearPrecio(this.obtenerSubtotal());
     }

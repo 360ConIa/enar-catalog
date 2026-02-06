@@ -5,117 +5,149 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ENAR B2B - Catálogo de Productos</title>
 
-  <!-- Estilos -->
-  <link rel="stylesheet" href="css/styles.css?v=6.0">
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
   <!-- Select2 para dropdowns con búsqueda -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+  <!-- Estilos personalizados ENAR -->
+  <link rel="stylesheet" href="css/styles.css?v=8.0">
+
+  <!-- jQuery (requerido por Select2) -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-  <!-- Firebase SDK v9 (CDN) -->
-  <script type="module">
-    // Los módulos de Firebase se importan en firebase-config.js
-  </script>
+  <!-- Bootstrap JS Bundle (cargado en head para disponibilidad temprana) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
   <!-- Header -->
   <header class="header-principal">
-    <div class="header-contenido">
-      <div class="header-logo">
-        <img src="img/logo-enar.png" alt="ENAR" class="logo-img" onerror="this.style.display='none'">
-      </div>
-      <div class="header-titulo">
-        <h1>ENAR B2B</h1>
-        <p class="header-tagline">Catálogo inteligente potenciado por IA</p>
-      </div>
-      <!-- Navegación de usuario -->
-      <nav class="header-nav" id="headerNav">
-        <!-- Estado no autenticado -->
-        <div id="navNoAuth">
-          <a href="login.html" class="header-nav__link">Iniciar Sesión</a>
-          <a href="registro.html" class="header-nav__link header-nav__link--registro">Registrarse</a>
+    <div class="container-fluid">
+      <div class="header-contenido d-flex align-items-center justify-content-between flex-wrap">
+        <div class="d-flex align-items-center gap-3">
+          <div class="header-logo">
+            <img src="img/logo-enar.png" alt="ENAR" class="logo-img" onerror="this.style.display='none'">
+          </div>
+          <div class="header-titulo">
+            <h1 class="mb-0">ENAR B2B</h1>
+            <p class="header-tagline mb-0 d-none d-sm-block">Asesor comercial con IA integrado al catálogo</p>
+          </div>
         </div>
-        <!-- Estado autenticado -->
-        <div id="navAuth" style="display: none;">
-          <span class="header-nav__user" id="navUserName">Usuario</span>
-          <a href="perfil.html" class="header-nav__link">Mi Perfil</a>
-          <a href="mis-ordenes.html" class="header-nav__link">Mis Órdenes</a>
-          <a href="admin.html" class="header-nav__link header-nav__link--admin" id="navAdminLink" style="display: none;">Admin</a>
-          <a href="#" class="header-nav__link header-nav__link--logout" id="navLogout">Salir</a>
-        </div>
-      </nav>
+
+        <!-- Navegación de usuario -->
+        <nav class="header-nav d-flex align-items-center gap-2 flex-wrap" id="headerNav">
+          <!-- Estado no autenticado -->
+          <div id="navNoAuth" class="align-items-center gap-2 nav-visible">
+            <a href="login.html" class="header-nav__link">Iniciar Sesión</a>
+            <a href="registro.html" class="header-nav__link header-nav__link--registro">Registrarse</a>
+          </div>
+          <!-- Estado autenticado -->
+          <div id="navAuth" class="align-items-center gap-2 flex-wrap nav-hidden">
+            <span class="header-nav__user" id="navUserName">Usuario</span>
+            <a href="perfil.html" class="header-nav__link">Mi Perfil</a>
+            <a href="mis-ordenes.html" class="header-nav__link">Mis Órdenes</a>
+            <a href="admin.html" class="header-nav__link header-nav__link--admin" id="navAdminLink" style="display: none;">Admin</a>
+            <a href="#" class="header-nav__link header-nav__link--logout" id="navLogout">Salir</a>
+          </div>
+        </nav>
+      </div>
     </div>
   </header>
 
   <!-- Barra de búsqueda y filtros -->
   <section class="filtros controles-tabla">
-    <div class="container">
-      <div class="filtros__grid filtros__grid--tabla">
+    <div class="container-fluid px-3">
+      <div class="row g-2 align-items-end">
         <!-- Búsqueda -->
-        <div class="filtros__busqueda">
-          <input
-            type="text"
-            id="inputBusqueda"
-            class="input-busqueda"
-            placeholder="Buscar..."
-            autocomplete="off"
-          >
+        <div class="col-12 col-md-6 col-lg-3">
+          <div class="busqueda-container">
+            <button type="button" id="btnLimpiarBusqueda" class="btn-limpiar-campo" title="Limpiar búsqueda" style="display: none;">
+              &times;
+            </button>
+            <input
+              type="text"
+              id="inputBusqueda"
+              class="form-control input-busqueda"
+              placeholder="Buscar..."
+              autocomplete="off"
+            >
+            <span class="busqueda-ayuda" data-tooltip="Buscar por código, producto, EAN o marca. Use ';' para múltiples términos.">
+              <span class="busqueda-ayuda-icono">i</span>
+            </span>
+          </div>
         </div>
 
-        <!-- Filtro categoría (Select2) -->
-        <div class="filtros__categoria">
+        <!-- Filtro categoría -->
+        <div class="col-6 col-md-3 col-lg-2">
           <label for="selectCategoria" class="filtro-label">Categoría:</label>
-          <select id="selectCategoria" class="select-categoria select2-filtro">
-            <option value="">Todas</option>
-          </select>
+          <div class="filtro-container">
+            <button type="button" id="btnLimpiarCategoria" class="btn-limpiar-campo" title="Limpiar" style="display: none;">
+              &times;
+            </button>
+            <select id="selectCategoria" class="form-select select2-filtro">
+              <option value="">Todas</option>
+            </select>
+          </div>
         </div>
 
-        <!-- Filtro marca (Select2) -->
-        <div class="filtros__marca">
+        <!-- Filtro marca -->
+        <div class="col-6 col-md-3 col-lg-2">
           <label for="selectMarca" class="filtro-label">Marca:</label>
-          <select id="selectMarca" class="select-marca select2-filtro">
-            <option value="">Todas</option>
-          </select>
+          <div class="filtro-container">
+            <button type="button" id="btnLimpiarMarca" class="btn-limpiar-campo" title="Limpiar" style="display: none;">
+              &times;
+            </button>
+            <select id="selectMarca" class="form-select select2-filtro">
+              <option value="">Todas</option>
+            </select>
+          </div>
         </div>
 
         <!-- Filtro ofertas -->
-        <div class="filtros__ofertas">
+        <div class="col-6 col-md-3 col-lg-2">
           <label for="filtroOfertas" class="filtro-label">Ofertas:</label>
-          <select id="filtroOfertas" class="select-ofertas">
-            <option value="">Todas</option>
-            <option value="marca_dia">Marca del día</option>
-            <option value="nadie_nos_gana">Nadie nos gana</option>
-            <option value="precio_viral">Precio viral</option>
-            <option value="obsequios">Obsequios</option>
-          </select>
+          <div class="filtro-container">
+            <button type="button" id="btnLimpiarOfertas" class="btn-limpiar-campo" title="Limpiar" style="display: none;">
+              &times;
+            </button>
+            <select id="filtroOfertas" class="form-select">
+              <option value="">Todas</option>
+              <option value="marca_dia">Marca del día</option>
+              <option value="nadie_nos_gana">Nadie nos gana</option>
+              <option value="precio_viral">Precio viral</option>
+              <option value="obsequios">Obsequios</option>
+            </select>
+          </div>
         </div>
 
-        <!-- Botón limpiar filtros -->
-        <div class="filtros__acciones">
-          <button id="btnLimpiarFiltros" class="btn-limpiar">Limpiar</button>
+        <!-- Botón limpiar -->
+        <div class="col-6 col-md-3 col-lg-1">
+          <button id="btnLimpiarFiltros" class="btn btn-danger btn-sm w-100">Limpiar</button>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Tabla de productos -->
-  <main class="productos">
-    <div class="container">
-      <!-- Contenedor tabla con scroll horizontal -->
-      <div class="tabla-container">
-        <table id="tablaProductos" class="tabla-productos">
+  <main class="productos py-3">
+    <div class="container-fluid px-2 px-md-3">
+      <!-- Tabla responsive -->
+      <div class="table-responsive tabla-container">
+        <table id="tablaProductos" class="table table-hover tabla-productos mb-0">
           <thead>
             <tr>
-              <th>Cantidad</th>
-              <th>Producto</th>
-              <th>Stock</th>
-              <th id="thPrecioCliente">P. PERSONAS</th>
-              <th>P. Lista</th>
-              <th>Categoría</th>
-              <th>Marca</th>
-              <th>Imagen</th>
-              <th>Acciones</th>
+              <th>Cant.</th>
+              <th style="text-align: center;">Img</th>
+              <th class="th-ordenable" data-columna="titulo">Producto <span class="sort-icon"></span></th>
+              <th class="th-ordenable" data-columna="precio_cliente" id="thPrecioCliente">Precio <span class="sort-icon"></span></th>
+              <th class="th-ordenable d-none d-md-table-cell" data-columna="precio_lista">P.Lista <span class="sort-icon"></span></th>
+              <th class="th-ordenable d-none d-lg-table-cell" data-columna="categoria">Categoría <span class="sort-icon"></span></th>
+              <th class="d-none d-lg-table-cell text-normal-case">UxT</th>
+              <th style="text-align: center;"><i class="bi bi-three-dots-vertical"></i></th>
             </tr>
           </thead>
           <tbody id="productosBody">
@@ -125,48 +157,39 @@
       </div>
 
       <!-- Loader -->
-      <div id="loader" class="loader" style="display: none;">
-        <div class="loader__spinner"></div>
-        <p>Cargando productos...</p>
+      <div id="loader" class="loader text-center py-5" style="display: none;">
+        <div class="spinner-border text-danger" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-2">Cargando productos...</p>
       </div>
 
       <!-- Mensaje sin resultados -->
-      <div id="sinResultados" class="sin-resultados" style="display: none;">
+      <div id="sinResultados" class="sin-resultados text-center py-5" style="display: none;">
         <p>No se encontraron productos con los filtros seleccionados.</p>
       </div>
 
-      <!-- Paginación con contador de resultados -->
-      <div class="paginacion-container" id="paginacion">
+      <!-- Paginación -->
+      <div class="paginacion-container d-flex flex-column flex-md-row justify-content-between align-items-center gap-2 py-3" id="paginacion">
         <div class="paginacion-info">
           <span id="infoResultados">Cargando productos...</span>
         </div>
-        <div class="paginacion-controles">
-          <button id="btnPrimera" class="btn-paginacion" title="Primera página">
-            &laquo;
-          </button>
-          <button id="btnAnterior" class="btn-paginacion" title="Página anterior">
-            &lsaquo;
-          </button>
-          <div class="paginacion__info">
-            <span>Página</span>
-            <input type="number" id="inputPagina" class="input-pagina" value="1" min="1">
+        <div class="paginacion-controles d-flex align-items-center gap-1">
+          <button id="btnPrimera" class="btn btn-sm btn-outline-secondary">&laquo;</button>
+          <button id="btnAnterior" class="btn btn-sm btn-outline-secondary">&lsaquo;</button>
+          <div class="paginacion__info d-flex align-items-center gap-1 mx-2">
+            <span>Pág</span>
+            <input type="number" id="inputPagina" class="form-control form-control-sm input-pagina" value="1" min="1" style="width:50px;">
             <span>de <span id="totalPaginas">1</span></span>
           </div>
-          <button id="btnSiguiente" class="btn-paginacion" title="Página siguiente">
-            &rsaquo;
-          </button>
-          <button id="btnUltima" class="btn-paginacion" title="Última página">
-            &raquo;
-          </button>
-          <div class="paginacion__porpagina">
-            <label for="selectPorPagina">Mostrar:</label>
-            <select id="selectPorPagina" class="select-porpagina">
-              <option value="25">25</option>
-              <option value="50" selected>50</option>
-              <option value="100">100</option>
-              <option value="200">200</option>
-            </select>
-          </div>
+          <button id="btnSiguiente" class="btn btn-sm btn-outline-secondary">&rsaquo;</button>
+          <button id="btnUltima" class="btn btn-sm btn-outline-secondary">&raquo;</button>
+          <select id="selectPorPagina" class="form-select form-select-sm ms-2" style="width:auto;">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="200">200</option>
+          </select>
         </div>
       </div>
     </div>
@@ -198,21 +221,19 @@
         <button class="modal__cerrar" data-cerrar-modal="modalCarrito">&times;</button>
       </div>
       <div class="modal__body">
-        <!-- Lista de productos en el carrito -->
-        <div id="listaCarrito" class="carrito-lista">
-          <!-- Items se renderizan aquí -->
-        </div>
-
-        <!-- Mensaje carrito vacío -->
+        <div id="listaCarrito" class="carrito-lista"></div>
         <div id="carritoVacio" class="carrito-vacio" style="display: none;">
           <p>Tu carrito está vacío</p>
           <p class="carrito-vacio__subtexto">Agrega productos para continuar</p>
         </div>
-
-        <!-- Resumen de totales -->
         <div id="carritoResumen" class="carrito-resumen">
+          <div class="carrito-resumen__conteo">
+            <span><strong id="carritoTotalProductos">0</strong> productos</span>
+            <span class="carrito-resumen__separador">|</span>
+            <span><strong id="carritoTotalUnidades">0</strong> unidades</span>
+          </div>
           <div class="carrito-resumen__linea">
-            <span>Subtotal:</span>
+            <span>Subtotal (sin IVA):</span>
             <span id="carritoSubtotal">$0</span>
           </div>
           <div class="carrito-resumen__linea">
@@ -220,7 +241,7 @@
             <span id="carritoIVA">$0</span>
           </div>
           <div class="carrito-resumen__linea carrito-resumen__linea--total">
-            <span>Total:</span>
+            <span>Total (IVA incluido):</span>
             <span id="carritoTotal">$0</span>
           </div>
         </div>
@@ -244,61 +265,49 @@
       </div>
       <div class="modal__body">
         <form id="formCotizacion" class="formulario-cotizacion">
-          <div class="formulario__grupo">
-            <label for="inputEmpresa">Empresa *</label>
-            <input type="text" id="inputEmpresa" name="empresa" required placeholder="Nombre de la empresa">
-          </div>
-
-          <div class="formulario__grupo">
-            <label for="inputNIT">NIT *</label>
-            <input type="text" id="inputNIT" name="nit" required placeholder="900.123.456-7">
-          </div>
-
-          <div class="formulario__grupo">
-            <label for="inputContacto">Nombre del contacto *</label>
-            <input type="text" id="inputContacto" name="contacto" required placeholder="Nombre completo">
-          </div>
-
-          <div class="formulario__fila">
-            <div class="formulario__grupo">
-              <label for="inputEmail">Email *</label>
-              <input type="email" id="inputEmail" name="email" required placeholder="correo@empresa.com">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="inputEmpresa" class="form-label">Empresa *</label>
+              <input type="text" class="form-control" id="inputEmpresa" name="empresa" required>
             </div>
-
-            <div class="formulario__grupo">
-              <label for="inputTelefono">Teléfono *</label>
-              <input type="tel" id="inputTelefono" name="telefono" required placeholder="300 123 4567">
+            <div class="col-md-6">
+              <label for="inputNIT" class="form-label">NIT *</label>
+              <input type="text" class="form-control" id="inputNIT" name="nit" required placeholder="900.123.456-7">
             </div>
-          </div>
-
-          <div class="formulario__fila">
-            <div class="formulario__grupo">
-              <label for="inputCiudad">Ciudad *</label>
-              <input type="text" id="inputCiudad" name="ciudad" required placeholder="Ciudad">
+            <div class="col-12">
+              <label for="inputContacto" class="form-label">Nombre del contacto *</label>
+              <input type="text" class="form-control" id="inputContacto" name="contacto" required>
             </div>
-
-            <div class="formulario__grupo">
-              <label for="inputDepartamento">Departamento</label>
-              <input type="text" id="inputDepartamento" name="departamento" placeholder="Departamento">
+            <div class="col-md-6">
+              <label for="inputEmail" class="form-label">Email *</label>
+              <input type="email" class="form-control" id="inputEmail" name="email" required>
             </div>
-          </div>
-
-          <div class="formulario__grupo">
-            <label for="inputDireccion">Dirección de entrega *</label>
-            <input type="text" id="inputDireccion" name="direccion" required placeholder="Dirección completa">
-          </div>
-
-          <div class="formulario__grupo">
-            <label for="inputNotas">Notas adicionales</label>
-            <textarea id="inputNotas" name="notas" rows="3" placeholder="Instrucciones especiales, observaciones..."></textarea>
+            <div class="col-md-6">
+              <label for="inputTelefono" class="form-label">Teléfono *</label>
+              <input type="tel" class="form-control" id="inputTelefono" name="telefono" required>
+            </div>
+            <div class="col-md-6">
+              <label for="inputCiudad" class="form-label">Ciudad *</label>
+              <input type="text" class="form-control" id="inputCiudad" name="ciudad" required>
+            </div>
+            <div class="col-md-6">
+              <label for="inputDepartamento" class="form-label">Departamento</label>
+              <input type="text" class="form-control" id="inputDepartamento" name="departamento">
+            </div>
+            <div class="col-12">
+              <label for="inputDireccion" class="form-label">Dirección de entrega *</label>
+              <input type="text" class="form-control" id="inputDireccion" name="direccion" required>
+            </div>
+            <div class="col-12">
+              <label for="inputNotas" class="form-label">Notas adicionales</label>
+              <textarea class="form-control" id="inputNotas" name="notas" rows="2"></textarea>
+            </div>
           </div>
         </form>
       </div>
       <div class="modal__footer">
         <button type="button" class="btn btn--secundario" data-cerrar-modal="modalCotizacion">Cancelar</button>
-        <button type="submit" form="formCotizacion" id="btnEnviarCotizacion" class="btn btn--primario">
-          Enviar cotización
-        </button>
+        <button type="submit" form="formCotizacion" id="btnEnviarCotizacion" class="btn btn--primario">Enviar cotización</button>
       </div>
     </div>
   </div>
@@ -387,14 +396,12 @@
             <div class="producto-detalle__agregar">
               <label for="modalProductoCantidad">Cantidad:</label>
               <input type="number" id="modalProductoCantidad" value="1" min="1" class="input-cantidad-modal">
-              <button id="btnAgregarDesdeModal" class="btn btn--primario">
-                Agregar al carrito
-              </button>
+              <button id="btnAgregarDesdeModal" class="btn btn--primario">Agregar al carrito</button>
             </div>
             <div class="producto-detalle__ficha" id="fichaContainer" style="display: none;">
-              <a id="btnDescargarFicha" href="#" target="_blank" class="btn btn--secundario btn--ficha">
-                📄 Descargar Ficha Técnica
-              </a>
+              <button id="btnVerFicha" class="btn btn--secundario btn--ficha" data-url="">
+                📄 Ver Ficha Técnica
+              </button>
             </div>
           </div>
         </div>
@@ -406,25 +413,34 @@
   <div id="modalGaleria" class="modal" style="display: none;">
     <div class="modal__overlay"></div>
     <div class="galeria-contenedor">
-      <!-- Botón cerrar -->
       <button id="btnCerrarGaleria" class="galeria__cerrar">&times;</button>
-
-      <!-- Título del producto -->
       <h3 id="galeriaTitulo" class="galeria__titulo"></h3>
-
-      <!-- Imagen principal -->
       <div class="galeria__principal">
         <button id="btnGaleriaPrev" class="galeria__nav galeria__nav--prev">&#8249;</button>
         <img id="galeriaImagenPrincipal" src="" alt="Imagen del producto" class="galeria__imagen-principal" referrerpolicy="no-referrer">
         <button id="btnGaleriaNext" class="galeria__nav galeria__nav--next">&#8250;</button>
       </div>
-
-      <!-- Contador de imágenes -->
       <p id="galeriaContador" class="galeria__contador"></p>
+      <div id="galeriaThumbnails" class="galeria__thumbnails"></div>
+    </div>
+  </div>
 
-      <!-- Miniaturas -->
-      <div id="galeriaThumbnails" class="galeria__thumbnails">
-        <!-- Miniaturas se renderizan aquí -->
+  <!-- Modal Ficha Técnica (Visor PDF) -->
+  <div id="modalFichaTecnica" class="modal" style="display: none;">
+    <div class="modal__overlay"></div>
+    <div class="modal__contenido modal__contenido--ficha">
+      <div class="modal__header">
+        <h2 class="modal__titulo" id="modalFichaTitulo">Ficha Técnica</h2>
+        <button class="modal__cerrar" data-cerrar-modal="modalFichaTecnica">&times;</button>
+      </div>
+      <div class="modal__body modal__body--ficha">
+        <iframe id="fichaViewer" src="" class="ficha-viewer" allowfullscreen></iframe>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--secundario" data-cerrar-modal="modalFichaTecnica">Cerrar</button>
+        <a id="btnDescargarFichaPDF" href="#" target="_blank" class="btn btn--primario" download>
+          <i class="bi bi-download"></i> Descargar PDF
+        </a>
       </div>
     </div>
   </div>
@@ -434,7 +450,7 @@
   <script type="module" src="js/utils.js"></script>
   <script type="module" src="js/carrito.js"></script>
   <script type="module" src="js/cotizacion.js"></script>
-  <script type="module" src="js/productos.js?v=7"></script>
+  <script type="module" src="js/productos.js?v=11"></script>
 
   <!-- Auth Navigation Handler -->
   <script type="module">
@@ -443,14 +459,12 @@
 
     const ADMIN_EMAILS = ['sebastianbumq@enarapp.com'];
 
-    // Elementos de navegación
     const navNoAuth = document.getElementById('navNoAuth');
     const navAuth = document.getElementById('navAuth');
     const navUserName = document.getElementById('navUserName');
     const navAdminLink = document.getElementById('navAdminLink');
     const navLogout = document.getElementById('navLogout');
 
-    // Botones del carrito
     const btnSolicitarCotizacion = document.getElementById('btnSolicitarCotizacion');
     const btnCrearOrden = document.getElementById('btnCrearOrden');
     const btnLoginParaOrden = document.getElementById('btnLoginParaOrden');
@@ -458,63 +472,61 @@
     let currentUser = null;
     let userData = null;
 
-    // Actualizar navegación según estado de auth
     function actualizarNavegacion(user, data) {
       if (user && data && data.estado === 'aprobado') {
-        // Usuario autenticado y aprobado
-        navNoAuth.style.display = 'none';
-        navAuth.style.display = 'flex';
+        // Usuario aprobado: ocultar login/registro, mostrar menú autenticado
+        navNoAuth.classList.remove('nav-visible');
+        navNoAuth.classList.add('nav-hidden');
+        navAuth.classList.remove('nav-hidden');
+        navAuth.classList.add('nav-visible');
         navUserName.textContent = data.nombre || user.email;
 
-        // Mostrar link de admin si es admin
         if (ADMIN_EMAILS.includes(user.email)) {
           navAdminLink.style.display = 'inline-block';
+        } else {
+          navAdminLink.style.display = 'none';
         }
 
-        // Botones del carrito
         btnSolicitarCotizacion.style.display = 'none';
         btnCrearOrden.style.display = 'inline-block';
         btnLoginParaOrden.style.display = 'none';
 
       } else if (user) {
-        // Usuario autenticado pero NO aprobado
-        navNoAuth.style.display = 'none';
-        navAuth.style.display = 'flex';
+        // Usuario pendiente: ocultar login/registro, mostrar menú autenticado
+        navNoAuth.classList.remove('nav-visible');
+        navNoAuth.classList.add('nav-hidden');
+        navAuth.classList.remove('nav-hidden');
+        navAuth.classList.add('nav-visible');
         navUserName.textContent = (data?.nombre || user.email) + ' (Pendiente)';
-
-        // No mostrar admin
         navAdminLink.style.display = 'none';
 
-        // Usuario pendiente no puede crear órdenes
         btnSolicitarCotizacion.style.display = 'inline-block';
         btnCrearOrden.style.display = 'none';
         btnLoginParaOrden.style.display = 'none';
 
       } else {
-        // No autenticado
-        navNoAuth.style.display = 'flex';
-        navAuth.style.display = 'none';
+        // Sin usuario: mostrar login/registro, ocultar menú autenticado
+        navNoAuth.classList.remove('nav-hidden');
+        navNoAuth.classList.add('nav-visible');
+        navAuth.classList.remove('nav-visible');
+        navAuth.classList.add('nav-hidden');
 
-        // Mostrar opción de login
         btnSolicitarCotizacion.style.display = 'none';
         btnCrearOrden.style.display = 'none';
         btnLoginParaOrden.style.display = 'inline-block';
       }
     }
 
-    // Cerrar sesión
     navLogout?.addEventListener('click', async (e) => {
       e.preventDefault();
       await cerrarSesion();
-      window.location.reload();
+      window.location.href = '/login.html';
     });
 
-    // Crear orden - redirigir a página de checkout
     btnCrearOrden?.addEventListener('click', () => {
       window.location.href = '/orden.html';
     });
 
-    // Escuchar cambios de autenticación
     onAuthChange(async (user) => {
       currentUser = user;
 
@@ -529,11 +541,9 @@
 
       actualizarNavegacion(user, userData);
 
-      // Exponer datos de usuario globalmente para otros módulos
       window.currentUserData = userData;
       window.currentUser = user;
 
-      // Disparar evento personalizado
       window.dispatchEvent(new CustomEvent('userStateChanged', {
         detail: { user, userData }
       }));
@@ -545,7 +555,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-functions-compat.js"></script>
   <script>
-    // Inicializar Firebase para el widget de chat
     if (!firebase.apps.length) {
       firebase.initializeApp({
         apiKey: "AIzaSyCMPflYHuPnAWaUhv90wi3uBOhP9AoA8e0",

@@ -57,15 +57,7 @@ export function getTipoCliente() {
  * @returns {string} - Etiqueta legible
  */
 export function getEtiquetaTipoCliente() {
-  switch (usuarioState.tipoCliente) {
-    case TIPOS_CLIENTE.MAYORISTA:
-      return 'P. MAYORISTA';
-    case TIPOS_CLIENTE.NEGOCIO:
-      return 'P. NEGOCIOS';
-    case TIPOS_CLIENTE.PERSONA_NATURAL:
-    default:
-      return 'P. PERSONAS';
-  }
+  return 'P.Final';
 }
 
 /**

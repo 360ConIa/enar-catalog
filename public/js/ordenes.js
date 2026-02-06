@@ -4,6 +4,12 @@
  * ============================================
  * Archivo: ordenes.js
  * Descripción: Gestión completa de órdenes de compra
+ * Versión: 2.1
+ * Última actualización: 30 Enero 2026
+ *
+ * Cambios v2.1:
+ * - Fix: Campos cliente y direccion_entrega con fallback '' para evitar undefined en Firestore
+ * - Campos corregidos: email, nombre, telefono, tipo_cliente, direccion, ciudad, departamento, contacto, telefono_contacto
  * ============================================
  */
 
@@ -46,10 +52,10 @@ const auth = getAuth(app);
 const ESTADOS_ORDEN = {
   BORRADOR: 'borrador',
   PENDIENTE: 'pendiente',
-  CONFIRMADA: 'confirmada',
-  EN_PROCESO: 'en_proceso',
-  ENVIADA: 'enviada',
-  ENTREGADA: 'entregada',
+  ALISTAMIENTO: 'alistamiento',
+  COMPLETO: 'completo',
+  PARCIAL: 'parcial',
+  EN_ESPERA: 'en_espera',
   CANCELADA: 'cancelada'
 };
 
@@ -243,8 +249,107 @@ async function vaciarCarrito(userId) {
 // ÓRDENES DE COMPRA
 // =====================
 
+const IVA_PORCENTAJE = 0.19;
+
 /**
- * Crea una nueva orden de compra a partir del carrito
+ * Crea una nueva orden de compra a partir de items del localStorage
+ */
+async function crearOrdenDesdeLocalStorage(userId, items, datosEntrega, observaciones = '') {
+  try {
+    if (!items || items.length === 0) {
+      return { success: false, error: 'El carrito está vacío' };
+    }
+
+    // Obtener datos del usuario
+    const userDoc = await getDoc(doc(db, 'usuarios', userId));
+
+    if (!userDoc.exists()) {
+      return { success: false, error: 'Usuario no encontrado' };
+    }
+
+    const usuario = userDoc.data();
+
+    // Calcular totales (los precios ya incluyen IVA)
+    const total = items.reduce((sum, item) => sum + (item.precio_unitario * item.cantidad), 0);
+    const subtotal = total / (1 + IVA_PORCENTAJE);
+    const iva = total - subtotal;
+    const cantidadUnidades = items.reduce((sum, item) => sum + item.cantidad, 0);
+
+    // Crear orden
+    const numeroOrden = generarNumeroOrden();
+    const orden = {
+      numero_orden: numeroOrden,
+      user_id: userId,
+
+      // Datos del cliente
+      cliente: {
+        email: usuario.email || '',
+        nombre: usuario.nombre || '',
+        telefono: usuario.telefono || '',
+        tipo_cliente: usuario.tipo_cliente || '',
+        razon_social: usuario.razon_social || '',
+        nit: usuario.nit || ''
+      },
+
+      // Dirección de entrega
+      direccion_entrega: {
+        direccion: datosEntrega.direccion || usuario.direccion || '',
+        ciudad: datosEntrega.ciudad || usuario.ciudad || '',
+        departamento: datosEntrega.departamento || usuario.departamento || '',
+        contacto: datosEntrega.contacto || usuario.nombre || '',
+        telefono_contacto: datosEntrega.telefonoContacto || usuario.telefono || ''
+      },
+
+      // Items de la orden
+      items: items.map(item => ({
+        cod_interno: item.cod_interno,
+        titulo: item.titulo,
+        marca: item.marca || '',
+        imagen: item.imagen || '',
+        precio_unitario: item.precio_unitario,
+        cantidad: item.cantidad,
+        subtotal: item.precio_unitario * item.cantidad
+      })),
+
+      // Totales
+      subtotal: subtotal,
+      iva: iva,
+      total: total,
+      cantidad_productos: items.length,
+      cantidad_unidades: cantidadUnidades,
+
+      // Estado y fechas
+      estado: ESTADOS_ORDEN.PENDIENTE,
+      observaciones: observaciones,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+
+      // Historial de estados
+      historial: [
+        {
+          estado: ESTADOS_ORDEN.PENDIENTE,
+          fecha: new Date().toISOString(),
+          nota: 'Orden creada'
+        }
+      ]
+    };
+
+    // Guardar orden
+    const ordenRef = await addDoc(collection(db, COLECCION_ORDENES), orden);
+
+    return {
+      success: true,
+      orden: { id: ordenRef.id, ...orden },
+      mensaje: `Orden ${numeroOrden} creada exitosamente`
+    };
+  } catch (error) {
+    console.error('Error creando orden:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Crea una nueva orden de compra a partir del carrito en Firestore (legacy)
  */
 async function crearOrden(userId, datosEntrega, observaciones = '') {
   try {
@@ -278,21 +383,21 @@ async function crearOrden(userId, datosEntrega, observaciones = '') {
 
       // Datos del cliente
       cliente: {
-        email: usuario.email,
-        nombre: usuario.nombre,
-        telefono: usuario.telefono,
-        tipo_cliente: usuario.tipo_cliente,
+        email: usuario.email || '',
+        nombre: usuario.nombre || '',
+        telefono: usuario.telefono || '',
+        tipo_cliente: usuario.tipo_cliente || '',
         razon_social: usuario.razon_social || '',
         nit: usuario.nit || ''
       },
 
       // Dirección de entrega
       direccion_entrega: {
-        direccion: datosEntrega.direccion || usuario.direccion,
-        ciudad: datosEntrega.ciudad || usuario.ciudad,
-        departamento: datosEntrega.departamento || usuario.departamento,
-        contacto: datosEntrega.contacto || usuario.nombre,
-        telefono_contacto: datosEntrega.telefonoContacto || usuario.telefono
+        direccion: datosEntrega.direccion || usuario.direccion || '',
+        ciudad: datosEntrega.ciudad || usuario.ciudad || '',
+        departamento: datosEntrega.departamento || usuario.departamento || '',
+        contacto: datosEntrega.contacto || usuario.nombre || '',
+        telefono_contacto: datosEntrega.telefonoContacto || usuario.telefono || ''
       },
 
       // Items de la orden
@@ -589,10 +694,10 @@ function textoEstado(estado) {
   const textos = {
     [ESTADOS_ORDEN.BORRADOR]: 'Borrador',
     [ESTADOS_ORDEN.PENDIENTE]: 'Pendiente',
-    [ESTADOS_ORDEN.CONFIRMADA]: 'Confirmada',
-    [ESTADOS_ORDEN.EN_PROCESO]: 'En Proceso',
-    [ESTADOS_ORDEN.ENVIADA]: 'Enviada',
-    [ESTADOS_ORDEN.ENTREGADA]: 'Entregada',
+    [ESTADOS_ORDEN.ALISTAMIENTO]: 'Alistamiento',
+    [ESTADOS_ORDEN.COMPLETO]: 'Completo',
+    [ESTADOS_ORDEN.PARCIAL]: 'Parcial',
+    [ESTADOS_ORDEN.EN_ESPERA]: 'En Espera',
     [ESTADOS_ORDEN.CANCELADA]: 'Cancelada'
   };
 
@@ -606,10 +711,10 @@ function claseEstado(estado) {
   const clases = {
     [ESTADOS_ORDEN.BORRADOR]: 'estado-borrador',
     [ESTADOS_ORDEN.PENDIENTE]: 'estado-pendiente',
-    [ESTADOS_ORDEN.CONFIRMADA]: 'estado-confirmada',
-    [ESTADOS_ORDEN.EN_PROCESO]: 'estado-proceso',
-    [ESTADOS_ORDEN.ENVIADA]: 'estado-enviada',
-    [ESTADOS_ORDEN.ENTREGADA]: 'estado-entregada',
+    [ESTADOS_ORDEN.ALISTAMIENTO]: 'estado-alistamiento',
+    [ESTADOS_ORDEN.COMPLETO]: 'estado-completo',
+    [ESTADOS_ORDEN.PARCIAL]: 'estado-parcial',
+    [ESTADOS_ORDEN.EN_ESPERA]: 'estado-en_espera',
     [ESTADOS_ORDEN.CANCELADA]: 'estado-cancelada'
   };
 
@@ -628,6 +733,7 @@ export {
   eliminarDelCarrito,
   vaciarCarrito,
   crearOrden,
+  crearOrdenDesdeLocalStorage,
   obtenerOrden,
   obtenerOrdenesUsuario,
   obtenerTodasLasOrdenes,

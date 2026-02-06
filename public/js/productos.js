@@ -43,7 +43,7 @@ import {
 // CONSTANTES Y ESTADO
 // ============================================
 
-const PRODUCTOS_POR_PAGINA_DEFAULT = 50;
+const PRODUCTOS_POR_PAGINA_DEFAULT = 100;
 
 // Estado de la aplicación
 const estado = {
@@ -59,6 +59,10 @@ const estado = {
     categoria: '',
     marca: '',
     ofertas: ''            // '' = todas, 'oferta' = solo ofertas
+  },
+  ordenamiento: {
+    columna: 'cantidad',   // Por defecto: ordenar por stock
+    direccion: 'desc'      // Por defecto: descendente (mayor stock primero)
   }
 };
 
@@ -73,6 +77,10 @@ const elementos = {
 
   // Filtros
   inputBusqueda: document.getElementById('inputBusqueda'),
+  btnLimpiarBusqueda: document.getElementById('btnLimpiarBusqueda'),
+  btnLimpiarCategoria: document.getElementById('btnLimpiarCategoria'),
+  btnLimpiarMarca: document.getElementById('btnLimpiarMarca'),
+  btnLimpiarOfertas: document.getElementById('btnLimpiarOfertas'),
   selectCategoria: document.getElementById('selectCategoria'),
   selectMarca: document.getElementById('selectMarca'),
   filtroOfertas: document.getElementById('filtroOfertas'),
@@ -117,7 +125,14 @@ const elementos = {
   galeriaThumbnails: document.getElementById('galeriaThumbnails'),
   btnCerrarGaleria: document.getElementById('btnCerrarGaleria'),
   btnGaleriaPrev: document.getElementById('btnGaleriaPrev'),
-  btnGaleriaNext: document.getElementById('btnGaleriaNext')
+  btnGaleriaNext: document.getElementById('btnGaleriaNext'),
+
+  // Modal ficha técnica
+  modalFichaTecnica: document.getElementById('modalFichaTecnica'),
+  modalFichaTitulo: document.getElementById('modalFichaTitulo'),
+  fichaViewer: document.getElementById('fichaViewer'),
+  btnVerFicha: document.getElementById('btnVerFicha'),
+  btnDescargarFichaPDF: document.getElementById('btnDescargarFichaPDF')
 };
 
 // Producto actualmente mostrado en modal
@@ -176,6 +191,9 @@ async function cargarTodosLosProductos() {
     actualizarSelectCategorias();
     actualizarSelectMarcas();
 
+    // Actualizar iconos de ordenamiento (por defecto: Stock desc)
+    actualizarIconosOrdenamiento();
+
     // Aplicar filtros y renderizar
     aplicarFiltros();
 
@@ -205,8 +223,14 @@ function calcularDescuento(producto) {
 }
 
 /**
- * Filtra productos por múltiples palabras (búsqueda AND)
- * Todas las palabras deben estar presentes en el título
+ * Filtra productos por múltiples términos (búsqueda AND)
+ * Todos los términos deben estar presentes en al menos uno de los campos buscables
+ * Campos buscables: titulo, cod_interno, ean, marca
+ *
+ * Separadores aceptados:
+ * - Punto y coma (;) → para términos con espacios: "Soldadura PVC; 1/4 galón"
+ * - Espacios → para términos simples: "soldadura pvc rojo"
+ *
  * @param {Array} productos - Lista de productos
  * @param {string} textoBusqueda - Texto de búsqueda
  * @returns {Array} - Productos filtrados
@@ -216,19 +240,139 @@ function filtrarProductosPorBusqueda(productos, textoBusqueda) {
     return productos;
   }
 
-  // Dividir búsqueda en palabras individuales
-  const palabras = textoBusqueda.toLowerCase()
-    .trim()
-    .split(/\s+/) // Separar por espacios
-    .filter(p => p.length > 0);
+  let terminos = [];
 
-  // Filtrar productos que contengan TODAS las palabras
+  // Si contiene punto y coma, usar ese como separador principal
+  if (textoBusqueda.includes(';')) {
+    terminos = textoBusqueda
+      .split(';')
+      .map(t => t.trim().toLowerCase())
+      .filter(t => t.length > 0);
+  } else {
+    // Si no hay punto y coma, separar por espacios
+    terminos = textoBusqueda.toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(t => t.length > 0);
+  }
+
+  // Filtrar productos que contengan TODOS los términos
   return productos.filter(producto => {
-    const titulo = (producto.titulo || '').toLowerCase();
+    // Concatenar todos los campos buscables en un solo string
+    const camposBuscables = [
+      producto.titulo || '',
+      producto.cod_interno || '',
+      producto.ean || '',
+      producto.marca || ''
+    ].join(' ').toLowerCase();
 
-    // Verificar que TODAS las palabras estén en el título
-    return palabras.every(palabra => titulo.includes(palabra));
+    // Verificar que TODOS los términos estén en los campos buscables
+    return terminos.every(termino => camposBuscables.includes(termino));
   });
+}
+
+/**
+ * Ordena los productos filtrados según la columna y dirección actuales
+ */
+function ordenarProductos() {
+  const { columna, direccion } = estado.ordenamiento;
+
+  if (!columna || !direccion) return;
+
+  estado.productosFiltrados.sort((a, b) => {
+    let valorA, valorB;
+
+    // Obtener valores según la columna
+    switch (columna) {
+      case 'cod_interno':
+        valorA = (a.cod_interno || '').toLowerCase();
+        valorB = (b.cod_interno || '').toLowerCase();
+        break;
+      case 'titulo':
+        valorA = (a.titulo || '').toLowerCase();
+        valorB = (b.titulo || '').toLowerCase();
+        break;
+      case 'cantidad':
+        valorA = a.cantidad || 0;
+        valorB = b.cantidad || 0;
+        break;
+      case 'precio_cliente':
+        valorA = obtenerPrecioCliente(a);
+        valorB = obtenerPrecioCliente(b);
+        break;
+      case 'precio_lista':
+        valorA = a.precio_lista || 0;
+        valorB = b.precio_lista || 0;
+        break;
+      case 'categoria':
+        valorA = (a.categoria || '').toLowerCase();
+        valorB = (b.categoria || '').toLowerCase();
+        break;
+      default:
+        return 0;
+    }
+
+    // Comparar según tipo
+    let comparacion = 0;
+    if (typeof valorA === 'string') {
+      comparacion = valorA.localeCompare(valorB);
+    } else {
+      comparacion = valorA - valorB;
+    }
+
+    // Invertir si es descendente
+    return direccion === 'desc' ? -comparacion : comparacion;
+  });
+}
+
+/**
+ * Cambia el ordenamiento de una columna
+ * @param {string} columna - Nombre de la columna
+ */
+function cambiarOrdenamiento(columna) {
+  const { columna: columnaActual, direccion: direccionActual } = estado.ordenamiento;
+
+  // Si es la misma columna, alternar dirección
+  if (columna === columnaActual) {
+    if (direccionActual === 'asc') {
+      estado.ordenamiento.direccion = 'desc';
+    } else if (direccionActual === 'desc') {
+      // Quitar ordenamiento
+      estado.ordenamiento.columna = null;
+      estado.ordenamiento.direccion = null;
+    }
+  } else {
+    // Nueva columna, empezar con ascendente
+    estado.ordenamiento.columna = columna;
+    estado.ordenamiento.direccion = 'asc';
+  }
+
+  // Actualizar clases visuales en cabeceras
+  actualizarIconosOrdenamiento();
+
+  // Reordenar y renderizar
+  ordenarProductos();
+  renderizarTabla();
+}
+
+/**
+ * Actualiza los iconos de ordenamiento en las cabeceras
+ */
+function actualizarIconosOrdenamiento() {
+  const { columna, direccion } = estado.ordenamiento;
+
+  // Quitar clases de todas las cabeceras
+  document.querySelectorAll('.th-ordenable').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+  });
+
+  // Agregar clase a la columna activa
+  if (columna && direccion) {
+    const thActivo = document.querySelector(`.th-ordenable[data-columna="${columna}"]`);
+    if (thActivo) {
+      thActivo.classList.add(`sort-${direccion}`);
+    }
+  }
 }
 
 /**
@@ -281,6 +425,9 @@ function aplicarFiltros() {
 
     return true;
   });
+
+  // Aplicar ordenamiento si existe
+  ordenarProductos();
 
   // Reiniciar a primera página al filtrar
   estado.paginaActual = 1;
@@ -494,6 +641,9 @@ function renderizarFila(producto) {
   const precioLista = producto.precio_lista || 0;
   const tieneDescuento = precioLista > precioCliente && precioLista > 0;
 
+  // Código interno
+  const codigoInterno = producto.cod_interno || '-';
+
   return `
     <tr>
       <td>
@@ -507,16 +657,15 @@ function renderizarFila(producto) {
           placeholder="0"
         >
       </td>
+      <td class="td-imagen">${imagenHtml}</td>
       <td title="${tituloTexto}">${tituloTexto}</td>
-      <td><span class="${stockClass}">${cantidadStock}</span></td>
       <td class="td-precio-cliente">${formatearPrecio(precioCliente)}</td>
       <td class="td-precio-lista ${tieneDescuento ? 'precio-tachado' : ''}">${formatearPrecio(precioLista)}</td>
-      <td>${producto.marca || '-'}</td>
       <td>${producto.categoria || '-'}</td>
-      <td class="td-imagen">${imagenHtml}</td>
-      <td>
-        <button class="btn-ver-detalles" data-producto='${productoDataStr}'>
-          Detalles
+      <td>${producto.embalaje || '-'}</td>
+      <td class="td-acciones">
+        <button class="btn-ver-detalles" data-producto='${productoDataStr}' title="Ver detalles">
+          <span class="icono-tres-puntos">⋮</span>
         </button>
       </td>
     </tr>
@@ -544,7 +693,8 @@ function agregarEventListenersFilas() {
   // Botones ver detalles
   elementos.productosBody.querySelectorAll('.btn-ver-detalles').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const producto = JSON.parse(e.target.dataset.producto.replace(/&apos;/g, "'"));
+      const button = e.target.closest('.btn-ver-detalles');
+      const producto = JSON.parse(button.dataset.producto.replace(/&apos;/g, "'"));
       abrirModalProducto(producto);
     });
   });
@@ -617,6 +767,12 @@ function limpiarFiltros() {
   $('#selectMarca').val('').trigger('change.select2');
   $('#filtroOfertas').val('').trigger('change.select2');
 
+  // Ocultar todos los botones X de limpiar
+  if (elementos.btnLimpiarBusqueda) elementos.btnLimpiarBusqueda.style.display = 'none';
+  if (elementos.btnLimpiarCategoria) elementos.btnLimpiarCategoria.style.display = 'none';
+  if (elementos.btnLimpiarMarca) elementos.btnLimpiarMarca.style.display = 'none';
+  if (elementos.btnLimpiarOfertas) elementos.btnLimpiarOfertas.style.display = 'none';
+
   // Restaurar todas las marcas
   actualizarFiltroMarca('');
 
@@ -658,12 +814,15 @@ function abrirModalProducto(producto) {
   elementos.modalProductoCantidad.value = 1;
   elementos.modalProductoCantidad.max = producto.cantidad || 0;
 
-  // Ficha técnica - mostrar botón si existe
+  // Ficha técnica - mostrar botón si existe URL
   const fichaContainer = document.getElementById('fichaContainer');
-  const btnDescargarFicha = document.getElementById('btnDescargarFicha');
-  if (producto.ficha_tecnica_url) {
+  const btnVerFicha = document.getElementById('btnVerFicha');
+  // Usar ficha_tecnica_url (URL real) o ficha_tecnica como fallback
+  const urlFicha = producto.ficha_tecnica_url || producto.ficha_tecnica;
+  if (urlFicha && urlFicha.startsWith('http')) {
     fichaContainer.style.display = 'block';
-    btnDescargarFicha.href = producto.ficha_tecnica_url;
+    btnVerFicha.dataset.url = urlFicha;
+    btnVerFicha.dataset.titulo = producto.titulo || 'Ficha Técnica';
   } else {
     fichaContainer.style.display = 'none';
   }
@@ -788,6 +947,48 @@ function cerrarGaleria() {
   galeriaEstado.indiceActual = 0;
 }
 
+// ============================================
+// MODAL FICHA TÉCNICA
+// ============================================
+
+/**
+ * Abre el modal de ficha técnica con el visor PDF
+ * @param {string} url - URL del PDF
+ * @param {string} titulo - Título del producto
+ */
+function abrirFichaTecnica(url, titulo) {
+  if (!url) return;
+
+  // Convertir URL de descarga a URL de visualización de Google Drive
+  let viewerUrl = url;
+
+  // Si es una URL de Google Drive de descarga, convertir a vista previa
+  if (url.includes('drive.google.com') && url.includes('export=download')) {
+    const fileId = url.match(/id=([^&]+)/)?.[1];
+    if (fileId) {
+      viewerUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+    }
+  }
+
+  // Actualizar modal
+  elementos.modalFichaTitulo.textContent = `Ficha Técnica - ${titulo}`;
+  elementos.fichaViewer.src = viewerUrl;
+  elementos.btnDescargarFichaPDF.href = url;
+
+  // Mostrar modal
+  elementos.modalFichaTecnica.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Cierra el modal de ficha técnica
+ */
+function cerrarFichaTecnica() {
+  elementos.modalFichaTecnica.style.display = 'none';
+  elementos.fichaViewer.src = '';
+  document.body.style.overflow = '';
+}
+
 /**
  * Actualiza la imagen principal de la galería
  */
@@ -879,9 +1080,25 @@ function galeriaSiguiente() {
 
 // Búsqueda con debounce (300ms)
 elementos.inputBusqueda.addEventListener('input', debounce((e) => {
-  estado.filtros.busqueda = e.target.value.trim();
+  const valor = e.target.value.trim();
+  estado.filtros.busqueda = valor;
+
+  // Mostrar/ocultar botón limpiar (X rojo)
+  if (elementos.btnLimpiarBusqueda) {
+    elementos.btnLimpiarBusqueda.style.display = valor.length > 0 ? 'flex' : 'none';
+  }
+
   aplicarFiltros();
 }, 300));
+
+// Botón limpiar búsqueda (X rojo)
+elementos.btnLimpiarBusqueda?.addEventListener('click', () => {
+  elementos.inputBusqueda.value = '';
+  estado.filtros.busqueda = '';
+  elementos.btnLimpiarBusqueda.style.display = 'none';
+  elementos.inputBusqueda.focus();
+  aplicarFiltros();
+});
 
 // Nota: Los filtros de laboratorio, marca y ofertas se manejan en Select2 (inicializarSelect2)
 
@@ -964,7 +1181,28 @@ document.addEventListener('keydown', (e) => {
       galeriaSiguiente();
     }
   }
+  // Ficha técnica - cerrar con Escape
+  if (elementos.modalFichaTecnica?.style.display === 'flex' && e.key === 'Escape') {
+    cerrarFichaTecnica();
+  }
 });
+
+// Ficha técnica - abrir modal al hacer click en el botón
+elementos.btnVerFicha?.addEventListener('click', () => {
+  const url = elementos.btnVerFicha.dataset.url;
+  const titulo = elementos.btnVerFicha.dataset.titulo;
+  if (url) {
+    abrirFichaTecnica(url, titulo);
+  }
+});
+
+// Ficha técnica - cerrar con botón X y botón Cerrar
+document.querySelectorAll('[data-cerrar-modal="modalFichaTecnica"]').forEach(btn => {
+  btn.addEventListener('click', cerrarFichaTecnica);
+});
+
+// Ficha técnica - cerrar al hacer click en overlay
+elementos.modalFichaTecnica?.querySelector('.modal__overlay')?.addEventListener('click', cerrarFichaTecnica);
 
 // ============================================
 // INICIALIZACIÓN
@@ -977,14 +1215,19 @@ function inicializarSelect2() {
   // Select2 para Categoría
   $('#selectCategoria').select2({
     placeholder: 'Todas',
-    allowClear: true,
-    width: '220px',
+    allowClear: false,
+    width: '100%',
     language: {
       noResults: () => 'No se encontraron resultados'
     }
   }).on('change', function() {
     const catSeleccionada = $(this).val() || '';
     estado.filtros.categoria = catSeleccionada;
+
+    // Mostrar/ocultar botón limpiar
+    if (elementos.btnLimpiarCategoria) {
+      elementos.btnLimpiarCategoria.style.display = catSeleccionada ? 'flex' : 'none';
+    }
 
     // Actualizar opciones de marca según categoría
     actualizarFiltroMarca(catSeleccionada);
@@ -995,25 +1238,55 @@ function inicializarSelect2() {
   // Select2 para Marca
   $('#selectMarca').select2({
     placeholder: 'Todas',
-    allowClear: true,
-    width: '220px',
+    allowClear: false,
+    width: '100%',
     language: {
       noResults: () => 'No se encontraron resultados'
     }
   }).on('change', function() {
-    estado.filtros.marca = $(this).val() || '';
+    const marcaSeleccionada = $(this).val() || '';
+    estado.filtros.marca = marcaSeleccionada;
+
+    // Mostrar/ocultar botón limpiar
+    if (elementos.btnLimpiarMarca) {
+      elementos.btnLimpiarMarca.style.display = marcaSeleccionada ? 'flex' : 'none';
+    }
+
     aplicarFiltros();
   });
 
   // Select2 para Ofertas
   $('#filtroOfertas').select2({
     placeholder: 'Todas',
-    allowClear: false,
-    width: '220px',
+    allowClear: true,
+    width: '100%',
     minimumResultsForSearch: Infinity  // Ocultar búsqueda (solo 2 opciones)
   }).on('change', function() {
-    estado.filtros.ofertas = $(this).val() || '';
+    const ofertaSeleccionada = $(this).val() || '';
+    estado.filtros.ofertas = ofertaSeleccionada;
+
+    // Mostrar/ocultar botón limpiar
+    if (elementos.btnLimpiarOfertas) {
+      elementos.btnLimpiarOfertas.style.display = ofertaSeleccionada ? 'flex' : 'none';
+    }
+
     aplicarFiltros();
+  });
+
+  // Event listeners para botones limpiar de filtros
+  elementos.btnLimpiarCategoria?.addEventListener('click', () => {
+    $('#selectCategoria').val('').trigger('change');
+    elementos.btnLimpiarCategoria.style.display = 'none';
+  });
+
+  elementos.btnLimpiarMarca?.addEventListener('click', () => {
+    $('#selectMarca').val('').trigger('change');
+    elementos.btnLimpiarMarca.style.display = 'none';
+  });
+
+  elementos.btnLimpiarOfertas?.addEventListener('click', () => {
+    $('#filtroOfertas').val('').trigger('change');
+    elementos.btnLimpiarOfertas.style.display = 'none';
   });
 }
 
@@ -1024,6 +1297,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Inicializar Select2 para búsqueda en dropdowns
   inicializarSelect2();
 
+  // Inicializar ordenamiento de columnas
+  document.querySelectorAll('.th-ordenable').forEach(th => {
+    th.addEventListener('click', () => {
+      const columna = th.dataset.columna;
+      if (columna) {
+        cambiarOrdenamiento(columna);
+      }
+    });
+  });
+
   // Inicializar módulo de usuario
   await inicializarUsuario();
 
@@ -1032,7 +1315,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Actualizar cabecera de la tabla con el tipo de cliente
     const thPrecio = document.getElementById('thPrecioCliente');
     if (thPrecio) {
-      thPrecio.textContent = getEtiquetaTipoCliente();
+      // Mantener el icono de ordenamiento
+      const sortIcon = thPrecio.querySelector('.sort-icon');
+      thPrecio.innerHTML = getEtiquetaTipoCliente() + ' ';
+      if (sortIcon) {
+        thPrecio.appendChild(sortIcon);
+      } else {
+        const newIcon = document.createElement('span');
+        newIcon.className = 'sort-icon';
+        thPrecio.appendChild(newIcon);
+      }
     }
 
     // Re-renderizar tabla si ya hay productos cargados
