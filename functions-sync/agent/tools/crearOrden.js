@@ -196,21 +196,17 @@ async function crearOrden({ user_id, items, observaciones }) {
 // Definición de la herramienta para Vertex AI
 const TOOL_DEFINITION = {
   name: 'crear_orden',
-  description: 'Crea una orden de compra para el usuario autenticado con los productos y cantidades especificados',
+  description: 'Crea una orden de compra para el usuario. El user_id se obtiene automáticamente del usuario logueado, NO lo pidas al cliente.',
   parameters: {
     type: 'object',
     properties: {
-      user_id: {
-        type: 'string',
-        description: 'ID del usuario autenticado (Firebase Auth UID)'
-      },
       items: {
         type: 'array',
         description: 'Lista de productos a ordenar',
         items: {
           type: 'object',
           properties: {
-            sku: { type: 'string', description: 'Código del producto (cod_interno)' },
+            sku: { type: 'string', description: 'Código del producto (cod_interno/SKU)' },
             cantidad: { type: 'number', description: 'Cantidad a ordenar' }
           },
           required: ['sku', 'cantidad']
@@ -221,7 +217,7 @@ const TOOL_DEFINITION = {
         description: 'Observaciones o instrucciones especiales para la orden (opcional)'
       }
     },
-    required: ['user_id', 'items']
+    required: ['items']
   }
 };
 

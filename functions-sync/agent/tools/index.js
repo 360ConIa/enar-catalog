@@ -1,44 +1,30 @@
 /**
- * Index de MCP Tools - Agente Comercial ENAR
- * Exporta todas las herramientas del agente
+ * Index de Tools - Agente Comercial ENAR
+ * v3.1 - Con agregar_carrito en lugar de crear_orden
  */
 
 const { consultarCatalogo, TOOL_DEFINITION: consultarCatalogoDefinition } = require('./consultarCatalogo');
-const { verificarStock, TOOL_DEFINITION: verificarStockDefinition } = require('./verificarStock');
-const { crearOrden, TOOL_DEFINITION: crearOrdenDefinition } = require('./crearOrden');
-const {
-  consultarFichaTecnica,
-  buscarProductosComplementarios,
-  TOOL_DEFINITION_FICHA,
-  TOOL_DEFINITION_COMPLEMENTARIOS
-} = require('./consultarFichaTecnica');
+const { agregarCarrito, TOOL_DEFINITION: agregarCarritoDefinition } = require('./agregarCarrito');
+const { consultarFichaTecnica, TOOL_DEFINITION_FICHA } = require('./consultarFichaTecnica');
 
-// Funciones de las herramientas
+// 3 herramientas esenciales
 const tools = {
   consultar_catalogo: consultarCatalogo,
-  verificar_stock: verificarStock,
-  crear_orden: crearOrden,
-  consultar_ficha_tecnica: consultarFichaTecnica,
-  buscar_complementarios: buscarProductosComplementarios
+  agregar_carrito: agregarCarrito,
+  consultar_ficha_tecnica: consultarFichaTecnica
 };
 
-// Definiciones para Vertex AI
 const toolDefinitions = [
   consultarCatalogoDefinition,
-  verificarStockDefinition,
-  crearOrdenDefinition,
-  TOOL_DEFINITION_FICHA,
-  TOOL_DEFINITION_COMPLEMENTARIOS
+  agregarCarritoDefinition,
+  TOOL_DEFINITION_FICHA
 ];
 
-// Ejecutar herramienta por nombre
 async function executeTool(toolName, parameters) {
   const tool = tools[toolName];
-
   if (!tool) {
     throw new Error(`Herramienta no encontrada: ${toolName}`);
   }
-
   return await tool(parameters);
 }
 

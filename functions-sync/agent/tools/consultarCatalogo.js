@@ -51,18 +51,11 @@ async function consultarCatalogo({ query, categoria, marca, limite = 10 }) {
     const db = admin.firestore();
     let productosRef = db.collection('productos');
 
-    // Query base: solo productos activos
+    // Query base: solo productos activos (NO filtrar por categoría/marca con where)
+    // La búsqueda flexible por texto es más efectiva
     let queryRef = productosRef.where('activo', '==', true);
 
-    // Aplicar filtros opcionales
-    if (categoria) {
-      queryRef = queryRef.where('categoria', '==', categoria);
-    }
-    if (marca) {
-      queryRef = queryRef.where('marca', '==', marca);
-    }
-
-    // Obtener TODOS los documentos activos (sin límite para buscar en todo el catálogo)
+    // Obtener TODOS los documentos activos para búsqueda flexible
     const snapshot = await queryRef.get();
 
     if (snapshot.empty) {
@@ -70,12 +63,21 @@ async function consultarCatalogo({ query, categoria, marca, limite = 10 }) {
         encontrados: 0,
         productos: [],
         sugerencias: [],
-        mensaje: `No se encontraron productos${categoria ? ` en categoría ${categoria}` : ''}${marca ? ` marca ${marca}` : ''}`
+        mensaje: `No se encontraron productos activos en el catálogo`
       };
     }
 
+    // Combinar query con categoria y marca para búsqueda más amplia
+    let busquedaCompleta = query || '';
+    if (categoria && !busquedaCompleta.toLowerCase().includes(categoria.toLowerCase())) {
+      busquedaCompleta = `${categoria} ${busquedaCompleta}`.trim();
+    }
+    if (marca && !busquedaCompleta.toLowerCase().includes(marca.toLowerCase())) {
+      busquedaCompleta = `${busquedaCompleta} ${marca}`.trim();
+    }
+
     // Normalizar query: quitar acentos y caracteres especiales
-    const queryNormalizado = query.toLowerCase()
+    const queryNormalizado = busquedaCompleta.toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const palabrasQuery = queryNormalizado.split(/\s+/).filter(p => p.length > 2);
 

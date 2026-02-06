@@ -106,7 +106,9 @@ exports.chatAgent = onCall(
     timeoutSeconds: 60,
     memory: '512MiB',
     // Permitir invocaciones públicas (autenticación se verifica en el código)
-    invoker: 'public'
+    invoker: 'public',
+    // Secretos de Firebase (API keys seguras)
+    secrets: ['GEMINI_API_KEY']
   },
   async (request) => {
     // Verificar autenticación (automática con onCall)

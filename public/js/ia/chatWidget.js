@@ -11,6 +11,8 @@ class EnarIAWidget {
     this.isOpen = false;
     this.isExpanded = false;
     this.isProcessing = false;
+    this.isListening = false;
+    this.recognition = null;
     this.chatAgent = null;
     this.sugerencias = [
       { icon: '🎨', text: 'Pinturas exteriores' },
@@ -192,10 +194,19 @@ class EnarIAWidget {
         }
 
         .enar-modal-header .enar-title {
-          display: flex;
+          display: inline-flex;
           align-items: center;
-          gap: 8px;
+          justify-content: center;
+          gap: 5px;
+          padding: 0.4rem 0.6rem 0.25rem 0.6rem;
+          background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+          border-radius: 8px;
           margin: 0;
+        }
+
+        .enar-modal-header .header-icon {
+          font-size: 0.8rem;
+          line-height: 1;
         }
 
         .enar-modal-header .header-text-enar {
@@ -205,26 +216,16 @@ class EnarIAWidget {
           letter-spacing: 0.02em !important;
           line-height: 1 !important;
           font-style: normal !important;
-          color: #1a1a2e;
+          color: white;
         }
 
         .enar-modal-header .header-text-ia {
           font-family: 'Poppins', sans-serif;
           font-weight: 700;
           font-size: 0.7rem;
-          color: #1a1a2e;
-        }
-
-        .enar-modal-header .header-icon {
-          width: 32px;
-          height: 32px;
-          background: var(--enar-gradient);
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          letter-spacing: 0.05em;
+          line-height: 1;
           color: white;
-          font-size: 16px;
         }
 
         .enar-modal-close {
@@ -430,6 +431,17 @@ class EnarIAWidget {
         .enar-btn-voice:hover {
           background: #e8e8e8;
           color: #666;
+        }
+
+        .enar-btn-voice.listening {
+          background: #fee2e2;
+          color: #dc2626;
+          animation: voicePulse 1s ease-in-out infinite;
+        }
+
+        @keyframes voicePulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
         }
 
         .enar-btn-send {
@@ -758,6 +770,12 @@ class EnarIAWidget {
       this.enviarMensaje();
     });
 
+    // Botón de voz
+    const voiceBtn = document.querySelector('.enar-btn-voice');
+    voiceBtn?.addEventListener('click', () => {
+      this.toggleVoice();
+    });
+
     // Chips de sugerencias
     document.querySelectorAll('.enar-chip').forEach(chip => {
       chip.addEventListener('click', () => {
@@ -774,6 +792,56 @@ class EnarIAWidget {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.isOpen) {
         this.closeModal();
+      }
+    });
+
+    // Atajo de teclado: Ctrl+E para abrir/cerrar
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+        e.preventDefault();
+        if (this.usuario) {
+          this.toggleModal();
+        }
+      }
+    });
+
+    // Long press para móvil (500ms en cualquier parte)
+    let longPressTimer = null;
+    let longPressTriggered = false;
+
+    document.addEventListener('touchstart', (e) => {
+      // Ignorar si ya está en el modal o en inputs
+      if (e.target.closest('#enar-ia-modal') ||
+          e.target.tagName === 'INPUT' ||
+          e.target.tagName === 'TEXTAREA' ||
+          e.target.tagName === 'BUTTON') {
+        return;
+      }
+
+      longPressTriggered = false;
+      longPressTimer = setTimeout(() => {
+        if (this.usuario) {
+          longPressTriggered = true;
+          // Vibrar si está disponible
+          if (navigator.vibrate) {
+            navigator.vibrate(50);
+          }
+          this.toggleModal();
+        }
+      }, 500);
+    });
+
+    document.addEventListener('touchend', () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    });
+
+    document.addEventListener('touchmove', () => {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
       }
     });
   }
@@ -877,6 +945,15 @@ class EnarIAWidget {
         if (this.historial.length > 20) {
           this.historial = this.historial.slice(-20);
         }
+
+        // Detectar si hay productos para agregar al carrito
+        if (data.herramientas_usadas && data.herramientas_usadas.length > 0) {
+          for (const tool of data.herramientas_usadas) {
+            if (tool.tool === 'agregar_carrito' && tool.result?.accion === 'AGREGAR_CARRITO') {
+              this.agregarProductosAlCarrito(tool.result.productos);
+            }
+          }
+        }
       } else {
         this.agregarMensaje('error', data.respuesta || 'Error al procesar');
       }
@@ -928,6 +1005,245 @@ class EnarIAWidget {
   ocultarTyping() {
     const typing = document.getElementById('enar-typing');
     typing?.classList.remove('visible');
+  }
+
+  initVoiceRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      console.log('[VOZ] API no soportada en este navegador');
+      return false;
+    }
+
+    console.log('[VOZ] Inicializando reconocimiento de voz...');
+
+    this.recognition = new SpeechRecognition();
+    this.recognition.lang = 'es'; // Simplificar idioma
+    this.recognition.continuous = true; // Mantener activo
+    this.recognition.interimResults = true;
+    this.recognition.maxAlternatives = 3; // Más alternativas
+
+    this.recognition.onstart = () => {
+      console.log('[VOZ] ✓ Reconocimiento iniciado');
+      this.isListening = true;
+      document.querySelector('.enar-btn-voice')?.classList.add('listening');
+
+      const input = document.getElementById('enar-ia-input');
+      if (input) input.placeholder = '🎤 Habla ahora...';
+
+      // Timeout de seguridad
+      this.voiceTimeout = setTimeout(() => {
+        console.log('[VOZ] Timeout alcanzado');
+        if (this.isListening) {
+          this.stopVoice();
+          this.agregarMensaje('error', 'No detecté voz. Intenta de nuevo.');
+        }
+      }, 8000);
+    };
+
+    this.recognition.onaudiostart = () => {
+      console.log('[VOZ] ✓ Audio capturándose');
+    };
+
+    this.recognition.onsoundstart = () => {
+      console.log('[VOZ] ✓ Sonido detectado');
+    };
+
+    this.recognition.onspeechstart = () => {
+      console.log('[VOZ] ✓ Voz detectada');
+    };
+
+    this.recognition.onresult = (event) => {
+      console.log('[VOZ] ✓ Resultado recibido:', event.results);
+      clearTimeout(this.voiceTimeout);
+
+      let transcript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+
+      console.log('[VOZ] Transcripción:', transcript);
+
+      const input = document.getElementById('enar-ia-input');
+      if (input && transcript) {
+        input.value = transcript;
+        input.dispatchEvent(new Event('input'));
+
+        // Si es resultado final, enviar
+        if (event.results[event.results.length - 1].isFinal) {
+          console.log('[VOZ] Resultado final, enviando...');
+          this.stopVoice();
+          setTimeout(() => this.enviarMensaje(), 500);
+        }
+      }
+    };
+
+    this.recognition.onerror = (event) => {
+      console.log('[VOZ] ✗ Error:', event.error);
+      clearTimeout(this.voiceTimeout);
+      this.stopVoice();
+
+      const errores = {
+        'no-speech': 'No escuché nada. Habla más fuerte.',
+        'not-allowed': 'Permite el micrófono en tu navegador.',
+        'network': 'Error de red. ¿Tienes internet?',
+        'audio-capture': 'No se pudo acceder al micrófono.'
+      };
+
+      if (errores[event.error]) {
+        this.agregarMensaje('error', errores[event.error]);
+      }
+    };
+
+    this.recognition.onend = () => {
+      console.log('[VOZ] Reconocimiento terminado');
+      clearTimeout(this.voiceTimeout);
+      this.stopVoice();
+    };
+
+    return true;
+  }
+
+  toggleVoice() {
+    if (this.isListening) {
+      this.stopVoice();
+    } else {
+      this.startVoice();
+    }
+  }
+
+  startVoice() {
+    // Inicializar si no existe
+    if (!this.recognition) {
+      if (!this.initVoiceRecognition()) {
+        this.agregarMensaje('error', 'Tu navegador no soporta reconocimiento de voz.');
+        return;
+      }
+    }
+
+    try {
+      this.recognition.start();
+      // Vibrar en móvil
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    } catch (error) {
+      console.error('Error iniciando voz:', error);
+    }
+  }
+
+  stopVoice() {
+    this.isListening = false;
+
+    // Limpiar timeout
+    if (this.voiceTimeout) {
+      clearTimeout(this.voiceTimeout);
+      this.voiceTimeout = null;
+    }
+
+    // Quitar clase del botón
+    document.querySelector('.enar-btn-voice')?.classList.remove('listening');
+
+    // Restaurar placeholder
+    const input = document.getElementById('enar-ia-input');
+    if (input && input.placeholder.includes('🎤')) {
+      input.placeholder = 'Cuéntame, ¿qué puedo hacer a tu favor?';
+    }
+
+    // Detener reconocimiento
+    if (this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch (e) {}
+    }
+  }
+
+  /**
+   * Agrega productos al carrito local (localStorage)
+   * Compatible con el formato de carrito.js
+   */
+  agregarProductosAlCarrito(productos) {
+    if (!productos || productos.length === 0) return;
+
+    const STORAGE_KEY = 'enar_carrito';
+
+    try {
+      // Cargar carrito actual
+      let carrito = [];
+      const datosGuardados = localStorage.getItem(STORAGE_KEY);
+      if (datosGuardados) {
+        carrito = JSON.parse(datosGuardados);
+      }
+
+      // Agregar cada producto
+      for (const prod of productos) {
+        const indice = carrito.findIndex(item => item.cod_interno === prod.cod_interno);
+
+        // Determinar precio según tipo de cliente
+        const tipoCliente = this.obtenerTipoCliente();
+        let precio = prod.precio_persona_natural || prod.precio_lista || 0;
+        if (tipoCliente === 'mayorista' && prod.precio_mayorista) {
+          precio = prod.precio_mayorista;
+        } else if (tipoCliente === 'negocio' && prod.precio_negocio) {
+          precio = prod.precio_negocio;
+        }
+
+        if (indice !== -1) {
+          // Incrementar cantidad si ya existe
+          carrito[indice].cantidad += prod.cantidad;
+        } else {
+          // Agregar nuevo item
+          carrito.push({
+            cod_interno: prod.cod_interno,
+            titulo: prod.titulo,
+            precio_unitario: precio,
+            cantidad: prod.cantidad,
+            imagen: prod.imagen_principal || '',
+            marca: prod.marca || '',
+            embalaje: prod.embalaje || 1
+          });
+        }
+      }
+
+      // Guardar en localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(carrito));
+
+      // Actualizar UI del carrito si existe
+      this.actualizarUICarrito(carrito);
+
+      // Vibrar como feedback
+      if (navigator.vibrate) {
+        navigator.vibrate([50, 50, 50]);
+      }
+
+    } catch (error) {
+      console.error('Error agregando al carrito:', error);
+    }
+  }
+
+  obtenerTipoCliente() {
+    // Intentar obtener del localStorage o del usuario
+    try {
+      const userData = localStorage.getItem('enar_usuario');
+      if (userData) {
+        const user = JSON.parse(userData);
+        return user.tipo_cliente || 'persona_natural';
+      }
+    } catch (e) {}
+    return 'persona_natural';
+  }
+
+  actualizarUICarrito(carrito) {
+    // Actualizar badge del carrito si existe
+    const badge = document.getElementById('carritoCantidad');
+    if (badge) {
+      const totalItems = carrito.reduce((sum, item) => sum + item.cantidad, 0);
+      badge.textContent = totalItems;
+      badge.style.display = totalItems > 0 ? 'inline-block' : 'none';
+    }
+
+    // Disparar evento personalizado para que otros componentes se enteren
+    window.dispatchEvent(new CustomEvent('carritoActualizado', { detail: carrito }));
   }
 }
 

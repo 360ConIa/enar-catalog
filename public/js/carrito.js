@@ -218,6 +218,17 @@ class Carrito {
       this.cerrarModal();
     });
 
+    // Escuchar actualizaciones del carrito desde otros componentes (ej: ENAR IA)
+    window.addEventListener('carritoActualizado', (e) => {
+      // Recargar items desde localStorage
+      this.items = this.cargarDesdeStorage();
+      this.actualizarUI();
+      // Mostrar notificación si hay productos nuevos
+      if (e.detail && e.detail.length > 0) {
+        this.mostrarNotificacion('Productos agregados desde ENAR IA');
+      }
+    });
+
     // Actualizar UI inicial
     this.actualizarUI();
   }

@@ -8,8 +8,8 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const SYSTEM_PROMPT = require('./systemPrompt');
 const { toolDefinitions, executeTool } = require('./tools');
 
-// API Key de Google AI Studio
-const API_KEY = 'AIzaSyA1jpW6PwFY8hXDQURDYrDTxlQPVkW71MM';
+// API Key desde variable de entorno (secreto de Firebase)
+const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL = 'gemini-2.5-flash';
 
 // Límite de historial para optimizar costos (últimos N mensajes)
@@ -23,9 +23,9 @@ const generativeModel = genAI.getGenerativeModel({
   model: MODEL,
   systemInstruction: SYSTEM_PROMPT,
   generationConfig: {
-    temperature: 0.7,
-    maxOutputTokens: 1024,
-    topP: 0.95
+    temperature: 0.3,
+    maxOutputTokens: 512,
+    topP: 0.9
   }
 });
 
