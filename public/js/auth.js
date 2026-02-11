@@ -47,6 +47,11 @@ const ADMIN_EMAILS = [
   'sebastianbumq@enarapp.com'
 ];
 
+// Emails de gestores de usuarios
+const USER_MANAGER_EMAILS = [
+  'ventas@enar.com.co'
+];
+
 // Estados de usuario
 const ESTADOS_USUARIO = {
   PENDIENTE: 'pendiente',
@@ -150,13 +155,14 @@ async function iniciarSesionConGoogle() {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
 
-    // Si es admin, permitir acceso directo
-    if (ADMIN_EMAILS.includes(user.email)) {
+    // Si es admin o gestor, permitir acceso directo
+    if (ADMIN_EMAILS.includes(user.email) || USER_MANAGER_EMAILS.includes(user.email)) {
       return {
         success: true,
         user: user,
-        esAdmin: true,
-        mensaje: 'Inicio de sesión como administrador exitoso'
+        esAdmin: ADMIN_EMAILS.includes(user.email),
+        esUserManager: USER_MANAGER_EMAILS.includes(user.email),
+        mensaje: 'Inicio de sesión exitoso'
       };
     }
 
@@ -439,5 +445,6 @@ export {
   verificarAcceso,
   ESTADOS_USUARIO,
   TIPOS_CLIENTE,
-  ADMIN_EMAILS
+  ADMIN_EMAILS,
+  USER_MANAGER_EMAILS
 };

@@ -7,6 +7,12 @@ service cloud.firestore {
         request.auth.token.email == 'sebastianbumq@enarapp.com';
     }
 
+    // Helper: Gestor de usuarios (puede gestionar usuarios pero no órdenes ni productos)
+    function isUserManager() {
+      return request.auth != null &&
+        request.auth.token.email == 'ventas@enar.com.co';
+    }
+
     // Helper: Usuario autenticado
     function isAuthenticated() {
       return request.auth != null;
@@ -36,17 +42,21 @@ service cloud.firestore {
       // Cualquier autenticado puede crear su propio documento (registro)
       allow create: if isAuthenticated() && request.auth.uid == userId;
 
-      // Usuario puede leer su propio documento, admin puede leer todos
+      // Usuario puede leer su propio documento, admin puede leer todos,
+      // gestores solo pueden leer usuarios que ellos crearon
       allow read: if isAuthenticated() && (
         request.auth.uid == userId ||
-        isAdmin()
+        isAdmin() ||
+        (isUserManager() && resource.data.creado_por == request.auth.token.email)
       );
 
       // Usuario puede actualizar su propio documento (datos limitados)
       // Admin puede actualizar cualquier documento
+      // Gestores solo pueden actualizar usuarios que ellos crearon
       allow update: if isAuthenticated() && (
         (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional'])) ||
-        isAdmin()
+        isAdmin() ||
+        (isUserManager() && resource.data.creado_por == request.auth.token.email)
       );
 
       // Solo admin puede eliminar

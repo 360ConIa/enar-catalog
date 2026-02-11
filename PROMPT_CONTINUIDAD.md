@@ -37,7 +37,32 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 |---------|-------|
 | **Firebase Project ID** | `enar-b2b` |
 | **Cuenta Admin** | `sebastianbumq@enarapp.com` |
+| **Cuenta Gestora** | `ventas@enar.com.co` (solo gestión de sus clientes) |
 | **API Key Gemini** | Secreto en Firebase (`GEMINI_API_KEY`) |
+
+---
+
+## CAMBIOS REALIZADOS (11 Feb 2026)
+
+### Rol Gestor de Usuarios - ventas@enar.com.co ✅
+- [x] Nuevo rol `User Manager` creado para `ventas@enar.com.co`
+- [x] Acceso al panel admin limitado: solo pestaña "Usuarios" (sin Órdenes)
+- [x] Campo `creado_por` agregado al crear usuarios desde admin
+- [x] Gestor solo ve los clientes que ella misma creó (filtro por `creado_por`)
+- [x] Firestore rules actualizadas: gestores solo leen/editan sus propios clientes
+- [x] Índice compuesto `creado_por` + `created_at` desplegado
+- [x] Enlace "Admin" visible en header del catálogo para gestores
+- [x] Login con Google redirige a admin.html para gestores
+- [x] Título del panel cambia a "Mis Clientes" para gestores
+
+### Permisos de ventas@enar.com.co:
+| Acción | Permitido |
+|--------|-----------|
+| Ver/crear/aprobar/editar sus clientes | ✅ Sí |
+| Ver clientes de otros | ❌ No |
+| Ver/gestionar órdenes | ❌ No |
+| Gestionar productos | ❌ No |
+| Eliminar usuarios | ❌ No |
 
 ---
 
@@ -85,6 +110,9 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 ```
 public/js/ia/chatWidget.js          # Widget IA
 public/js/carrito.js                # Carrito con listener IA
+public/js/user-manager.js           # Gestión usuarios + rol gestor
+public/js/auth.js                   # Auth + USER_MANAGER_EMAILS
+public/admin.html                   # Panel admin (filtrado por rol)
 
 functions-sync/agent/
 ├── agentConfig.js                  # Gemini config
@@ -117,4 +145,4 @@ firebase functions:log --only chatAgent -n 30
 
 ---
 
-*Última actualización: 6 Febrero 2026, 14:30 hrs*
+*Última actualización: 11 Febrero 2026 (Rol Gestor de Usuarios)*

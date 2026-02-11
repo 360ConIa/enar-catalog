@@ -1177,7 +1177,9 @@
     import { getFirestore, doc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import {
       esAdmin,
+      esUserManager,
       obtenerTodosLosUsuarios,
+      obtenerUsuariosPorCreador,
       aprobarUsuario,
       rechazarUsuario,
       ESTADOS_USUARIO,
@@ -1210,6 +1212,8 @@
     let ordenes = [];
     let usuarioSeleccionado = null;
     let ordenSeleccionada = null;
+    let currentUserEmail = null;
+    let isAdminUser = false;
 
     // Elementos DOM
     const loading = document.getElementById('loading');
@@ -1260,9 +1264,14 @@
       return `${dia} ${mes} ${hora}:${min} hs`;
     }
 
-    // Cargar usuarios
+    // Cargar usuarios (admin ve todos, gestor solo los suyos)
     async function cargarUsuarios() {
-      const resultado = await obtenerTodosLosUsuarios();
+      let resultado;
+      if (isAdminUser) {
+        resultado = await obtenerTodosLosUsuarios();
+      } else {
+        resultado = await obtenerUsuariosPorCreador(currentUserEmail);
+      }
 
       if (resultado.success || resultado.usuarios) {
         usuarios = resultado.usuarios || [];
@@ -1443,6 +1452,9 @@
       btn.textContent = 'Creando...';
 
       try {
+        // Guardar email del creador antes de que createUser cambie la sesión
+        const creadorEmail = auth.currentUser?.email || '';
+
         // Crear usuario en Firebase Auth
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const uid = userCredential.user.uid;
@@ -1460,6 +1472,7 @@
           direccion: direccion,
           ciudad: ciudad,
           departamento: departamento,
+          creado_por: creadorEmail,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           limite_credito: 0,
@@ -1829,14 +1842,28 @@
         return;
       }
 
-      if (!esAdmin(user)) {
+      isAdminUser = esAdmin(user);
+      const isManager = esUserManager(user);
+      currentUserEmail = user.email;
+
+      if (!isAdminUser && !isManager) {
         noAccess.style.display = 'block';
         return;
       }
 
       adminPanel.style.display = 'block';
+
+      if (!isAdminUser) {
+        // Gestor: ocultar pestaña de órdenes y mostrar título personalizado
+        document.querySelector('[data-tab="ordenes"]').style.display = 'none';
+        document.querySelector('.card-header h2').textContent = 'Mis Clientes';
+      }
+
       await cargarUsuarios();
-      await cargarOrdenes();
+
+      if (isAdminUser) {
+        await cargarOrdenes();
+      }
     });
   </script>
 </body>

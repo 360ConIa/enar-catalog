@@ -46,6 +46,11 @@ const ADMIN_EMAILS = [
   'sebastianbumq@enarapp.com'
 ];
 
+// Emails de gestores de usuarios (pueden gestionar usuarios pero no órdenes)
+const USER_MANAGER_EMAILS = [
+  'ventas@enar.com.co'
+];
+
 // Estados y tipos
 const ESTADOS_USUARIO = {
   PENDIENTE: 'pendiente',
@@ -65,6 +70,45 @@ const TIPOS_CLIENTE = {
  */
 function esAdmin(user) {
   return user && ADMIN_EMAILS.includes(user.email);
+}
+
+/**
+ * Verifica si el usuario es gestor de usuarios
+ */
+function esUserManager(user) {
+  return user && USER_MANAGER_EMAILS.includes(user.email);
+}
+
+/**
+ * Verifica si tiene acceso al panel admin (admin o gestor)
+ */
+function tieneAccesoAdmin(user) {
+  return esAdmin(user) || esUserManager(user);
+}
+
+/**
+ * Obtiene usuarios creados por un gestor específico
+ */
+async function obtenerUsuariosPorCreador(emailCreador) {
+  try {
+    const usuariosRef = collection(db, 'usuarios');
+    const q = query(
+      usuariosRef,
+      where('creado_por', '==', emailCreador),
+      orderBy('created_at', 'desc')
+    );
+    const snapshot = await getDocs(q);
+
+    const usuarios = [];
+    snapshot.forEach(doc => {
+      usuarios.push({ uid: doc.id, ...doc.data() });
+    });
+
+    return { success: true, usuarios };
+  } catch (error) {
+    console.error('Error obteniendo usuarios por creador:', error);
+    return { success: false, error: error.message, usuarios: [] };
+  }
 }
 
 /**
@@ -398,6 +442,9 @@ export {
   db,
   auth,
   esAdmin,
+  esUserManager,
+  tieneAccesoAdmin,
+  obtenerUsuariosPorCreador,
   obtenerTodosLosUsuarios,
   obtenerUsuariosPendientes,
   aprobarUsuario,
@@ -412,5 +459,6 @@ export {
   buscarUsuarios,
   ESTADOS_USUARIO,
   TIPOS_CLIENTE,
-  ADMIN_EMAILS
+  ADMIN_EMAILS,
+  USER_MANAGER_EMAILS
 };

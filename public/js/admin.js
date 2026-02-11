@@ -39,6 +39,11 @@ const ADMIN_EMAILS = [
   'sebastianbumq@enarapp.com'
 ];
 
+// Emails de gestores de usuarios
+const USER_MANAGER_EMAILS = [
+  'ventas@enar.com.co'
+];
+
 // Tipos de cliente
 const TIPOS_CLIENTE = {
   mayorista: 'Mayorista',
@@ -69,6 +74,13 @@ const elementos = {
  */
 function esAdmin(user) {
   return user && ADMIN_EMAILS.includes(user.email);
+}
+
+/**
+ * Verifica si el usuario es gestor de usuarios
+ */
+function esUserManager(user) {
+  return user && USER_MANAGER_EMAILS.includes(user.email);
 }
 
 /**
@@ -290,13 +302,13 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  if (!esAdmin(user)) {
-    // No es admin - mostrar acceso denegado
+  if (!esAdmin(user) && !esUserManager(user)) {
+    // No es admin ni gestor - mostrar acceso denegado
     elementos.noAccess.style.display = 'block';
     return;
   }
 
-  // Es admin - mostrar panel
+  // Es admin o gestor - mostrar panel
   elementos.adminPanel.style.display = 'block';
   await cargarUsuarios();
 });

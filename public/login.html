@@ -383,7 +383,7 @@
       if (resultado.success) {
         showMessage(message, messageText, '¡Bienvenido! Redirigiendo...', 'success');
         setTimeout(() => {
-          if (resultado.esAdmin) {
+          if (resultado.esAdmin || resultado.esUserManager) {
             window.location.href = '/admin.html';
           } else {
             window.location.href = '/';

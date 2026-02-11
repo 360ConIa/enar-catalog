@@ -458,6 +458,7 @@
     import { agregarAlCarrito, obtenerCarrito } from './js/ordenes.js';
 
     const ADMIN_EMAILS = ['sebastianbumq@enarapp.com'];
+    const USER_MANAGER_EMAILS = ['ventas@enar.com.co'];
 
     const navNoAuth = document.getElementById('navNoAuth');
     const navAuth = document.getElementById('navAuth');
@@ -473,15 +474,17 @@
     let userData = null;
 
     function actualizarNavegacion(user, data) {
-      if (user && data && data.estado === 'aprobado') {
-        // Usuario aprobado: ocultar login/registro, mostrar menú autenticado
+      const esPrivilegiado = user && (ADMIN_EMAILS.includes(user.email) || USER_MANAGER_EMAILS.includes(user.email));
+
+      if (user && (data?.estado === 'aprobado' || esPrivilegiado)) {
+        // Usuario aprobado o con permisos elevados
         navNoAuth.classList.remove('nav-visible');
         navNoAuth.classList.add('nav-hidden');
         navAuth.classList.remove('nav-hidden');
         navAuth.classList.add('nav-visible');
-        navUserName.textContent = data.nombre || user.email;
+        navUserName.textContent = data?.nombre || user.email;
 
-        if (ADMIN_EMAILS.includes(user.email)) {
+        if (esPrivilegiado) {
           navAdminLink.style.display = 'inline-block';
         } else {
           navAdminLink.style.display = 'none';
