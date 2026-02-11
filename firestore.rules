@@ -77,14 +77,16 @@ service cloud.firestore {
       allow create: if isApproved() &&
         request.resource.data.user_id == request.auth.uid;
 
-      // Usuarios pueden leer sus propias órdenes, admin puede leer todas
+      // Usuarios pueden leer sus propias órdenes, admin y vendedores pueden leer todas
       allow read: if isAuthenticated() && (
         resource.data.user_id == request.auth.uid ||
-        isAdmin()
+        isAdmin() ||
+        isUserManager()
       );
 
-      // Solo admin puede actualizar órdenes (cambiar estado, etc.)
-      allow update: if isAdmin();
+      // Admin y vendedores pueden actualizar cualquier orden; usuarios aprobados pueden actualizar sus propias órdenes pendientes
+      allow update: if isAdmin() || isUserManager() ||
+        (isApproved() && resource.data.user_id == request.auth.uid && resource.data.estado == 'pendiente');
 
       // Solo admin puede eliminar
       allow delete: if isAdmin();

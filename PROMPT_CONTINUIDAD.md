@@ -44,9 +44,40 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 
 ## CAMBIOS REALIZADOS (11 Feb 2026)
 
+### Editar Órdenes de Compra (Mis Órdenes) ✅
+- [x] Botón "Editar Orden" (azul) en listado de órdenes con estado Pendiente
+- [x] Botón "Ver Detalles" (rojo) para todas las órdenes
+- [x] Modal de edición: modificar cantidades (+/-), eliminar productos, buscar y agregar nuevos productos
+- [x] Campo de observaciones editable en modo edición
+- [x] Totales actualizados en tiempo real (subtotal, IVA 19%, total)
+- [x] Función `editarOrden()` abre modal directo en modo edición (sin pasar por detalles)
+- [x] Backend `actualizarItemsOrden` acepta observaciones como parámetro opcional
+- [x] Registro en historial: "Orden modificada por el cliente"
+- [x] Toast notifications (verde/rojo) en vez de alert() nativo
+- [x] Seguridad: solo el dueño puede editar, solo si estado == 'pendiente'
+- [x] Aplica a TODOS los usuarios de la app
+
+### Vendedores con acceso a Órdenes en Admin ✅
+- [x] Pestaña "Órdenes" visible para `ventas@enar.com.co` en admin.html
+- [x] Firestore rules: vendedores (isUserManager) pueden leer y actualizar órdenes
+- [x] Filtro: vendedor solo ve órdenes de **sus propios clientes** (creado_por)
+- [x] Contadores/estadísticas reflejan solo las órdenes de sus clientes
+- [x] Puede ver detalles y cambiar estados de órdenes
+- [x] NO puede eliminar órdenes (solo admin)
+
+### Permisos de ventas@enar.com.co:
+| Acción | Permitido |
+|--------|-----------|
+| Ver/crear/aprobar/editar sus clientes | ✅ Sí |
+| Ver clientes de otros | ❌ No |
+| Ver órdenes de sus clientes | ✅ Sí |
+| Cambiar estado de órdenes | ✅ Sí |
+| Eliminar órdenes | ❌ No (solo admin) |
+| Gestionar productos | ❌ No |
+| Eliminar usuarios | ❌ No |
+
 ### Rol Gestor de Usuarios - ventas@enar.com.co ✅
 - [x] Nuevo rol `User Manager` creado para `ventas@enar.com.co`
-- [x] Acceso al panel admin limitado: solo pestaña "Usuarios" (sin Órdenes)
 - [x] Campo `creado_por` agregado al crear usuarios desde admin
 - [x] Gestor solo ve los clientes que ella misma creó (filtro por `creado_por`)
 - [x] Firestore rules actualizadas: gestores solo leen/editan sus propios clientes
@@ -54,15 +85,6 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 - [x] Enlace "Admin" visible en header del catálogo para gestores
 - [x] Login con Google redirige a admin.html para gestores
 - [x] Título del panel cambia a "Mis Clientes" para gestores
-
-### Permisos de ventas@enar.com.co:
-| Acción | Permitido |
-|--------|-----------|
-| Ver/crear/aprobar/editar sus clientes | ✅ Sí |
-| Ver clientes de otros | ❌ No |
-| Ver/gestionar órdenes | ❌ No |
-| Gestionar productos | ❌ No |
-| Eliminar usuarios | ❌ No |
 
 ---
 
@@ -101,6 +123,8 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 | Atajo Ctrl+E | ✅ Funciona |
 | Long press móvil | ✅ Funciona |
 | Voz | ⏸️ Pendiente (Whisper) |
+| Editar orden (pendiente) | ✅ Funciona (todos los usuarios) |
+| Vendedor ve órdenes admin | ✅ Funciona (solo sus clientes) |
 | Consistencia respuestas | 🔄 Siguiente tarea |
 
 ---
@@ -112,6 +136,8 @@ public/js/ia/chatWidget.js          # Widget IA
 public/js/carrito.js                # Carrito con listener IA
 public/js/user-manager.js           # Gestión usuarios + rol gestor
 public/js/auth.js                   # Auth + USER_MANAGER_EMAILS
+public/js/ordenes.js                # Órdenes de compra + edición
+public/mis-ordenes.html             # Mis Órdenes (editar orden pendiente)
 public/admin.html                   # Panel admin (filtrado por rol)
 
 functions-sync/agent/
@@ -145,4 +171,4 @@ firebase functions:log --only chatAgent -n 30
 
 ---
 
-*Última actualización: 11 Febrero 2026 (Rol Gestor de Usuarios)*
+*Última actualización: 11 Febrero 2026 (Editar Órdenes + Vendedor ve Órdenes en Admin)*

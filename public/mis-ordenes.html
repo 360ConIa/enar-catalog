@@ -197,17 +197,19 @@
     }
     .btn-details {
       padding: 8px 16px;
-      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      background: linear-gradient(135deg, #D9232D 0%, #ff6b6b 100%);
       color: white;
       text-decoration: none;
       border-radius: 6px;
       font-size: 13px;
       font-weight: 500;
+      border: none;
+      cursor: pointer;
       transition: all 0.3s;
     }
     .btn-details:hover {
       transform: translateY(-1px);
-      box-shadow: 0 3px 10px rgba(30, 58, 138, 0.3);
+      box-shadow: 0 3px 10px rgba(217, 35, 45, 0.3);
     }
     .btn-reorder {
       padding: 8px 16px;
@@ -431,6 +433,199 @@
       color: #666;
       margin-top: 3px;
     }
+    /* Edit mode styles */
+    .btn-edit-order {
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .btn-edit-order:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(30, 58, 138, 0.3);
+    }
+    .btn-save-order {
+      padding: 10px 24px;
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-save-order:hover { background: #059669; }
+    .btn-save-order:disabled { background: #9ca3af; cursor: not-allowed; }
+    .btn-cancel-edit {
+      padding: 10px 24px;
+      background: #6b7280;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-cancel-edit:hover { background: #4b5563; }
+    .edit-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #e0e0e0;
+    }
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .qty-btn {
+      width: 28px;
+      height: 28px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #f9fafb;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #374151;
+    }
+    .qty-btn:hover { background: #e5e7eb; }
+    .qty-input {
+      width: 50px;
+      text-align: center;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 4px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .qty-input:focus { outline: none; border-color: #3b82f6; }
+    .btn-remove-item {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 6px;
+      background: #fee2e2;
+      color: #dc2626;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-remove-item:hover { background: #fecaca; }
+    .search-add-section {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px dashed #d1d5db;
+    }
+    .search-add-section h5 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e3a8a;
+      margin-bottom: 10px;
+    }
+    .search-input-wrap {
+      position: relative;
+    }
+    .search-input-wrap input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: 'Poppins', sans-serif;
+    }
+    .search-input-wrap input:focus { outline: none; border-color: #3b82f6; }
+    .search-results {
+      margin-top: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: white;
+    }
+    .search-results:empty { display: none; }
+    .search-result-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #eff6ff; }
+    .search-result-name { font-weight: 500; color: #333; }
+    .search-result-code { color: #888; font-size: 12px; }
+    .search-result-price { font-weight: 600; color: #D9232D; }
+    .edit-totals {
+      margin-top: 15px;
+      padding: 12px;
+      background: #f0f4ff;
+      border-radius: 8px;
+    }
+    .edit-totals .detail-row { font-size: 14px; }
+    .searching-indicator {
+      padding: 10px;
+      text-align: center;
+      color: #888;
+      font-size: 13px;
+    }
+    .estado-alistamiento { background: #e0e7ff; color: #4f46e5; }
+    .estado-completo { background: #dcfce7; color: #16a34a; }
+    .estado-parcial { background: #fef3c7; color: #d97706; }
+    .estado-en_espera { background: #fce7f3; color: #db2777; }
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      padding: 14px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+      max-width: 350px;
+    }
+    .toast.success {
+      background: #dcfce7;
+      color: #166534;
+      border-left: 4px solid #16a34a;
+    }
+    .toast.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border-left: 4px solid #dc2626;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(50px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes toastOut {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(50px); }
+    }
   </style>
 </head>
 <body>
@@ -486,15 +681,20 @@
     </div>
   </div>
 
+  <div class="toast-container" id="toastContainer"></div>
+
   <script type="module">
     import { onAuthChange, cerrarSesion } from './js/auth.js';
     import {
       obtenerOrdenesUsuario,
       obtenerOrden,
+      actualizarItemsOrden,
+      buscarProductos,
       formatearPrecio,
       textoEstado,
       claseEstado
     } from './js/ordenes.js';
+    import { obtenerPrecioCliente, inicializarUsuario } from './js/usuario.js';
 
     // Elementos del DOM
     const loading = document.getElementById('loading');
@@ -508,6 +708,20 @@
 
     let currentUser = null;
     let ordenes = [];
+    let editItems = [];
+    let editingOrdenId = null;
+    let editObservaciones = '';
+    let searchDebounceTimer = null;
+
+    // Toast notification
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
 
     // Formatear fecha
     function formatearFecha(fechaStr) {
@@ -541,10 +755,10 @@
             <div class="order-items-preview">
               ${orden.items.slice(0, 4).map(item => `
                 <img
-                  src="${item.imagen || 'img/no-image.png'}"
+                  src="${item.imagen || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 50 50%22><rect fill=%22%23f0f0f0%22 width=%2250%22 height=%2250%22 rx=%228%22/><text x=%2225%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%228%22 font-family=%22sans-serif%22>Sin img</text></svg>'}"
                   alt="${item.titulo}"
                   class="item-thumbnail"
-                  onerror="this.src='img/no-image.png'"
+                  onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 50 50%22><rect fill=%22%23f0f0f0%22 width=%2250%22 height=%2250%22 rx=%228%22/><text x=%2225%22 y=%2230%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%228%22 font-family=%22sans-serif%22>Sin img</text></svg>'"
                 >
               `).join('')}
               ${orden.items.length > 4 ? `
@@ -560,6 +774,9 @@
 
           <div class="order-actions">
             <button class="btn-details" onclick="verDetalles('${orden.id}')">Ver Detalles</button>
+            ${orden.estado === 'pendiente' ? `
+              <button class="btn-edit-order" onclick="editarOrden('${orden.id}')">Editar Orden</button>
+            ` : ''}
           </div>
         </div>
       `).join('');
@@ -568,17 +785,18 @@
       ordersList.style.display = 'block';
     }
 
-    // Ver detalles de orden
-    window.verDetalles = async function(ordenId) {
-      const orden = ordenes.find(o => o.id === ordenId);
+    // Placeholder image for missing product images
+    const PLACEHOLDER_IMG = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 60 60%22><rect fill=%22%23f0f0f0%22 width=%2260%22 height=%2260%22 rx=%226%22/><text x=%2230%22 y=%2235%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%229%22 font-family=%22sans-serif%22>Sin img</text></svg>";
 
-      if (!orden) return;
+    // Render read-only detail view
+    function renderReadOnlyDetail(orden) {
+      const editBtn = orden.estado === 'pendiente'
+        ? `<button class="btn-edit-order" data-action="enter-edit" data-orden-id="${orden.id}">Editar</button>`
+        : '';
 
-      modalTitle.textContent = `Orden ${orden.numero_orden}`;
-
-      modalBody.innerHTML = `
+      return `
         <div class="detail-section">
-          <h4>Información de la Orden</h4>
+          <h4>Información de la Orden ${editBtn}</h4>
           <div class="detail-row">
             <span class="detail-label">Número</span>
             <span class="detail-value">${orden.numero_orden}</span>
@@ -618,19 +836,15 @@
           <div class="product-list">
             ${orden.items.map(item => `
               <div class="product-item">
-                <img
-                  src="${item.imagen || 'img/no-image.png'}"
-                  alt="${item.titulo}"
-                  class="product-img"
-                  onerror="this.src='img/no-image.png'"
-                >
+                <img src="${item.imagen || PLACEHOLDER_IMG}" alt="${item.titulo}" class="product-img"
+                  onerror="this.onerror=null;this.src='${PLACEHOLDER_IMG}'">
                 <div class="product-info">
                   <div class="product-title">${item.titulo}</div>
                   <div class="product-code">${item.cod_interno}</div>
                 </div>
                 <div class="product-price">
                   <div class="product-quantity">${item.cantidad} × ${formatearPrecio(item.precio_unitario)}</div>
-                  <div class="product-subtotal">${formatearPrecio(item.subtotal)}</div>
+                  <div class="product-subtotal">${formatearPrecio(item.subtotal || item.precio_unitario * item.cantidad)}</div>
                 </div>
               </div>
             `).join('')}
@@ -662,9 +876,304 @@
           </div>
         ` : ''}
       `;
+    }
 
+    // Calculate edit totals
+    function calcEditTotals() {
+      const total = editItems.reduce((s, i) => s + i.precio_unitario * i.cantidad, 0);
+      const subtotal = total / 1.19;
+      const iva = total - subtotal;
+      return { subtotal, iva, total };
+    }
+
+    // Render edit mode view
+    function renderEditMode() {
+      const { subtotal, iva, total } = calcEditTotals();
+
+      return `
+        <div class="detail-section">
+          <h4>Editando Productos</h4>
+          <div class="product-list" id="editProductList">
+            ${editItems.map((item, idx) => `
+              <div class="product-item" data-edit-idx="${idx}">
+                <img src="${item.imagen || PLACEHOLDER_IMG}" alt="${item.titulo}" class="product-img"
+                  onerror="this.onerror=null;this.src='${PLACEHOLDER_IMG}'">
+                <div class="product-info">
+                  <div class="product-title">${item.titulo}</div>
+                  <div class="product-code">${item.cod_interno}</div>
+                </div>
+                <div class="product-price" style="display:flex;align-items:center;gap:8px;">
+                  <div class="qty-controls">
+                    <button class="qty-btn" data-action="qty-minus" data-idx="${idx}">−</button>
+                    <input type="number" class="qty-input" value="${item.cantidad}" min="1" data-action="qty-change" data-idx="${idx}">
+                    <button class="qty-btn" data-action="qty-plus" data-idx="${idx}">+</button>
+                  </div>
+                  <div style="text-align:right;min-width:90px;">
+                    <div class="product-quantity">${formatearPrecio(item.precio_unitario)}/u</div>
+                    <div class="product-subtotal">${formatearPrecio(item.precio_unitario * item.cantidad)}</div>
+                  </div>
+                  <button class="btn-remove-item" data-action="remove-item" data-idx="${idx}" title="Eliminar">×</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="search-add-section">
+          <h5>Agregar Producto</h5>
+          <div class="search-input-wrap">
+            <input type="text" id="searchProductInput" placeholder="Buscar por SKU o nombre..." autocomplete="off">
+          </div>
+          <div class="search-results" id="searchResults"></div>
+        </div>
+
+        <div class="detail-section" style="margin-top:15px;">
+          <h5 style="font-size:14px;font-weight:600;color:#1e3a8a;margin-bottom:8px;">Observaciones</h5>
+          <textarea id="editObservacionesInput" placeholder="Instrucciones especiales, notas adicionales..."
+            style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;font-family:'Poppins',sans-serif;resize:vertical;min-height:60px;">${editObservaciones}</textarea>
+        </div>
+
+        <div class="edit-totals">
+          <div class="detail-row">
+            <span class="detail-label">Subtotal</span>
+            <span class="detail-value">${formatearPrecio(subtotal)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">IVA (19%)</span>
+            <span class="detail-value">${formatearPrecio(iva)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label" style="font-weight:700;">Total</span>
+            <span class="detail-value" style="color:#D9232D;font-weight:700;font-size:16px;">${formatearPrecio(total)}</span>
+          </div>
+        </div>
+
+        <div class="edit-actions">
+          <button class="btn-cancel-edit" data-action="cancel-edit">Cancelar</button>
+          <button class="btn-save-order" data-action="save-edit" ${editItems.length === 0 ? 'disabled' : ''}>Guardar Cambios</button>
+        </div>
+      `;
+    }
+
+    // Enter edit mode
+    function enterEditMode(ordenId) {
+      const orden = ordenes.find(o => o.id === ordenId);
+      if (!orden || orden.estado !== 'pendiente') return;
+
+      editingOrdenId = ordenId;
+      editItems = orden.items.map(i => ({ ...i }));
+      editObservaciones = orden.observaciones || '';
+      modalTitle.textContent = `Editando ${orden.numero_orden}`;
+      modalBody.innerHTML = renderEditMode();
+    }
+
+    // Persist observaciones before re-rendering
+    function captureObservaciones() {
+      const obsInput = document.getElementById('editObservacionesInput');
+      if (obsInput) editObservaciones = obsInput.value;
+    }
+
+    // Refresh edit view (after qty changes etc)
+    function refreshEditView() {
+      captureObservaciones();
+      modalBody.innerHTML = renderEditMode();
+    }
+
+    // Ver detalles de orden
+    window.verDetalles = async function(ordenId) {
+      const orden = ordenes.find(o => o.id === ordenId);
+      if (!orden) return;
+
+      editingOrdenId = null;
+      editItems = [];
+      editObservaciones = orden.observaciones || '';
+      modalTitle.textContent = `Orden ${orden.numero_orden}`;
+      modalBody.innerHTML = renderReadOnlyDetail(orden);
       orderModal.classList.add('active');
     };
+
+    // Editar orden directamente desde la lista
+    window.editarOrden = function(ordenId) {
+      const orden = ordenes.find(o => o.id === ordenId);
+      if (!orden || orden.estado !== 'pendiente') return;
+
+      editObservaciones = orden.observaciones || '';
+      orderModal.classList.add('active');
+      enterEditMode(ordenId);
+    };
+
+    // Event delegation on modal body
+    modalBody.addEventListener('click', async (e) => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+
+      const action = target.dataset.action;
+      const idx = parseInt(target.dataset.idx);
+
+      if (action === 'enter-edit') {
+        enterEditMode(target.dataset.ordenId);
+        return;
+      }
+
+      if (action === 'qty-minus') {
+        if (editItems[idx] && editItems[idx].cantidad > 1) {
+          editItems[idx].cantidad--;
+          refreshEditView();
+        }
+        return;
+      }
+
+      if (action === 'qty-plus') {
+        if (editItems[idx]) {
+          editItems[idx].cantidad++;
+          refreshEditView();
+        }
+        return;
+      }
+
+      if (action === 'remove-item') {
+        editItems.splice(idx, 1);
+        refreshEditView();
+        return;
+      }
+
+      if (action === 'add-search-item') {
+        const cod = target.dataset.cod;
+        const titulo = target.dataset.titulo;
+        const precio = parseFloat(target.dataset.precio);
+        const imagen = target.dataset.imagen || '';
+        const marca = target.dataset.marca || '';
+
+        const existing = editItems.findIndex(i => i.cod_interno === cod);
+        if (existing > -1) {
+          editItems[existing].cantidad++;
+        } else {
+          editItems.push({
+            cod_interno: cod,
+            titulo,
+            marca,
+            imagen,
+            precio_unitario: precio,
+            cantidad: 1,
+            subtotal: precio
+          });
+        }
+        refreshEditView();
+        return;
+      }
+
+      if (action === 'cancel-edit') {
+        const orden = ordenes.find(o => o.id === editingOrdenId);
+        editingOrdenId = null;
+        editItems = [];
+        editObservaciones = '';
+        if (orden) {
+          modalTitle.textContent = `Orden ${orden.numero_orden}`;
+          modalBody.innerHTML = renderReadOnlyDetail(orden);
+        } else {
+          orderModal.classList.remove('active');
+        }
+        return;
+      }
+
+      if (action === 'save-edit') {
+        if (editItems.length === 0) return;
+        target.disabled = true;
+        target.textContent = 'Guardando...';
+
+        captureObservaciones();
+        const resultado = await actualizarItemsOrden(editingOrdenId, editItems, currentUser.uid, editObservaciones);
+
+        if (resultado.success) {
+          // Update local array
+          const idx2 = ordenes.findIndex(o => o.id === editingOrdenId);
+          if (idx2 > -1) {
+            const { subtotal, iva, total } = calcEditTotals();
+            ordenes[idx2].items = editItems.map(i => ({ ...i, subtotal: i.precio_unitario * i.cantidad }));
+            ordenes[idx2].subtotal = subtotal;
+            ordenes[idx2].iva = iva;
+            ordenes[idx2].total = total;
+            ordenes[idx2].cantidad_productos = editItems.length;
+            ordenes[idx2].cantidad_unidades = editItems.reduce((s, i) => s + i.cantidad, 0);
+            ordenes[idx2].observaciones = editObservaciones;
+            ordenes[idx2].historial = [...(ordenes[idx2].historial || []), {
+              estado: 'pendiente',
+              fecha: new Date().toISOString(),
+              nota: 'Orden modificada por el cliente'
+            }];
+          }
+          renderizarOrdenes();
+          editingOrdenId = null;
+          editItems = [];
+          editObservaciones = '';
+          orderModal.classList.remove('active');
+          showToast('Orden actualizada exitosamente', 'success');
+        } else {
+          showToast('Error: ' + resultado.error, 'error');
+          target.disabled = false;
+          target.textContent = 'Guardar Cambios';
+        }
+        return;
+      }
+    });
+
+    // Handle qty input changes
+    modalBody.addEventListener('change', (e) => {
+      if (e.target.dataset.action === 'qty-change') {
+        const idx = parseInt(e.target.dataset.idx);
+        const val = parseInt(e.target.value);
+        if (editItems[idx] && val >= 1) {
+          editItems[idx].cantidad = val;
+          refreshEditView();
+        } else if (editItems[idx]) {
+          e.target.value = editItems[idx].cantidad;
+        }
+      }
+    });
+
+    // Search input with debounce (delegated)
+    modalBody.addEventListener('input', (e) => {
+      if (e.target.id !== 'searchProductInput') return;
+      const term = e.target.value.trim();
+
+      clearTimeout(searchDebounceTimer);
+      const resultsDiv = document.getElementById('searchResults');
+
+      if (term.length < 2) {
+        if (resultsDiv) resultsDiv.innerHTML = '';
+        return;
+      }
+
+      if (resultsDiv) resultsDiv.innerHTML = '<div class="searching-indicator">Buscando...</div>';
+
+      searchDebounceTimer = setTimeout(async () => {
+        const res = await buscarProductos(term);
+        const resultsDiv2 = document.getElementById('searchResults');
+        if (!resultsDiv2) return;
+
+        if (!res.success || res.productos.length === 0) {
+          resultsDiv2.innerHTML = '<div class="searching-indicator">No se encontraron productos</div>';
+          return;
+        }
+
+        resultsDiv2.innerHTML = res.productos.map(p => {
+          const precio = obtenerPrecioCliente(p);
+          const escapedTitulo = (p.titulo || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+          return `
+            <div class="search-result-item" data-action="add-search-item"
+              data-cod="${p.cod_interno}" data-titulo="${escapedTitulo}"
+              data-precio="${precio}" data-imagen="${p.imagen_principal || ''}"
+              data-marca="${p.marca || ''}">
+              <div>
+                <span class="search-result-name">${p.titulo}</span>
+                <span class="search-result-code"> — ${p.cod_interno}</span>
+              </div>
+              <span class="search-result-price">${formatearPrecio(precio)}</span>
+            </div>
+          `;
+        }).join('');
+      }, 400);
+    });
 
     // Cerrar modal
     closeModal.addEventListener('click', () => {
@@ -698,13 +1207,14 @@
     }
 
     // Verificar autenticación
-    onAuthChange((user) => {
+    onAuthChange(async (user) => {
       if (!user) {
         window.location.href = '/login.html';
         return;
       }
 
       currentUser = user;
+      await inicializarUsuario();
       cargarOrdenes(user.uid);
     });
   </script>

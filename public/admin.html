@@ -1210,6 +1210,7 @@
     // Estado
     let usuarios = [];
     let ordenes = [];
+    let clienteIds = new Set(); // IDs de clientes del gestor
     let usuarioSeleccionado = null;
     let ordenSeleccionada = null;
     let currentUserEmail = null;
@@ -1275,6 +1276,12 @@
 
       if (resultado.success || resultado.usuarios) {
         usuarios = resultado.usuarios || [];
+
+        // Construir set de IDs de clientes del gestor
+        if (!isAdminUser) {
+          clienteIds = new Set(usuarios.map(u => u.uid));
+        }
+
         actualizarStatsUsuarios();
         renderizarUsuarios();
       }
@@ -1512,7 +1519,12 @@
       const resultado = await obtenerTodasLasOrdenes();
 
       if (resultado.success) {
-        ordenes = resultado.ordenes;
+        // Gestor: solo órdenes de sus clientes
+        if (!isAdminUser) {
+          ordenes = resultado.ordenes.filter(o => clienteIds.has(o.user_id));
+        } else {
+          ordenes = resultado.ordenes;
+        }
         actualizarStatsOrdenes();
         renderizarOrdenes();
       }
@@ -1601,9 +1613,11 @@
                   </a></li>
                 </ul>
               </div>
+              ${isAdminUser ? `
               <button class="btn btn-outline-danger" onclick="abrirEliminarOrden('${o.id}')" title="Eliminar orden">
                 <i class="bi bi-trash"></i>
               </button>
+              ` : ''}
             </div>
           </td>
         </tr>
@@ -1854,16 +1868,12 @@
       adminPanel.style.display = 'block';
 
       if (!isAdminUser) {
-        // Gestor: ocultar pestaña de órdenes y mostrar título personalizado
-        document.querySelector('[data-tab="ordenes"]').style.display = 'none';
+        // Gestor: mostrar título personalizado en usuarios
         document.querySelector('.card-header h2').textContent = 'Mis Clientes';
       }
 
       await cargarUsuarios();
-
-      if (isAdminUser) {
-        await cargarOrdenes();
-      }
+      await cargarOrdenes();
     });
   </script>
 </body>

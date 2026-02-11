@@ -676,6 +676,118 @@ async function obtenerEstadisticasOrdenes() {
 }
 
 /**
+ * Actualiza los items de una orden pendiente
+ */
+async function actualizarItemsOrden(ordenId, items, userId, observaciones = null) {
+  try {
+    if (!items || items.length === 0) {
+      return { success: false, error: 'La orden debe tener al menos un producto' };
+    }
+
+    const ordenRef = doc(db, COLECCION_ORDENES, ordenId);
+    const ordenDoc = await getDoc(ordenRef);
+
+    if (!ordenDoc.exists()) {
+      return { success: false, error: 'Orden no encontrada' };
+    }
+
+    const orden = ordenDoc.data();
+
+    if (orden.user_id !== userId) {
+      return { success: false, error: 'No tienes permiso para editar esta orden' };
+    }
+
+    if (orden.estado !== ESTADOS_ORDEN.PENDIENTE) {
+      return { success: false, error: 'Solo se pueden editar órdenes en estado pendiente' };
+    }
+
+    // Recalcular totales (precios incluyen IVA 19%)
+    const total = items.reduce((sum, item) => sum + (item.precio_unitario * item.cantidad), 0);
+    const subtotal = total / (1 + IVA_PORCENTAJE);
+    const iva = total - subtotal;
+    const cantidadUnidades = items.reduce((sum, item) => sum + item.cantidad, 0);
+
+    const historial = orden.historial || [];
+    historial.push({
+      estado: ESTADOS_ORDEN.PENDIENTE,
+      fecha: new Date().toISOString(),
+      nota: 'Orden modificada por el cliente'
+    });
+
+    const updateData = {
+      items: items.map(item => ({
+        cod_interno: item.cod_interno,
+        titulo: item.titulo,
+        marca: item.marca || '',
+        imagen: item.imagen || '',
+        precio_unitario: item.precio_unitario,
+        cantidad: item.cantidad,
+        subtotal: item.precio_unitario * item.cantidad
+      })),
+      subtotal,
+      iva,
+      total,
+      cantidad_productos: items.length,
+      cantidad_unidades: cantidadUnidades,
+      historial,
+      updated_at: new Date().toISOString()
+    };
+
+    if (observaciones !== null) {
+      updateData.observaciones = observaciones;
+    }
+
+    await updateDoc(ordenRef, updateData);
+
+    return { success: true, mensaje: 'Orden actualizada exitosamente' };
+  } catch (error) {
+    console.error('Error actualizando orden:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Busca productos por código interno o título
+ */
+async function buscarProductos(termino, limitCount = 10) {
+  try {
+    if (!termino || termino.trim().length === 0) {
+      return { success: true, productos: [] };
+    }
+
+    const productosRef = collection(db, 'productos');
+    let resultados = [];
+
+    // Buscar primero por cod_interno exacto (uppercase)
+    const qCodigo = query(
+      productosRef,
+      where('cod_interno', '==', termino.toUpperCase()),
+      limit(limitCount)
+    );
+    const snapCodigo = await getDocs(qCodigo);
+    snapCodigo.forEach(d => resultados.push({ id: d.id, ...d.data() }));
+
+    // Si no encontró por código, buscar por prefijo en titulo
+    if (resultados.length === 0) {
+      const terminoUpper = termino.toUpperCase();
+      const qTitulo = query(
+        productosRef,
+        where('titulo', '>=', terminoUpper),
+        where('titulo', '<=', terminoUpper + '\uf8ff'),
+        limit(limitCount)
+      );
+      const snapTitulo = await getDocs(qTitulo);
+      snapTitulo.forEach(d => resultados.push({ id: d.id, ...d.data() }));
+    }
+
+    return { success: true, productos: resultados.slice(0, limitCount) };
+  } catch (error) {
+    console.error('Error buscando productos:', error);
+    return { success: false, error: error.message, productos: [] };
+  }
+}
+
+/**
  * Formatea precio a moneda colombiana
  */
 function formatearPrecio(precio) {
@@ -738,6 +850,8 @@ export {
   obtenerOrdenesUsuario,
   obtenerTodasLasOrdenes,
   actualizarEstadoOrden,
+  actualizarItemsOrden,
+  buscarProductos,
   cancelarOrden,
   confirmarOrden,
   marcarEnProceso,

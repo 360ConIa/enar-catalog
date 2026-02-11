@@ -620,14 +620,14 @@ function renderizarFila(producto) {
       : '';
     const hoverOverlay = tieneMultiples
       ? `<div class="imagen-hover-overlay"><span>Ver galería</span></div>`
-      : '';
+      : `<div class="imagen-hover-overlay"><span>Ampliar</span></div>`;
 
     imagenHtml = `
       <div class="imagen-container" data-producto='${productoDataStr}'>
         <img src="${imagenUrl}" alt="${tituloTexto}"
-             class="tabla-thumbnail ${tieneMultiples ? 'tabla-thumbnail-clickeable' : ''}"
+             class="tabla-thumbnail tabla-thumbnail-clickeable"
              referrerpolicy="no-referrer"
-             onerror="this.style.display='none';this.parentElement.querySelector('.tabla-placeholder').style.display='flex';">
+             onerror="this.style.display='none';this.parentElement.querySelector('.tabla-placeholder').style.display='flex';var ov=this.parentElement.querySelector('.imagen-hover-overlay');if(ov)ov.style.display='none';var bg=this.parentElement.querySelector('.imagen-badge');if(bg)bg.style.display='none';this.parentElement.style.cursor='default';this.parentElement.onclick=null;">
         <div class="tabla-placeholder" style="display:none;">Sin img</div>
         ${badgeHtml}
         ${hoverOverlay}
@@ -652,8 +652,6 @@ function renderizarFila(producto) {
           class="input-cantidad"
           data-producto='${productoDataStr}'
           min="1"
-          max="${cantidadStock}"
-          ${cantidadStock === 0 ? 'disabled' : ''}
           placeholder="0"
         >
       </td>
@@ -699,14 +697,11 @@ function agregarEventListenersFilas() {
     });
   });
 
-  // Contenedores de imagen clickeables - abrir galería
+  // Contenedores de imagen clickeables - abrir galería/zoom
   elementos.productosBody.querySelectorAll('.imagen-container').forEach(container => {
     container.addEventListener('click', (e) => {
       const producto = JSON.parse(container.dataset.producto.replace(/&apos;/g, "'"));
-      const totalImagenes = producto.total_imagenes || (producto.imagenes ? producto.imagenes.length : 0);
-      if (totalImagenes > 1) {
-        abrirGaleria(producto);
-      }
+      abrirGaleria(producto);
     });
   });
 }
@@ -812,7 +807,6 @@ function abrirModalProducto(producto) {
   }
 
   elementos.modalProductoCantidad.value = 1;
-  elementos.modalProductoCantidad.max = producto.cantidad || 0;
 
   // Ficha técnica - mostrar botón si existe URL
   const fichaContainer = document.getElementById('fichaContainer');

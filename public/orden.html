@@ -353,7 +353,7 @@
       <a href="/" class="btn-back">← Seguir comprando</a>
 
       <h1 class="page-title">Finalizar Orden de Compra</h1>
-      <p class="page-subtitle">Revisa tu pedido y confirma los datos de entrega</p>
+      <p class="page-subtitle">Revisa tu pedido y confirma tu orden</p>
 
       <!-- Message -->
       <div id="message" class="message"></div>
@@ -368,80 +368,6 @@
             </div>
             <div class="card-body" id="cartItems">
               <!-- Items dinámicos -->
-            </div>
-          </div>
-
-          <!-- Dirección de Entrega -->
-          <div class="checkout-card">
-            <div class="card-header">
-              <h2>Dirección de Entrega</h2>
-            </div>
-            <div class="card-body">
-              <div class="info-box">
-                Se usará la dirección de tu perfil. Puedes modificarla para esta orden.
-              </div>
-
-              <div class="form-group">
-                <label for="direccion">Dirección</label>
-                <input type="text" id="direccion" required>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="ciudad">Ciudad</label>
-                  <input type="text" id="ciudad" required>
-                </div>
-                <div class="form-group">
-                  <label for="departamento">Departamento</label>
-                  <select id="departamento" required>
-                    <option value="">Seleccionar...</option>
-                    <option value="Amazonas">Amazonas</option>
-                    <option value="Antioquia">Antioquia</option>
-                    <option value="Arauca">Arauca</option>
-                    <option value="Atlántico">Atlántico</option>
-                    <option value="Bogotá D.C.">Bogotá D.C.</option>
-                    <option value="Bolívar">Bolívar</option>
-                    <option value="Boyacá">Boyacá</option>
-                    <option value="Caldas">Caldas</option>
-                    <option value="Caquetá">Caquetá</option>
-                    <option value="Casanare">Casanare</option>
-                    <option value="Cauca">Cauca</option>
-                    <option value="Cesar">Cesar</option>
-                    <option value="Chocó">Chocó</option>
-                    <option value="Córdoba">Córdoba</option>
-                    <option value="Cundinamarca">Cundinamarca</option>
-                    <option value="Guainía">Guainía</option>
-                    <option value="Guaviare">Guaviare</option>
-                    <option value="Huila">Huila</option>
-                    <option value="La Guajira">La Guajira</option>
-                    <option value="Magdalena">Magdalena</option>
-                    <option value="Meta">Meta</option>
-                    <option value="Nariño">Nariño</option>
-                    <option value="Norte de Santander">Norte de Santander</option>
-                    <option value="Putumayo">Putumayo</option>
-                    <option value="Quindío">Quindío</option>
-                    <option value="Risaralda">Risaralda</option>
-                    <option value="San Andrés y Providencia">San Andrés y Providencia</option>
-                    <option value="Santander">Santander</option>
-                    <option value="Sucre">Sucre</option>
-                    <option value="Tolima">Tolima</option>
-                    <option value="Valle del Cauca">Valle del Cauca</option>
-                    <option value="Vaupés">Vaupés</option>
-                    <option value="Vichada">Vichada</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="contacto">Persona de Contacto</label>
-                  <input type="text" id="contacto" required>
-                </div>
-                <div class="form-group">
-                  <label for="telefonoContacto">Teléfono de Contacto</label>
-                  <input type="tel" id="telefonoContacto" required>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -555,11 +481,11 @@
       cartItemsContainer.innerHTML = carritoItems.map(item => `
         <div class="cart-item">
           <img
-            src="${item.imagen || 'img/no-image.png'}"
+            src="${item.imagen || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 70 70%22><rect fill=%22%23f0f0f0%22 width=%2270%22 height=%2270%22 rx=%228%22/><text x=%2235%22 y=%2240%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2210%22 font-family=%22sans-serif%22>Sin imagen</text></svg>'}"
             alt="${item.titulo}"
             class="cart-item-img"
             referrerpolicy="no-referrer"
-            onerror="this.src='img/no-image.png'"
+            onerror="this.onerror=null;this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 70 70%22><rect fill=%22%23f0f0f0%22 width=%2270%22 height=%2270%22 rx=%228%22/><text x=%2235%22 y=%2240%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2210%22 font-family=%22sans-serif%22>Sin imagen</text></svg>'"
           >
           <div class="cart-item-info">
             <div class="cart-item-title">${item.titulo}</div>
@@ -585,11 +511,6 @@
       const resultadoUsuario = await obtenerDatosUsuario(user.uid);
       if (resultadoUsuario.success) {
         userData = resultadoUsuario.data;
-        document.getElementById('direccion').value = userData.direccion || '';
-        document.getElementById('ciudad').value = userData.ciudad || '';
-        document.getElementById('departamento').value = userData.departamento || '';
-        document.getElementById('contacto').value = userData.nombre || '';
-        document.getElementById('telefonoContacto').value = userData.telefono || '';
       }
 
       carritoItems = leerCarritoLocal();
@@ -598,17 +519,7 @@
 
     // Confirmar orden
     btnConfirm?.addEventListener('click', async () => {
-      const direccion = document.getElementById('direccion').value.trim();
-      const ciudad = document.getElementById('ciudad').value.trim();
-      const departamento = document.getElementById('departamento').value;
-      const contacto = document.getElementById('contacto').value.trim();
-      const telefonoContacto = document.getElementById('telefonoContacto').value.trim();
       const observaciones = document.getElementById('observaciones').value.trim();
-
-      if (!direccion || !ciudad || !departamento || !contacto || !telefonoContacto) {
-        showMessage('Por favor completa todos los campos de entrega', 'error');
-        return;
-      }
 
       if (carritoItems.length === 0) {
         showMessage('El carrito está vacío', 'error');
@@ -619,10 +530,19 @@
       btnConfirm.innerHTML = '<span class="loader"></span>Procesando...';
 
       try {
+        // Usar datos del perfil del usuario directamente
+        const datosEntrega = {
+          direccion: userData?.direccion || '',
+          ciudad: userData?.ciudad || '',
+          departamento: userData?.departamento || '',
+          contacto: userData?.nombre || '',
+          telefonoContacto: userData?.telefono || ''
+        };
+
         const resultado = await crearOrdenDesdeLocalStorage(
           currentUser.uid,
           carritoItems,
-          { direccion, ciudad, departamento, contacto, telefonoContacto },
+          datosEntrega,
           observaciones
         );
 
