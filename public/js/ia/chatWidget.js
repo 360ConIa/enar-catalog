@@ -795,55 +795,7 @@ class EnarIAWidget {
       }
     });
 
-    // Atajo de teclado: Ctrl+E para abrir/cerrar
-    document.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
-        e.preventDefault();
-        if (this.usuario) {
-          this.toggleModal();
-        }
-      }
-    });
-
-    // Long press para móvil (500ms en cualquier parte)
-    let longPressTimer = null;
-    let longPressTriggered = false;
-
-    document.addEventListener('touchstart', (e) => {
-      // Ignorar si ya está en el modal o en inputs
-      if (e.target.closest('#enar-ia-modal') ||
-          e.target.tagName === 'INPUT' ||
-          e.target.tagName === 'TEXTAREA' ||
-          e.target.tagName === 'BUTTON') {
-        return;
-      }
-
-      longPressTriggered = false;
-      longPressTimer = setTimeout(() => {
-        if (this.usuario) {
-          longPressTriggered = true;
-          // Vibrar si está disponible
-          if (navigator.vibrate) {
-            navigator.vibrate(50);
-          }
-          this.toggleModal();
-        }
-      }, 500);
-    });
-
-    document.addEventListener('touchend', () => {
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-    });
-
-    document.addEventListener('touchmove', () => {
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-    });
+    // Nota: ENAR IA solo se activa con click en el botón #btn-enar-ia
   }
 
   mostrarBoton() {
