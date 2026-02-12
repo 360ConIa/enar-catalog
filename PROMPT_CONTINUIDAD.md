@@ -42,6 +42,15 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 
 ---
 
+## CAMBIOS REALIZADOS (12 Feb 2026)
+
+### Widget ENAR IA - Solo activación por botón ✅
+- [x] Eliminado atajo `Ctrl+E` / `Cmd+E` para abrir/cerrar widget
+- [x] Eliminado long press (500ms) en móvil
+- [x] ENAR IA ahora solo se activa con click en el botón "ENAR IA"
+
+---
+
 ## CAMBIOS REALIZADOS (11 Feb 2026)
 
 ### Editar Órdenes de Compra (Mis Órdenes) ✅
@@ -92,8 +101,8 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 
 ### Widget ENAR IA ✅
 - Título del modal = mismo estilo que el botón
-- Atajo `Ctrl+E` para abrir/cerrar
-- Long press (500ms) en móvil
+- ~~Atajo `Ctrl+E` para abrir/cerrar~~ (eliminado 12 Feb)
+- ~~Long press (500ms) en móvil~~ (eliminado 12 Feb)
 - Vibración de feedback
 
 ### Agente IA ✅
@@ -120,8 +129,8 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 | Chat escrito | ✅ Funciona |
 | Agregar al carrito | ✅ Funciona (tiempo real) |
 | Órdenes masivas | ✅ Implementado |
-| Atajo Ctrl+E | ✅ Funciona |
-| Long press móvil | ✅ Funciona |
+| Atajo Ctrl+E | ❌ Eliminado (solo botón) |
+| Long press móvil | ❌ Eliminado (solo botón) |
 | Voz | ⏸️ Pendiente (Whisper) |
 | Editar orden (pendiente) | ✅ Funciona (todos los usuarios) |
 | Vendedor ve órdenes admin | ✅ Funciona (solo sus clientes) |
@@ -171,4 +180,4 @@ firebase functions:log --only chatAgent -n 30
 
 ---
 
-*Última actualización: 11 Febrero 2026 (Editar Órdenes + Vendedor ve Órdenes en Admin)*
+*Última actualización: 12 Febrero 2026 (ENAR IA solo por botón)*
