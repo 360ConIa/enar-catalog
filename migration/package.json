@@ -1,0 +1,16 @@
+{
+  "name": "enar-crm-migration",
+  "version": "1.0.0",
+  "description": "Script de migración de Google Sheets a Firebase Firestore",
+  "main": "migrate.js",
+  "scripts": {
+    "migrate": "node migrate.js",
+    "test": "node migrate.js --test"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "googleapis": "^134.0.0",
+    "cli-progress": "^3.12.0",
+    "chalk": "^4.1.2"
+  }
+}
