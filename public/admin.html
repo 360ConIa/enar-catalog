@@ -739,7 +739,7 @@
             <div class="search-box">
               <button class="btn-crear-usuario" onclick="abrirCrearUsuario()">+ Crear Usuario</button>
               <a href="admin-import-users.html" class="btn-crear-usuario" style="background:#8b5cf6;text-decoration:none;">📥 Importar Masivo</a>
-              <input type="text" id="buscarUsuario" placeholder="Buscar por email o nombre...">
+              <input type="text" id="buscarUsuario" placeholder="Buscar por email o nombre..." autocomplete="off">
               <input type="hidden" id="filtroEstado" value="">
               <div class="dropdown">
                 <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" style="min-width: 160px; text-align: left;">
@@ -2228,6 +2228,9 @@
         // Gestor: mostrar título personalizado en usuarios
         document.querySelector('.card-header h2').textContent = 'Mis Clientes';
       }
+
+      // Limpiar campo de búsqueda (evitar autocomplete del navegador)
+      document.getElementById('buscarUsuario').value = '';
 
       await cargarUsuarios();
       await cargarOrdenes();
