@@ -40,7 +40,12 @@ service cloud.firestore {
     // Usuarios: usuarios pueden leer/escribir su propio doc, admin puede todo
     match /usuarios/{userId} {
       // Cualquier autenticado puede crear su propio documento (registro)
-      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Admin y gestores pueden crear documentos de otros usuarios
+      allow create: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isAdmin() ||
+        isUserManager()
+      );
 
       // Usuario puede leer su propio documento, admin puede leer todos,
       // gestores solo pueden leer usuarios que ellos crearon

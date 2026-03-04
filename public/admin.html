@@ -905,6 +905,99 @@
     </div>
   </div>
 
+  <!-- Modal Editar Usuario -->
+  <div class="modal-overlay" id="modalEditarUsuario">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>Editar Usuario</h3>
+        <button class="modal-close" onclick="cerrarModal('modalEditarUsuario')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="editarUsuarioError" style="background:#fee2e2;color:#dc2626;padding:10px;border-radius:6px;margin-bottom:15px;display:none;"></div>
+
+        <p style="margin-bottom: 15px; color: #666;">Email: <strong id="editarEmail">-</strong></p>
+        <input type="hidden" id="editarUid">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editarNombre">Nombre Completo *</label>
+            <input type="text" id="editarNombre" placeholder="Nombre del usuario" required>
+          </div>
+          <div class="form-group">
+            <label for="editarTelefono">Teléfono</label>
+            <input type="tel" id="editarTelefono" placeholder="300 123 4567">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editarRol">Rol *</label>
+            <select id="editarRol">
+              <option value="cliente">Cliente</option>
+              <option value="vendedor">Vendedor</option>
+              <option value="gestor">Gestor de Usuarios</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editarTipoCliente">Tipo de Cliente *</label>
+            <select id="editarTipoCliente">
+              <option value="persona_natural">Persona Natural</option>
+              <option value="negocio">Negocio</option>
+              <option value="mayorista">Mayorista</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editarEstado">Estado *</label>
+            <select id="editarEstado">
+              <option value="aprobado">Aprobado</option>
+              <option value="pendiente">Pendiente</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editarRazonSocial">Razón Social</label>
+            <input type="text" id="editarRazonSocial" placeholder="Empresa S.A.S">
+          </div>
+          <div class="form-group">
+            <label for="editarNit">NIT</label>
+            <input type="text" id="editarNit" placeholder="900.123.456-7">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="editarDireccion">Dirección</label>
+          <input type="text" id="editarDireccion" placeholder="Calle 123 # 45-67">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editarDepartamento">Departamento</label>
+            <select id="editarDepartamento">
+              <option value="">Seleccionar...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editarCiudad">Ciudad</label>
+            <select id="editarCiudad" disabled>
+              <option value="">Seleccione departamento primero</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalEditarUsuario')">Cancelar</button>
+          <button class="btn-save" id="btnGuardarEditarUsuario">Guardar Cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Rechazar Usuario -->
   <div class="modal-overlay" id="modalRechazar">
     <div class="modal-content">
@@ -1003,6 +1096,32 @@
         <div class="modal-actions">
           <button class="btn-cancel" onclick="cerrarModal('modalEliminarOrden')">Cancelar</button>
           <button class="btn-save" style="background: #dc2626;" id="btnConfirmarEliminar">Eliminar Orden</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Eliminar Usuario -->
+  <div class="modal-overlay" id="modalEliminarUsuario">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);">
+        <h3>Eliminar Usuario</h3>
+        <button class="modal-close" onclick="cerrarModal('modalEliminarUsuario')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <i class="bi bi-exclamation-triangle" style="font-size: 48px; color: #dc2626;"></i>
+        </div>
+        <p style="text-align: center; margin-bottom: 15px;">
+          ¿Está seguro que desea eliminar al usuario <strong id="eliminarUsuarioNombre">-</strong>?
+        </p>
+        <p style="text-align: center; color: #666; font-size: 14px;">
+          Se eliminará el registro del usuario. Esta acción no se puede deshacer.
+        </p>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalEliminarUsuario')">Cancelar</button>
+          <button class="btn-save" style="background: #dc2626;" id="btnConfirmarEliminarUsuario">Eliminar Usuario</button>
         </div>
       </div>
     </div>
@@ -1199,7 +1318,7 @@
   <script type="module">
     import { initializeApp, deleteApp, getApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-    import { getFirestore, doc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getFirestore, doc, setDoc, deleteDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import {
       esAdmin,
       esUserManager,
@@ -1382,10 +1501,13 @@
                 </button>
               ` : ''}
               ${(u.estado === 'aprobado' || !u.estado) ? `
-                <button class="btn btn-outline-enar" onclick="abrirAprobar('${u.uid}')" title="Editar">
+                <button class="btn btn-outline-enar" onclick="abrirEditarUsuario('${u.uid}')" title="Editar">
                   <i class="bi bi-pencil"></i>
                 </button>
               ` : ''}
+              <button class="btn btn-outline-danger" onclick="abrirEliminarUsuario('${u.uid}')" title="Eliminar">
+                <i class="bi bi-trash"></i>
+              </button>
             </div>
           </td>
         </tr>
@@ -1472,6 +1594,124 @@
         defOpt.value = '';
         defOpt.textContent = 'Seleccione departamento primero';
         selectCiudad.appendChild(defOpt);
+      }
+    });
+
+    // Poblar select de departamentos del modal editar
+    const selectEditarDepartamento = document.getElementById('editarDepartamento');
+    const selectEditarCiudad = document.getElementById('editarCiudad');
+    Object.keys(DEPARTAMENTOS_CIUDADES).sort().forEach(dep => {
+      const opt = document.createElement('option');
+      opt.value = dep;
+      opt.textContent = dep;
+      selectEditarDepartamento.appendChild(opt);
+    });
+
+    // Al cambiar departamento en modal editar, poblar ciudades
+    selectEditarDepartamento.addEventListener('change', () => {
+      const dep = selectEditarDepartamento.value;
+      selectEditarCiudad.innerHTML = '';
+      if (dep && DEPARTAMENTOS_CIUDADES[dep]) {
+        selectEditarCiudad.disabled = false;
+        const defOpt = document.createElement('option');
+        defOpt.value = '';
+        defOpt.textContent = 'Seleccionar...';
+        selectEditarCiudad.appendChild(defOpt);
+        DEPARTAMENTOS_CIUDADES[dep].forEach(ciudad => {
+          const opt = document.createElement('option');
+          opt.value = ciudad;
+          opt.textContent = ciudad;
+          selectEditarCiudad.appendChild(opt);
+        });
+      } else {
+        selectEditarCiudad.disabled = true;
+        const defOpt = document.createElement('option');
+        defOpt.value = '';
+        defOpt.textContent = 'Seleccione departamento primero';
+        selectEditarCiudad.appendChild(defOpt);
+      }
+    });
+
+    // Abrir modal editar usuario
+    window.abrirEditarUsuario = function(uid) {
+      const usuario = usuarios.find(u => u.uid === uid);
+      if (!usuario) return;
+
+      document.getElementById('editarUid').value = uid;
+      document.getElementById('editarEmail').textContent = usuario.email || '-';
+      document.getElementById('editarNombre').value = usuario.nombre || '';
+      document.getElementById('editarTelefono').value = usuario.telefono || '';
+      document.getElementById('editarRol').value = usuario.rol || 'cliente';
+      document.getElementById('editarTipoCliente').value = usuario.tipo_cliente || 'persona_natural';
+      document.getElementById('editarEstado').value = usuario.estado || 'aprobado';
+      document.getElementById('editarRazonSocial').value = usuario.razon_social || '';
+      document.getElementById('editarNit').value = usuario.nit || '';
+      document.getElementById('editarDireccion').value = usuario.direccion || '';
+
+      // Cargar departamento y ciudades
+      selectEditarDepartamento.value = usuario.departamento || '';
+      selectEditarDepartamento.dispatchEvent(new Event('change'));
+      // Después de poblar ciudades, seleccionar la ciudad del usuario
+      if (usuario.ciudad) {
+        selectEditarCiudad.value = usuario.ciudad;
+      }
+
+      document.getElementById('editarUsuarioError').style.display = 'none';
+      document.getElementById('modalEditarUsuario').classList.add('active');
+    };
+
+    // Guardar cambios del modal editar usuario
+    document.getElementById('btnGuardarEditarUsuario').addEventListener('click', async () => {
+      const errorDiv = document.getElementById('editarUsuarioError');
+      errorDiv.style.display = 'none';
+
+      const uid = document.getElementById('editarUid').value;
+      const nombre = document.getElementById('editarNombre').value.trim();
+      const telefono = document.getElementById('editarTelefono').value.trim();
+      const rol = document.getElementById('editarRol').value;
+      const tipoCliente = document.getElementById('editarTipoCliente').value;
+      const estado = document.getElementById('editarEstado').value;
+      const razonSocial = document.getElementById('editarRazonSocial').value.trim();
+      const nit = document.getElementById('editarNit').value.trim();
+      const direccion = document.getElementById('editarDireccion').value.trim();
+      const departamento = selectEditarDepartamento.value.trim();
+      const ciudad = selectEditarCiudad.value.trim();
+
+      if (!nombre) {
+        errorDiv.textContent = 'El nombre es obligatorio';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      const btn = document.getElementById('btnGuardarEditarUsuario');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+
+      try {
+        await updateDoc(doc(db, 'usuarios', uid), {
+          nombre,
+          telefono,
+          rol,
+          tipo_cliente: tipoCliente,
+          estado,
+          razon_social: razonSocial,
+          nit,
+          direccion,
+          departamento,
+          ciudad,
+          updated_at: new Date().toISOString()
+        });
+
+        cerrarModal('modalEditarUsuario');
+        mostrarMensaje('Usuario actualizado exitosamente');
+        await cargarUsuarios();
+      } catch (error) {
+        console.error('Error al actualizar usuario:', error);
+        errorDiv.textContent = 'Error al actualizar: ' + error.message;
+        errorDiv.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar Cambios';
       }
     });
 
@@ -1901,6 +2141,38 @@
       } finally {
         btn.disabled = false;
         btn.textContent = 'Eliminar Orden';
+      }
+    });
+
+    // Abrir modal eliminar usuario
+    let usuarioAEliminar = null;
+    window.abrirEliminarUsuario = function(uid) {
+      usuarioAEliminar = usuarios.find(u => u.uid === uid);
+      if (!usuarioAEliminar) return;
+
+      document.getElementById('eliminarUsuarioNombre').textContent = `${usuarioAEliminar.nombre || '-'} (${usuarioAEliminar.email})`;
+      document.getElementById('modalEliminarUsuario').classList.add('active');
+    };
+
+    // Confirmar eliminar usuario
+    document.getElementById('btnConfirmarEliminarUsuario').addEventListener('click', async () => {
+      if (!usuarioAEliminar) return;
+
+      const btn = document.getElementById('btnConfirmarEliminarUsuario');
+      btn.disabled = true;
+      btn.textContent = 'Eliminando...';
+
+      try {
+        await deleteDoc(doc(db, 'usuarios', usuarioAEliminar.uid));
+        cerrarModal('modalEliminarUsuario');
+        mostrarMensaje(`Usuario ${usuarioAEliminar.nombre || usuarioAEliminar.email} eliminado`);
+        await cargarUsuarios();
+      } catch (error) {
+        console.error('Error eliminando usuario:', error);
+        alert('Error al eliminar el usuario: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Eliminar Usuario';
       }
     });
 
