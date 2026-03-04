@@ -42,6 +42,24 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 
 ---
 
+## CAMBIOS REALIZADOS (3 Mar 2026)
+
+### Formulario "Crear Nuevo Usuario" en Admin — EN PROGRESO 🔄
+- [x] Nuevo archivo `public/js/colombia-data.js` — diccionario departamentos → ciudades de Colombia (ES6 export)
+- [x] Campos Ciudad y Departamento cambiados de `<input text>` a `<select>` desplegables
+- [x] Orden invertido: primero Departamento, luego Ciudad (dependiente)
+- [x] Al seleccionar departamento se cargan automáticamente sus ciudades
+- [x] Nuevo campo **Rol** (`<select>`) con opciones: Cliente, Vendedor, Gestor de Usuarios, Administrador
+- [x] Campo `rol` se guarda en Firestore al crear usuario
+- [x] App secundaria de Firebase para crear usuarios sin deslogear al admin
+- [ ] **BUG PENDIENTE:** `createUserWithEmailAndPassword` en app secundaria arroja error genérico — falta diagnosticar (mensaje de error detallado ya agregado para debug)
+
+### Archivos modificados:
+- `public/admin.html` — HTML del formulario + JS de creación con app secundaria
+- `public/js/colombia-data.js` — NUEVO, datos departamentos/ciudades
+
+---
+
 ## CAMBIOS REALIZADOS (12 Feb 2026)
 
 ### Widget ENAR IA - Solo activación por botón ✅
@@ -134,6 +152,9 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 | Voz | ⏸️ Pendiente (Whisper) |
 | Editar orden (pendiente) | ✅ Funciona (todos los usuarios) |
 | Vendedor ve órdenes admin | ✅ Funciona (solo sus clientes) |
+| Crear usuario (admin) | 🔄 Bug pendiente — app secundaria Firebase |
+| Depto → Ciudad (admin) | ✅ Selects dinámicos |
+| Campo Rol (admin) | ✅ 4 roles: cliente, vendedor, gestor, admin |
 | Consistencia respuestas | 🔄 Siguiente tarea |
 
 ---
@@ -146,6 +167,7 @@ public/js/carrito.js                # Carrito con listener IA
 public/js/user-manager.js           # Gestión usuarios + rol gestor
 public/js/auth.js                   # Auth + USER_MANAGER_EMAILS
 public/js/ordenes.js                # Órdenes de compra + edición
+public/js/colombia-data.js          # Departamentos → ciudades Colombia
 public/mis-ordenes.html             # Mis Órdenes (editar orden pendiente)
 public/admin.html                   # Panel admin (filtrado por rol)
 
@@ -163,9 +185,10 @@ functions-sync/agent/
 
 ## Próximas Tareas
 
-1. **Mejorar consistencia del agente** - Identificar problemas específicos y ajustar prompt
-2. **Probar órdenes masivas** - Formato "SKU x cantidad"
-3. **Voz con Whisper** (opcional) - Requiere API key OpenAI
+1. **Arreglar bug crear usuario en admin** - Diagnosticar error de `createUserWithEmailAndPassword` con app secundaria (mensaje detallado ya visible en UI)
+2. **Mejorar consistencia del agente** - Identificar problemas específicos y ajustar prompt
+3. **Probar órdenes masivas** - Formato "SKU x cantidad"
+4. **Voz con Whisper** (opcional) - Requiere API key OpenAI
 
 ---
 
@@ -180,4 +203,4 @@ firebase functions:log --only chatAgent -n 30
 
 ---
 
-*Última actualización: 12 Febrero 2026 (ENAR IA solo por botón)*
+*Última actualización: 3 Marzo 2026 (Formulario crear usuario: selects depto/ciudad, campo rol, bug pendiente)*

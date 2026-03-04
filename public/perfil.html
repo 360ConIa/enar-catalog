@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="shortcut icon" href="/favicon.ico">
   <title>Mi Perfil - ENAR B2B</title>
   <link rel="stylesheet" href="css/styles.css?v=5.0">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -65,6 +69,16 @@
     }
     .header-nav a:hover {
       background: rgba(255, 255, 255, 0.1);
+    }
+    .header-nav a.nav-active {
+      background: rgba(255, 255, 255, 0.15);
+      font-weight: 600;
+    }
+    .btn-logout {
+      background: rgba(217, 35, 45, 0.8);
+    }
+    .btn-logout:hover {
+      background: #D9232D;
     }
     .page-container {
       max-width: 900px;
@@ -342,8 +356,10 @@
       </div>
       <nav class="header-nav">
         <a href="/">Catálogo</a>
+        <a href="perfil.html" class="nav-active">Mi Perfil</a>
         <a href="mis-ordenes.html">Mis Órdenes</a>
-        <a href="#" id="logoutLink">Cerrar Sesión</a>
+        <a href="admin.html" id="navAdminLink" style="display: none;">Admin</a>
+        <a href="#" id="logoutLink" class="btn-logout">Salir</a>
       </nav>
     </div>
   </header>
@@ -505,7 +521,7 @@
   </main>
 
   <script type="module">
-    import { onAuthChange, cerrarSesion, obtenerDatosUsuario } from './js/auth.js';
+    import { onAuthChange, cerrarSesion, obtenerDatosUsuario, ADMIN_EMAILS, USER_MANAGER_EMAILS } from './js/auth.js';
     import { actualizarPerfil, TIPOS_CLIENTE } from './js/user-manager.js';
 
     // Elementos del DOM
@@ -515,6 +531,7 @@
     const saveBtn = document.getElementById('saveBtn');
     const message = document.getElementById('message');
     const logoutLink = document.getElementById('logoutLink');
+    const navAdminLink = document.getElementById('navAdminLink');
     const empresaCard = document.getElementById('empresaCard');
 
     let currentUser = null;
@@ -634,6 +651,12 @@
       }
 
       currentUser = user;
+
+      // Mostrar link Admin para usuarios privilegiados
+      if (ADMIN_EMAILS.includes(user.email) || USER_MANAGER_EMAILS.includes(user.email)) {
+        navAdminLink.style.display = 'inline-block';
+      }
+
       await cargarPerfil(user);
     });
   </script>

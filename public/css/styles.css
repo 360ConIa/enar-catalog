@@ -443,7 +443,7 @@ body {
   width: 100%;
   padding: var(--espaciado-sm) var(--espaciado-md);
   font-size: 1rem;
-  border: 2px solid var(--color-borde);
+  border: 1px solid #ddd;
   border-radius: var(--radio-borde);
   background-color: var(--color-blanco);
   transition: border-color var(--transicion);
@@ -2701,6 +2701,16 @@ body {
   padding-right: 35px;
 }
 
+/* Altura uniforme para inputs y selects de filtros */
+.filtros .form-control,
+.filtros .form-select,
+.filtros .select2-container--default .select2-selection--single {
+  height: 30px !important;
+  min-height: 30px !important;
+  line-height: 28px;
+  box-sizing: border-box;
+}
+
 /* Tabla responsive */
 .tabla-productos {
   min-width: 600px;
@@ -2755,7 +2765,8 @@ table.tabla-productos > thead > tr > th,
   color: white;
   font-weight: 500;
   font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
+  height: 26px;
+  padding: 0;
 }
 
 #btnLimpiarFiltros:hover {
@@ -2770,6 +2781,45 @@ table.tabla-productos > thead > tr > th,
 #btnLimpiarFiltros:active {
   background-color: #9a171f;
   border-color: #9a171f;
+}
+
+/* Botón carrito en barra de filtros */
+.btn-carrito-filtro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 0.6rem;
+  background-color: #D9232D;
+  border: 1px solid #D9232D;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+.btn-carrito-filtro:hover {
+  background-color: #b91c25;
+  transform: translateY(-1px);
+}
+.btn-carrito-filtro svg {
+  flex-shrink: 0;
+}
+.carrito-filtro__badge {
+  background: white;
+  color: #D9232D;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
 }
 
 .tabla-productos tbody td {

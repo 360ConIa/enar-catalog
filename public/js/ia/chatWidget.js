@@ -79,8 +79,8 @@ class EnarIAWidget {
           align-items: center;
           justify-content: center;
           gap: 5px;
-          padding: 0.4rem 0.6rem 0.25rem 0.6rem;
-          height: auto;
+          padding: 0 0.6rem;
+          height: 26px;
           background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
           border: 1px solid transparent;
           border-radius: 8px;
@@ -88,7 +88,7 @@ class EnarIAWidget {
           font-family: 'Poppins', sans-serif;
           font-weight: 700;
           font-size: 0.75rem;
-          line-height: 1.5;
+          line-height: 26px;
           cursor: pointer;
           transition: all 0.3s ease;
           box-shadow: 0 2px 6px rgba(255, 255, 255, 0.12);
@@ -125,6 +125,8 @@ class EnarIAWidget {
           letter-spacing: 0.02em;
           line-height: 1;
           font-style: normal;
+          position: relative;
+          top: 2px;
         }
 
         #btn-enar-ia .btn-text-ia {

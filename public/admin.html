@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="shortcut icon" href="/favicon.ico">
   <title>Admin - ENAR B2B</title>
   <link rel="stylesheet" href="css/styles.css?v=5.0">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -61,6 +65,12 @@
       font-size: 12px;
       font-weight: 600;
     }
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
     .header-nav a {
       color: white;
       text-decoration: none;
@@ -72,21 +82,16 @@
     .header-nav a:hover {
       background: rgba(255, 255, 255, 0.1);
     }
-    .btn-catalogo {
-      background: #D9232D;
-      color: white !important;
+    .header-nav a.nav-active {
+      background: rgba(255, 255, 255, 0.15);
       font-weight: 600;
-      padding: 10px 20px;
-      border-radius: 8px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 2px 8px rgba(217, 35, 45, 0.3);
     }
-    .btn-catalogo:hover {
-      background: #b91c25;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(217, 35, 45, 0.4);
+    .btn-logout {
+      background: rgba(217, 35, 45, 0.8);
+      font-weight: 600;
+    }
+    .btn-logout:hover {
+      background: #D9232D;
     }
     .admin-container {
       max-width: 1400px;
@@ -660,7 +665,11 @@
         <span>ADMIN</span>
       </div>
       <nav class="header-nav">
-        <a href="/" class="btn-catalogo"><i class="bi bi-grid-3x3-gap-fill"></i> Ir al Catálogo</a>
+        <a href="/">Catálogo</a>
+        <a href="perfil.html">Mi Perfil</a>
+        <a href="mis-ordenes.html">Mis Órdenes</a>
+        <a href="admin.html" class="nav-active">Admin</a>
+        <a href="#" id="logoutLink" class="btn-logout">Salir</a>
       </nav>
     </div>
   </header>
@@ -677,7 +686,7 @@
       <h2>Acceso Denegado</h2>
       <p>No tienes permisos para acceder a esta sección.</p>
       <br>
-      <a href="/" style="color: #1e3a8a;">Volver al Catálogo</a>
+      <a href="/login.html" style="color: #1e3a8a;">Volver al inicio de sesión</a>
     </div>
 
     <!-- Admin Panel -->
@@ -1117,6 +1126,15 @@
 
         <div class="form-row">
           <div class="form-group">
+            <label for="nuevoRol">Rol *</label>
+            <select id="nuevoRol">
+              <option value="cliente">Cliente</option>
+              <option value="vendedor">Vendedor</option>
+              <option value="gestor">Gestor de Usuarios</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label for="nuevoTipoCliente">Tipo de Cliente *</label>
             <select id="nuevoTipoCliente">
               <option value="persona_natural">Persona Natural</option>
@@ -1124,6 +1142,9 @@
               <option value="mayorista">Mayorista</option>
             </select>
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label for="nuevoEstadoUsuario">Estado *</label>
             <select id="nuevoEstadoUsuario">
@@ -1151,12 +1172,16 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="nuevoCiudad">Ciudad</label>
-            <input type="text" id="nuevoCiudad" placeholder="Bogotá">
+            <label for="nuevoDepartamento">Departamento</label>
+            <select id="nuevoDepartamento">
+              <option value="">Seleccionar...</option>
+            </select>
           </div>
           <div class="form-group">
-            <label for="nuevoDepartamento">Departamento</label>
-            <input type="text" id="nuevoDepartamento" placeholder="Cundinamarca">
+            <label for="nuevoCiudad">Ciudad</label>
+            <select id="nuevoCiudad" disabled>
+              <option value="">Seleccione departamento primero</option>
+            </select>
           </div>
         </div>
 
@@ -1172,7 +1197,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { initializeApp, deleteApp, getApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
     import { getFirestore, doc, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import {
@@ -1192,6 +1217,7 @@
       textoEstado,
       claseEstado
     } from './js/ordenes.js';
+    import { DEPARTAMENTOS_CIUDADES } from './js/colombia-data.js';
 
     // Firebase config
     const firebaseConfig = {
@@ -1221,6 +1247,14 @@
     const noAccess = document.getElementById('noAccess');
     const adminPanel = document.getElementById('adminPanel');
     const mensajeExito = document.getElementById('mensajeExito');
+    const logoutLink = document.getElementById('logoutLink');
+
+    // Logout
+    logoutLink?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await getAuth().signOut();
+      window.location.href = '/login.html';
+    });
 
     // Textos
     const TIPO_TEXTOS = {
@@ -1406,6 +1440,41 @@
       }
     });
 
+    // Poblar select de departamentos
+    const selectDepartamento = document.getElementById('nuevoDepartamento');
+    const selectCiudad = document.getElementById('nuevoCiudad');
+    Object.keys(DEPARTAMENTOS_CIUDADES).sort().forEach(dep => {
+      const opt = document.createElement('option');
+      opt.value = dep;
+      opt.textContent = dep;
+      selectDepartamento.appendChild(opt);
+    });
+
+    // Al cambiar departamento, poblar ciudades
+    selectDepartamento.addEventListener('change', () => {
+      const dep = selectDepartamento.value;
+      selectCiudad.innerHTML = '';
+      if (dep && DEPARTAMENTOS_CIUDADES[dep]) {
+        selectCiudad.disabled = false;
+        const defOpt = document.createElement('option');
+        defOpt.value = '';
+        defOpt.textContent = 'Seleccionar...';
+        selectCiudad.appendChild(defOpt);
+        DEPARTAMENTOS_CIUDADES[dep].forEach(ciudad => {
+          const opt = document.createElement('option');
+          opt.value = ciudad;
+          opt.textContent = ciudad;
+          selectCiudad.appendChild(opt);
+        });
+      } else {
+        selectCiudad.disabled = true;
+        const defOpt = document.createElement('option');
+        defOpt.value = '';
+        defOpt.textContent = 'Seleccione departamento primero';
+        selectCiudad.appendChild(defOpt);
+      }
+    });
+
     // Abrir modal crear usuario
     window.abrirCrearUsuario = function() {
       // Limpiar formulario
@@ -1413,13 +1482,14 @@
       document.getElementById('nuevoPassword').value = '';
       document.getElementById('nuevoNombre').value = '';
       document.getElementById('nuevoTelefono').value = '';
+      document.getElementById('nuevoRol').value = 'cliente';
       document.getElementById('nuevoTipoCliente').value = 'persona_natural';
       document.getElementById('nuevoEstadoUsuario').value = 'aprobado';
       document.getElementById('nuevoRazonSocial').value = '';
       document.getElementById('nuevoNit').value = '';
       document.getElementById('nuevoDireccion').value = '';
-      document.getElementById('nuevoCiudad').value = '';
-      document.getElementById('nuevoDepartamento').value = '';
+      selectDepartamento.value = '';
+      selectDepartamento.dispatchEvent(new Event('change'));
       document.getElementById('crearUsuarioError').style.display = 'none';
       document.getElementById('modalCrearUsuario').classList.add('active');
     };
@@ -1433,6 +1503,7 @@
       const password = document.getElementById('nuevoPassword').value;
       const nombre = document.getElementById('nuevoNombre').value.trim();
       const telefono = document.getElementById('nuevoTelefono').value.trim();
+      const rol = document.getElementById('nuevoRol').value;
       const tipoCliente = document.getElementById('nuevoTipoCliente').value;
       const estado = document.getElementById('nuevoEstadoUsuario').value;
       const razonSocial = document.getElementById('nuevoRazonSocial').value.trim();
@@ -1458,20 +1529,30 @@
       btn.disabled = true;
       btn.textContent = 'Creando...';
 
+      let secondaryApp = null;
       try {
-        // Guardar email del creador antes de que createUser cambie la sesión
         const creadorEmail = auth.currentUser?.email || '';
 
-        // Crear usuario en Firebase Auth
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Usar una app secundaria para no afectar la sesión del admin
+        try { secondaryApp = getApp('secondaryApp'); } catch(e) { /* no existe aún */ }
+        if (secondaryApp) {
+          await deleteApp(secondaryApp);
+        }
+        secondaryApp = initializeApp(firebaseConfig, 'secondaryApp');
+        const secondaryAuth = getAuth(secondaryApp);
+
+        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
         const uid = userCredential.user.uid;
 
-        // Crear documento en Firestore
+        await secondaryAuth.signOut();
+
+        // Crear documento en Firestore (usa la instancia principal)
         const userData = {
           uid: uid,
           email: email,
           nombre: nombre,
           telefono: telefono,
+          rol: rol,
           tipo_cliente: tipoCliente,
           estado: estado,
           razon_social: razonSocial,
@@ -1506,9 +1587,13 @@
         } else if (error.code === 'auth/weak-password') {
           mensaje = 'Contraseña muy débil';
         }
-        errorDiv.textContent = mensaje;
+        errorDiv.textContent = mensaje + ' — ' + (error.code || '') + ': ' + error.message;
         errorDiv.style.display = 'block';
       } finally {
+        // Limpiar app secundaria si quedó abierta
+        if (secondaryApp) {
+          try { await deleteApp(secondaryApp); } catch(e) { /* ya eliminada */ }
+        }
         btn.disabled = false;
         btn.textContent = 'Crear Usuario';
       }

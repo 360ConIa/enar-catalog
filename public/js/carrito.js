@@ -189,7 +189,9 @@ class Carrito {
     // Elementos del DOM
     this.elementos = {
       btnFlotante: document.getElementById('btnCarritoFlotante'),
+      btnCarritoFiltro: document.getElementById('btnCarritoFiltro'),
       contador: document.getElementById('carritoContador'),
+      contadorFiltro: document.getElementById('carritoContadorFiltro'),
       modal: document.getElementById('modalCarrito'),
       lista: document.getElementById('listaCarrito'),
       vacio: document.getElementById('carritoVacio'),
@@ -205,6 +207,7 @@ class Carrito {
 
     // Event listeners
     this.elementos.btnFlotante?.addEventListener('click', () => this.abrirModal());
+    this.elementos.btnCarritoFiltro?.addEventListener('click', () => this.abrirModal());
     this.elementos.btnVaciar?.addEventListener('click', () => this.confirmarVaciar());
     this.elementos.btnCotizar?.addEventListener('click', () => this.solicitarCotizacion());
 
@@ -250,6 +253,9 @@ class Carrito {
     if (this.elementos.contador) {
       this.elementos.contador.textContent = cantidad;
       this.elementos.contador.style.display = cantidad > 0 ? 'flex' : 'none';
+    }
+    if (this.elementos.contadorFiltro) {
+      this.elementos.contadorFiltro.textContent = cantidad;
     }
   }
 
