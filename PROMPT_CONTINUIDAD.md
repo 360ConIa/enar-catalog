@@ -16,7 +16,9 @@
 | Catálogo | https://enar-b2b.web.app |
 | Login | https://enar-b2b.web.app/login.html |
 | Admin | https://enar-b2b.web.app/admin.html |
+| Panel Vendedor | https://enar-b2b.web.app/vendedor.html |
 | Mis Órdenes | https://enar-b2b.web.app/mis-ordenes.html |
+| Mi Perfil | https://enar-b2b.web.app/perfil.html |
 
 ---
 
@@ -39,6 +41,48 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 | **Cuenta Admin** | `sebastianbumq@enarapp.com` |
 | **Cuenta Gestora** | `ventas@enar.com.co` (solo gestión de sus clientes) |
 | **API Key Gemini** | Secreto en Firebase (`GEMINI_API_KEY`) |
+
+---
+
+## CAMBIOS REALIZADOS (5 Mar 2026)
+
+### Panel Vendedor — Órdenes en nombre de clientes ✅
+- [x] Nuevo archivo `public/vendedor.html` — Panel profesional con header sticky gradiente, grid de stats (4 tarjetas), tabla de órdenes con filtros, 3 modales (buscar cliente, agregar productos, detalle orden), toast notifications
+- [x] Nuevo archivo `public/js/vendedor.js` — Lógica completa del vendedor:
+  - Auth: verifica `perfil.rol === 'vendedor'` en Firestore, redirige a login si no
+  - Buscar cliente: carga usuarios aprobados (limit 200), filtra client-side por nombre/nit/razon_social/email
+  - Buscar producto: búsqueda por cod_interno exacto o titulo prefix
+  - Precios por tipo: `precio_mayorista`, `precio_negocio`, `precio_persona_natural`
+  - Crear orden: documento con `user_id` (cliente), `creadaPor` (vendedor), `tipo: 'orden-vendedor'`
+  - Número de orden: formato `OC-YYMMDD-XXXX`
+  - Cargar órdenes: filtro `creadaPor == vendedorUser.uid`, ordenado por `created_at desc`
+- [x] Login actualizado: nueva función `obtenerDestinoLogin()` detecta rol vendedor y redirige a `/vendedor.html`
+- [x] Admin actualizado: columna "Origen" en tabla de órdenes (vendedor vs cliente directo)
+- [x] Firestore rules: nueva función `isVendedor()`, permisos de lectura usuarios aprobados, crear/leer órdenes propias
+- [x] Índice compuesto: `creadaPor` (ASC) + `created_at` (DESC) en colección `ordenes`
+
+### Menú unificado y responsive ✅
+- [x] Navegación unificada en TODAS las páginas con clases BEM: `header-nav__user`, `header-nav__link`, `header-nav__link--logout`
+- [x] Solo el nombre de usuario tiene fondo rojo (`#D9232D`), demás links tienen borde sutil y fondo transparente
+- [x] Labels abreviados: "Perfil", "Órdenes", "Ventas"; "Salir" reemplazado por ícono Bootstrap Icons
+- [x] Nombre de usuario abreviado al primer nombre (`nombre.split(' ')[0]`)
+- [x] Breakpoints responsive: 991px (wrap, 12px font), 767px (stack columna, 11px), 480px (ajustes adicionales en vendedor)
+- [x] Bootstrap Icons CSS agregado a perfil.html y mis-ordenes.html
+- [x] Estilos inline conflictivos eliminados de todas las páginas
+
+### Archivos creados:
+- `public/vendedor.html` — Panel vendedor completo
+- `public/js/vendedor.js` — Lógica vendedor (módulo ES6)
+
+### Archivos modificados:
+- `public/login.html` — Redirección vendedor con `obtenerDestinoLogin()`
+- `public/admin.html` — Columna "Origen" + nav unificado + responsive
+- `public/index.html` — Link "Ventas" condicional + nav unificado
+- `public/perfil.html` — Nav unificado + Bootstrap Icons + responsive
+- `public/mis-ordenes.html` — Nav unificado + Bootstrap Icons + responsive
+- `public/css/styles.css` — Estilos nav BEM unificados con breakpoints responsive
+- `firestore.rules` — Función `isVendedor()` + permisos vendedor
+- `firestore.indexes.json` — Índice compuesto creadaPor + created_at
 
 ---
 
@@ -152,6 +196,11 @@ IA COMERCIAL      →  Firebase Functions + Gemini 2.5 Flash (Google AI Studio)
 | Voz | ⏸️ Pendiente (Whisper) |
 | Editar orden (pendiente) | ✅ Funciona (todos los usuarios) |
 | Vendedor ve órdenes admin | ✅ Funciona (solo sus clientes) |
+| Panel vendedor | ✅ Órdenes en nombre de clientes |
+| Buscar cliente (vendedor) | ✅ Por nombre/nit/razon_social/email |
+| Crear orden (vendedor) | ✅ Con precios por tipo cliente |
+| Origen en admin | ✅ Columna vendedor vs cliente directo |
+| Menú unificado | ✅ BEM classes, responsive, todas las páginas |
 | Crear usuario (admin) | 🔄 Bug pendiente — app secundaria Firebase |
 | Depto → Ciudad (admin) | ✅ Selects dinámicos |
 | Campo Rol (admin) | ✅ 4 roles: cliente, vendedor, gestor, admin |
@@ -167,9 +216,13 @@ public/js/carrito.js                # Carrito con listener IA
 public/js/user-manager.js           # Gestión usuarios + rol gestor
 public/js/auth.js                   # Auth + USER_MANAGER_EMAILS
 public/js/ordenes.js                # Órdenes de compra + edición
+public/js/vendedor.js               # Lógica panel vendedor (módulo ES6)
 public/js/colombia-data.js          # Departamentos → ciudades Colombia
+public/vendedor.html                # Panel vendedor (órdenes en nombre de clientes)
 public/mis-ordenes.html             # Mis Órdenes (editar orden pendiente)
+public/perfil.html                  # Mi Perfil
 public/admin.html                   # Panel admin (filtrado por rol)
+public/css/styles.css               # Estilos globales + nav unificado BEM
 
 functions-sync/agent/
 ├── agentConfig.js                  # Gemini config
@@ -186,9 +239,10 @@ functions-sync/agent/
 ## Próximas Tareas
 
 1. **Arreglar bug crear usuario en admin** - Diagnosticar error de `createUserWithEmailAndPassword` con app secundaria (mensaje detallado ya visible en UI)
-2. **Mejorar consistencia del agente** - Identificar problemas específicos y ajustar prompt
-3. **Probar órdenes masivas** - Formato "SKU x cantidad"
-4. **Voz con Whisper** (opcional) - Requiere API key OpenAI
+2. **Probar panel vendedor en producción** - Crear usuario con rol vendedor, verificar flujo completo: buscar cliente → agregar productos → confirmar orden → ver en admin con "Origen"
+3. **Mejorar consistencia del agente** - Identificar problemas específicos y ajustar prompt
+4. **Probar órdenes masivas** - Formato "SKU x cantidad"
+5. **Voz con Whisper** (opcional) - Requiere API key OpenAI
 
 ---
 
@@ -203,4 +257,4 @@ firebase functions:log --only chatAgent -n 30
 
 ---
 
-*Última actualización: 3 Marzo 2026 (Formulario crear usuario: selects depto/ciudad, campo rol, bug pendiente)*
+*Última actualización: 5 Marzo 2026 (Panel vendedor con órdenes en nombre de clientes + menú unificado responsive)*
