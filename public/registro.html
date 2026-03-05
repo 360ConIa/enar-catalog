@@ -575,6 +575,9 @@
     // Inicializar selección por defecto
     document.querySelector('.tipo-card[data-tipo="persona_natural"]').classList.add('selected');
 
+    // Flag para evitar que onAuthChange redirija durante el registro
+    let isRegistering = false;
+
     // Mostrar mensaje
     function showMessage(texto, tipo) {
       message.textContent = texto;
@@ -626,6 +629,8 @@
       registerBtn.disabled = true;
       registerBtn.innerHTML = '<span class="loader"></span>Creando cuenta...';
 
+      isRegistering = true;
+
       const resultado = await registrarUsuario({
         email,
         password,
@@ -654,8 +659,9 @@
     });
 
     // Verificar si ya está autenticado (no debería poder registrarse de nuevo)
+    // El flag isRegistering evita redirección durante el proceso de registro
     onAuthChange((user) => {
-      if (user) {
+      if (user && !isRegistering) {
         window.location.href = '/';
       }
     });

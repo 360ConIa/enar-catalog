@@ -48,20 +48,22 @@ service cloud.firestore {
       );
 
       // Usuario puede leer su propio documento, admin puede leer todos,
-      // gestores solo pueden leer usuarios que ellos crearon
+      // gestores pueden leer usuarios que crearon O usuarios pendientes (auto-registrados)
       allow read: if isAuthenticated() && (
         request.auth.uid == userId ||
         isAdmin() ||
-        (isUserManager() && resource.data.creado_por == request.auth.token.email)
+        (isUserManager() && resource.data.creado_por == request.auth.token.email) ||
+        (isUserManager() && resource.data.estado == 'pendiente')
       );
 
       // Usuario puede actualizar su propio documento (datos limitados)
       // Admin puede actualizar cualquier documento
-      // Gestores solo pueden actualizar usuarios que ellos crearon
+      // Gestores pueden actualizar usuarios que crearon O usuarios pendientes (para aprobar/rechazar)
       allow update: if isAuthenticated() && (
         (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional'])) ||
         isAdmin() ||
-        (isUserManager() && resource.data.creado_por == request.auth.token.email)
+        (isUserManager() && resource.data.creado_por == request.auth.token.email) ||
+        (isUserManager() && resource.data.estado == 'pendiente')
       );
 
       // Solo admin puede eliminar

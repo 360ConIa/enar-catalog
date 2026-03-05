@@ -739,7 +739,7 @@
             <div class="search-box">
               <button class="btn-crear-usuario" onclick="abrirCrearUsuario()">+ Crear Usuario</button>
               <a href="admin-import-users.html" class="btn-crear-usuario" style="background:#8b5cf6;text-decoration:none;">📥 Importar Masivo</a>
-              <input type="text" id="buscarUsuario" placeholder="Buscar por email o nombre..." autocomplete="off">
+              <input type="search" id="buscarUsuario" name="buscarUsuario_admin" placeholder="Buscar por email o nombre..." autocomplete="nope" readonly onfocus="this.removeAttribute('readonly')">
               <input type="hidden" id="filtroEstado" value="">
               <div class="dropdown">
                 <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" style="min-width: 160px; text-align: left;">
@@ -767,6 +767,12 @@
             </div>
           </div>
           <div class="card-body">
+            <!-- Alerta de usuarios pendientes -->
+            <div id="alertaPendientes" style="display:none; background:#fff7ed; border:1px solid #fdba74; border-radius:8px; padding:14px 20px; margin-bottom:16px; align-items:center; gap:12px;">
+              <span style="font-size:22px;">&#9888;&#65039;</span>
+              <span id="alertaPendientesTexto" style="flex:1; color:#9a3412; font-weight:500; font-size:14px;"></span>
+              <button onclick="filtrarUsuariosPorEstado('pendiente', 'Pendientes')" style="background:#ea580c; color:white; border:none; border-radius:6px; padding:6px 16px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;">Ver pendientes</button>
+            </div>
             <table class="data-table">
               <thead>
                 <tr>
@@ -1324,6 +1330,7 @@
       esUserManager,
       obtenerTodosLosUsuarios,
       obtenerUsuariosPorCreador,
+      obtenerUsuariosPendientes,
       aprobarUsuario,
       rechazarUsuario,
       ESTADOS_USUARIO,
@@ -1418,13 +1425,24 @@
       return `${dia} ${mes} ${hora}:${min} hs`;
     }
 
-    // Cargar usuarios (admin ve todos, gestor solo los suyos)
+    // Cargar usuarios (admin ve todos, gestor ve los suyos + pendientes auto-registrados)
     async function cargarUsuarios() {
       let resultado;
       if (isAdminUser) {
         resultado = await obtenerTodosLosUsuarios();
       } else {
-        resultado = await obtenerUsuariosPorCreador(currentUserEmail);
+        // Gestor: cargar sus usuarios creados + todos los pendientes (auto-registrados)
+        const [propios, pendientes] = await Promise.all([
+          obtenerUsuariosPorCreador(currentUserEmail),
+          obtenerUsuariosPendientes()
+        ]);
+
+        // Merge sin duplicados
+        const mapa = new Map();
+        (propios.usuarios || []).forEach(u => mapa.set(u.uid, u));
+        (pendientes.usuarios || []).forEach(u => mapa.set(u.uid, u));
+
+        resultado = { success: true, usuarios: Array.from(mapa.values()) };
       }
 
       if (resultado.success || resultado.usuarios) {
@@ -1456,6 +1474,16 @@
       document.getElementById('totalMayoristas').textContent = stats.mayoristas;
       document.getElementById('totalNegocios').textContent = stats.negocios;
       document.getElementById('pendientesBadge').textContent = stats.pendientes;
+
+      // Banner de alerta de pendientes
+      const alerta = document.getElementById('alertaPendientes');
+      if (stats.pendientes > 0) {
+        alerta.style.display = 'flex';
+        const plural = stats.pendientes === 1 ? 'solicitud de registro pendiente' : 'solicitudes de registro pendientes';
+        document.getElementById('alertaPendientesTexto').textContent = `Tienes ${stats.pendientes} ${plural}`;
+      } else {
+        alerta.style.display = 'none';
+      }
     }
 
     // Renderizar usuarios
@@ -2230,7 +2258,10 @@
       }
 
       // Limpiar campo de búsqueda (evitar autocomplete del navegador)
-      document.getElementById('buscarUsuario').value = '';
+      const campoBusqueda = document.getElementById('buscarUsuario');
+      campoBusqueda.value = '';
+      // Limpiar de nuevo tras breve delay (el navegador puede autocompletar después)
+      setTimeout(() => { campoBusqueda.value = ''; renderizarUsuarios(); }, 300);
 
       await cargarUsuarios();
       await cargarOrdenes();
