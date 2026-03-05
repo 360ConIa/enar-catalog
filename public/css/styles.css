@@ -169,68 +169,105 @@ body {
   margin-right: 6px;
 }
 
-/* Header Navigation */
+/* ============================================
+   HEADER NAVIGATION — Estilos unificados
+   Usado por: index, admin, perfil, mis-ordenes
+   ============================================ */
 .header-nav {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .header-nav > div {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.header-nav__link {
+/* — Username badge (único elemento con fondo rojo) — */
+.header-nav__user {
   color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  background: #D9232D;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(217, 35, 45, 0.35);
+  letter-spacing: 0.2px;
+}
+
+/* — Links de navegación (apariencia homogénea) — */
+.header-nav__link {
+  color: rgba(255, 255, 255, 0.85);
   text-decoration: none;
   font-size: 13px;
   font-weight: 500;
-  padding: 8px 14px;
+  padding: 7px 14px;
   border-radius: 6px;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .header-nav__link:hover {
-  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .header-nav__link--registro {
   background: #D9232D;
+  border-color: #D9232D;
+  color: #fff;
 }
 
 .header-nav__link--registro:hover {
   background: #b91c25;
+  border-color: #b91c25;
 }
 
+/* Links de rol (Admin / Ventas) — sutil diferenciación */
 .header-nav__link--admin {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
 }
 
-.header-nav__link--logout {
-  opacity: 0.9;
+/* Active state para páginas interiores */
+.header-nav a.nav-active,
+.header-nav__link.nav-active {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font-weight: 600;
 }
 
-.header-nav__link--logout:hover {
-  opacity: 1;
-  background: rgba(217, 35, 45, 0.8);
+/* — Botón logout (solo icono, sin fondo rojo) — */
+.header-nav__link--logout,
+.header-nav .btn-logout {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.75);
+  padding: 7px 10px;
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.header-nav__user {
-  color: white;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 8px 14px;
-  background: #D9232D;
-  border-radius: 6px;
-  white-space: nowrap;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+.header-nav__link--logout:hover,
+.header-nav .btn-logout:hover {
+  background: rgba(217, 35, 45, 0.7);
+  border-color: rgba(217, 35, 45, 0.8);
+  color: #fff;
 }
 
-/* Clases para ocultar/mostrar navegación (con !important para sobreescribir Bootstrap) */
+/* Clases para ocultar/mostrar navegación */
 .nav-hidden {
   display: none !important;
 }
@@ -239,23 +276,31 @@ body {
   display: flex !important;
 }
 
-/* Header responsive */
+/* ============================================
+   HEADER RESPONSIVE
+   ============================================ */
 @media (max-width: 991px) {
   .header-nav {
     margin-left: 0;
-    margin-top: 10px;
+    margin-top: 8px;
     flex-wrap: wrap;
     justify-content: center;
   }
 
   .header-nav__link {
     font-size: 12px;
-    padding: 6px 10px;
+    padding: 5px 10px;
   }
 
   .header-nav__user {
     font-size: 12px;
-    padding: 6px 10px;
+    padding: 5px 10px;
+  }
+
+  .header-nav__link--logout,
+  .header-nav .btn-logout {
+    padding: 5px 8px;
+    font-size: 14px;
   }
 }
 
@@ -263,7 +308,7 @@ body {
   .header-contenido {
     flex-direction: column;
     text-align: center;
-    gap: 10px;
+    gap: 8px;
     padding: 12px var(--espaciado-sm);
   }
 
@@ -282,11 +327,23 @@ body {
   .header-nav {
     width: 100%;
     justify-content: center;
+    gap: 5px;
   }
 
   .header-nav > div {
     flex-wrap: wrap;
     justify-content: center;
+    gap: 5px;
+  }
+
+  .header-nav__link {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+
+  .header-nav__user {
+    font-size: 11px;
+    padding: 5px 8px;
   }
 }
 

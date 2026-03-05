@@ -52,10 +52,11 @@
           <!-- Estado autenticado -->
           <div id="navAuth" class="align-items-center gap-2 flex-wrap nav-hidden">
             <span class="header-nav__user" id="navUserName">Usuario</span>
-            <a href="perfil.html" class="header-nav__link">Mi Perfil</a>
-            <a href="mis-ordenes.html" class="header-nav__link">Mis Órdenes</a>
+            <a href="perfil.html" class="header-nav__link">Perfil</a>
+            <a href="mis-ordenes.html" class="header-nav__link">Órdenes</a>
             <a href="admin.html" class="header-nav__link header-nav__link--admin" id="navAdminLink" style="display: none;">Admin</a>
-            <a href="#" class="header-nav__link header-nav__link--logout" id="navLogout">Salir</a>
+            <a href="vendedor.html" class="header-nav__link header-nav__link--admin" id="navVendedorLink" style="display: none;">Ventas</a>
+            <a href="#" class="header-nav__link header-nav__link--logout" id="navLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></a>
           </div>
         </nav>
       </div>
@@ -501,12 +502,19 @@
         navNoAuth.classList.add('nav-hidden');
         navAuth.classList.remove('nav-hidden');
         navAuth.classList.add('nav-visible');
-        navUserName.textContent = data?.nombre || user.email;
+        const nombreCompleto = data?.nombre || user.email;
+        navUserName.textContent = nombreCompleto.split(' ')[0];
 
         if (esPrivilegiado) {
           navAdminLink.style.display = 'inline-block';
         } else {
           navAdminLink.style.display = 'none';
+        }
+
+        // Mostrar link Panel Ventas si es vendedor
+        const navVendedorLink = document.getElementById('navVendedorLink');
+        if (navVendedorLink) {
+          navVendedorLink.style.display = (data?.rol === 'vendedor') ? 'inline-block' : 'none';
         }
 
         btnSolicitarCotizacion.style.display = 'none';
@@ -519,7 +527,7 @@
         navNoAuth.classList.add('nav-hidden');
         navAuth.classList.remove('nav-hidden');
         navAuth.classList.add('nav-visible');
-        navUserName.textContent = (data?.nombre || user.email) + ' (Pendiente)';
+        navUserName.textContent = (data?.nombre || user.email).split(' ')[0] + ' (Pendiente)';
         navAdminLink.style.display = 'none';
 
         btnSolicitarCotizacion.style.display = 'inline-block';

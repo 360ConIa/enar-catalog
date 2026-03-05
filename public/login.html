@@ -319,8 +319,27 @@
       iniciarSesionConGoogle,
       recuperarPassword,
       onAuthChange,
-      verificarAcceso
-    } from './js/auth.js?v=2';
+      verificarAcceso,
+      obtenerDatosUsuario
+    } from './js/auth.js?v=3';
+
+    // Determina la URL de destino según el rol del usuario
+    async function obtenerDestinoLogin(user, resultado) {
+      // Admin o gestor → admin panel
+      if (resultado.esAdmin || resultado.esUserManager) return '/admin.html';
+
+      // Verificar rol vendedor en Firestore
+      try {
+        const datos = await obtenerDatosUsuario(user.uid);
+        if (datos.success && datos.data && datos.data.rol === 'vendedor') {
+          return '/vendedor.html';
+        }
+      } catch (e) {
+        console.error('Error verificando rol:', e);
+      }
+
+      return '/';
+    }
 
     // Elementos del DOM
     const loginForm = document.getElementById('loginForm');
@@ -366,8 +385,9 @@
 
       if (resultado.success) {
         showMessage(message, messageText, '¡Bienvenido! Redirigiendo...', 'success');
+        const destino = await obtenerDestinoLogin(resultado.user, resultado);
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = destino;
         }, 1000);
       } else {
         showMessage(message, messageText, resultado.error, resultado.code === 'pending-approval' ? 'warning' : 'error');
@@ -386,12 +406,9 @@
 
       if (resultado.success) {
         showMessage(message, messageText, '¡Bienvenido! Redirigiendo...', 'success');
+        const destino = await obtenerDestinoLogin(resultado.user, resultado);
         setTimeout(() => {
-          if (resultado.esAdmin || resultado.esUserManager) {
-            window.location.href = '/admin.html';
-          } else {
-            window.location.href = '/';
-          }
+          window.location.href = destino;
         }, 1000);
       } else {
         showMessage(message, messageText, resultado.error, resultado.code === 'pending-approval' ? 'warning' : 'error');
@@ -445,7 +462,13 @@
       if (user) {
         const acceso = await verificarAcceso();
         if (acceso.autenticado && acceso.aprobado) {
-          window.location.href = '/';
+          // Verificar si es vendedor
+          const datos = await obtenerDatosUsuario(user.uid);
+          if (datos.success && datos.data && datos.data.rol === 'vendedor') {
+            window.location.href = '/vendedor.html';
+          } else {
+            window.location.href = '/';
+          }
         }
       }
     });

@@ -65,34 +65,7 @@
       font-size: 12px;
       font-weight: 600;
     }
-    .header-nav {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .header-nav a {
-      color: white;
-      text-decoration: none;
-      font-size: 14px;
-      padding: 8px 16px;
-      border-radius: 6px;
-      transition: all 0.3s;
-    }
-    .header-nav a:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-    .header-nav a.nav-active {
-      background: rgba(255, 255, 255, 0.15);
-      font-weight: 600;
-    }
-    .btn-logout {
-      background: rgba(217, 35, 45, 0.8);
-      font-weight: 600;
-    }
-    .btn-logout:hover {
-      background: #D9232D;
-    }
+    /* Nav hereda de styles.css (.header-nav, .header-nav__link) */
     .admin-container {
       max-width: 1400px;
       margin: 0 auto;
@@ -653,6 +626,19 @@
         padding: 8px 10px;
       }
     }
+    @media (max-width: 768px) {
+      .header-content {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+      }
+      .header-left { justify-content: center; flex-wrap: wrap; }
+      .header-left h1 { font-size: 18px; }
+      .admin-tabs { flex-wrap: wrap; justify-content: center; }
+      .admin-tab { padding: 10px 14px; font-size: 12px; }
+      .search-box { flex-wrap: wrap; }
+      .search-box input { width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -665,11 +651,11 @@
         <span>ADMIN</span>
       </div>
       <nav class="header-nav">
-        <a href="/">Catálogo</a>
-        <a href="perfil.html">Mi Perfil</a>
-        <a href="mis-ordenes.html">Mis Órdenes</a>
-        <a href="admin.html" class="nav-active">Admin</a>
-        <a href="#" id="logoutLink" class="btn-logout">Salir</a>
+        <a href="/" class="header-nav__link">Catálogo</a>
+        <a href="perfil.html" class="header-nav__link">Perfil</a>
+        <a href="mis-ordenes.html" class="header-nav__link">Órdenes</a>
+        <a href="admin.html" class="header-nav__link nav-active">Admin</a>
+        <a href="#" id="logoutLink" class="header-nav__link header-nav__link--logout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></a>
       </nav>
     </div>
   </header>
@@ -865,6 +851,7 @@
                 <tr>
                   <th>Orden</th>
                   <th>Cliente</th>
+                  <th>Origen</th>
                   <th>Items</th>
                   <th>Total</th>
                   <th>Estado</th>
@@ -874,7 +861,7 @@
               </thead>
               <tbody id="ordenesBody">
                 <tr>
-                  <td colspan="7" class="empty-message">Cargando órdenes...</td>
+                  <td colspan="8" class="empty-message">Cargando órdenes...</td>
                 </tr>
               </tbody>
             </table>
@@ -1168,6 +1155,10 @@
             <span style="font-size: 12px; color: #666;">Fecha:</span>
             <span style="font-size: 13px; font-weight: 500;" id="detalleFecha">-</span>
           </div>
+        </div>
+        <div style="margin-bottom: 12px; padding: 8px 14px; background: #f8f7ff; border-radius: 6px; border: 1px solid #e9e5ff;">
+          <span style="font-size: 12px; color: #666;">Origen:</span>
+          <span style="font-size: 13px; font-weight: 500;" id="detalleOrigen">Cliente directo</span>
         </div>
 
         <!-- Productos -->
@@ -1918,20 +1909,25 @@
       const tbody = document.getElementById('ordenesBody');
 
       if (ordenesFiltradas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-message">No se encontraron órdenes</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-message">No se encontraron órdenes</td></tr>';
         return;
       }
 
-      tbody.innerHTML = ordenesFiltradas.map(o => `
+      tbody.innerHTML = ordenesFiltradas.map(o => {
+        const origen = o.tipo === 'orden-vendedor'
+          ? `<span style="font-size:11px;color:#7c3aed;font-weight:500;"><i class="bi bi-person-badge"></i> ${o.creadaPorNombre || 'Vendedor'}</span>`
+          : `<span style="font-size:11px;color:#64748b;">Cliente directo</span>`;
+        return `
         <tr>
           <td><strong>${o.numero_orden}</strong></td>
           <td>
             <div class="user-info">
-              <span class="user-name">${o.cliente?.nombre || '-'}</span>
+              <span class="user-name">${o.cliente?.nombre || o.clienteNombre || '-'}</span>
               <span class="user-email">${o.cliente?.email || ''}</span>
             </div>
           </td>
-          <td>${o.items?.length || o.cantidad_items || 0}</td>
+          <td>${origen}</td>
+          <td>${o.items?.length || o.productos?.length || o.cantidad_items || 0}</td>
           <td><strong style="color: #D9232D;">${formatearPrecio(o.total)}</strong></td>
           <td><span class="order-status ${claseEstado(o.estado)}">${textoEstado(o.estado)}</span></td>
           <td>${formatearFecha(o.created_at)}</td>
@@ -1974,7 +1970,7 @@
             </div>
           </td>
         </tr>
-      `).join('');
+      `; }).join('');
     }
 
     // Custom dropdown para estados
@@ -2061,6 +2057,16 @@
 
       // Fecha
       document.getElementById('detalleFecha').textContent = formatearFecha(orden.created_at);
+
+      // Origen (vendedor o cliente directo)
+      let detalleOrigenEl = document.getElementById('detalleOrigen');
+      if (detalleOrigenEl) {
+        if (orden.tipo === 'orden-vendedor') {
+          detalleOrigenEl.innerHTML = `<i class="bi bi-person-badge" style="color:#7c3aed;"></i> Creada por: <strong>${orden.creadaPorNombre || 'Vendedor'}</strong>`;
+        } else {
+          detalleOrigenEl.textContent = 'Cliente directo';
+        }
+      }
 
       // Productos
       const items = orden.items || [];
