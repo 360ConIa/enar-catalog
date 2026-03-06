@@ -630,6 +630,92 @@ function iniciarSincronizacionCompleta() {
 // Usa Firestore Batch Commit API para enviar 500 productos por request
 
 /**
+ * Función principal del menú "Sincronizar productos"
+ * Usa Batch Commit API con feedback visual para el usuario
+ */
+function sincronizarProductosConFeedback() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Confirmación antes de iniciar
+  const respuesta = ui.alert(
+    'Sincronizar productos',
+    '¿Deseas sincronizar todos los productos a Firestore?\n\nEsto puede tomar 1-2 minutos.',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (respuesta !== ui.Button.OK) {
+    return;
+  }
+
+  ss.toast('Leyendo productos de la hoja...', 'Sincronización', -1);
+
+  try {
+    const inicio = new Date();
+    const productos = leerProductosDeHoja();
+
+    if (productos.length === 0) {
+      ui.alert('Sin productos', 'No se encontraron productos para sincronizar.', ui.ButtonSet.OK);
+      return;
+    }
+
+    ss.toast(`Sincronizando ${productos.length} productos...`, 'Sincronización', -1);
+
+    const BATCH_SIZE = 500;
+    const totalBatches = Math.ceil(productos.length / BATCH_SIZE);
+    let exitosos = 0;
+    let errores = 0;
+
+    for (let i = 0; i < productos.length; i += BATCH_SIZE) {
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const lote = productos.slice(i, i + BATCH_SIZE);
+
+      ss.toast(`Batch ${batchNum}/${totalBatches} (${lote.length} productos)...`, 'Sincronización', -1);
+
+      try {
+        enviarBatchAFirestore(lote);
+        exitosos += lote.length;
+
+        if (batchNum < totalBatches) {
+          Utilities.sleep(2000);
+        }
+      } catch (error) {
+        Logger.log(`Error en batch ${batchNum}: ${error.message}`);
+        errores += lote.length;
+        Utilities.sleep(5000);
+      }
+    }
+
+    // Actualizar configuración
+    const datosConfig = {
+      ultima_sincronizacion: inicio.toISOString(),
+      productos_sincronizados: exitosos,
+      errores_sincronizacion: errores
+    };
+    actualizarConfiguracion(datosConfig);
+
+    const duracion = ((new Date() - inicio) / 1000).toFixed(1);
+
+    ss.toast(''); // Limpiar toast
+    ui.alert(
+      'Sincronización completada',
+      `Productos sincronizados: ${exitosos}\n` +
+      `Errores: ${errores}\n` +
+      `Tiempo: ${duracion} segundos`,
+      ui.ButtonSet.OK
+    );
+
+    Logger.log(`Sincronización batch completada: ${exitosos} ok, ${errores} errores, ${duracion}s`);
+
+  } catch (error) {
+    ss.toast(''); // Limpiar toast
+    ui.alert('Error', `Error en sincronización:\n${error.message}`, ui.ButtonSet.OK);
+    Logger.log(`Error fatal sincronización: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
  * Sincronización usando Batch Commit API de Firestore
  * Procesa todos los productos en lotes de 500
  */

@@ -360,7 +360,7 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
   ui.createMenu('ENAR Sync')
-    .addItem('Sincronizar productos', 'sincronizarProductosAFirestore')
+    .addItem('Sincronizar productos', 'sincronizarProductosConFeedback')
     .addItem('Sincronizar prueba (5 productos)', 'sincronizarPrueba')
     .addSeparator()
     .addItem('Previsualizar sincronización', 'previsualizarSincronizacion')
