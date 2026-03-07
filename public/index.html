@@ -38,7 +38,7 @@
           </div>
           <div class="header-titulo">
             <h1 class="mb-0">ENAR B2B</h1>
-            <p class="header-tagline mb-0 d-none d-sm-block">Asesor comercial con IA integrado al catálogo</p>
+            <p class="header-tagline mb-0 d-none d-sm-block">Con IA integrada</p>
           </div>
         </div>
 
@@ -63,8 +63,39 @@
     </div>
   </header>
 
+  <!-- Gate: requiere autenticación + aprobación -->
+  <section id="gateSection" class="text-center py-5" style="min-height:60vh;display:flex;align-items:center;justify-content:center;">
+    <div>
+      <div id="gateLoading">
+        <div class="spinner-border text-danger" role="status" style="width:3rem;height:3rem;">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="mt-3" style="color:#666;">Verificando acceso...</p>
+      </div>
+      <div id="gateLogin" style="display:none;">
+        <img src="img/logo-enar.png" alt="ENAR" style="height:80px;margin-bottom:20px;" onerror="this.style.display='none'">
+        <h2 style="color:#1e3a8a;font-weight:700;margin-bottom:12px;">ENAR B2B</h2>
+        <p style="color:#666;margin-bottom:24px;max-width:400px;margin-left:auto;margin-right:auto;">
+          Catálogo exclusivo para clientes registrados y aprobados por ENAR.
+        </p>
+        <div class="d-flex gap-3 justify-content-center">
+          <a href="login.html" class="btn btn-primary btn-lg" style="background:#1e3a8a;border-color:#1e3a8a;">Iniciar Sesión</a>
+          <a href="registro.html" class="btn btn-outline-danger btn-lg">Registrarse</a>
+        </div>
+      </div>
+      <div id="gatePendiente" style="display:none;">
+        <i class="bi bi-hourglass-split" style="font-size:3rem;color:#f59e0b;"></i>
+        <h2 style="color:#1e3a8a;font-weight:700;margin:16px 0 12px;">Registro en proceso</h2>
+        <p style="color:#666;max-width:450px;margin:0 auto 16px;">
+          Tu cuenta está pendiente de aprobación por el equipo ENAR. Te notificaremos cuando sea aprobada.
+        </p>
+        <a href="#" id="gatePendienteLogout" class="btn btn-outline-secondary">Cerrar sesión</a>
+      </div>
+    </div>
+  </section>
+
   <!-- Barra de búsqueda y filtros -->
-  <section class="filtros controles-tabla">
+  <section id="filtrosSection" class="filtros controles-tabla" style="display:none;">
     <div class="container-fluid px-3">
       <div class="row g-2 align-items-end">
         <!-- Búsqueda -->
@@ -153,7 +184,7 @@
   </section>
 
   <!-- Tabla de productos -->
-  <main class="productos py-3">
+  <main id="catalogoSection" class="productos py-3" style="display:none;">
     <div class="container-fluid px-2 px-md-3">
       <!-- Tabla responsive -->
       <div class="table-responsive tabla-container">
@@ -493,11 +524,40 @@
     let currentUser = null;
     let userData = null;
 
+    // Gate elements
+    const gateSection = document.getElementById('gateSection');
+    const gateLoading = document.getElementById('gateLoading');
+    const gateLogin = document.getElementById('gateLogin');
+    const gatePendiente = document.getElementById('gatePendiente');
+    const filtrosSection = document.getElementById('filtrosSection');
+    const catalogoSection = document.getElementById('catalogoSection');
+
+    function mostrarCatalogo(visible) {
+      gateSection.style.display = visible ? 'none' : 'flex';
+      filtrosSection.style.display = visible ? '' : 'none';
+      catalogoSection.style.display = visible ? '' : 'none';
+    }
+
+    function mostrarGate(cual) {
+      gateLoading.style.display = cual === 'loading' ? '' : 'none';
+      gateLogin.style.display = cual === 'login' ? '' : 'none';
+      gatePendiente.style.display = cual === 'pendiente' ? '' : 'none';
+    }
+
+    // Logout desde gate pendiente
+    document.getElementById('gatePendienteLogout')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await cerrarSesion();
+      window.location.href = '/login.html';
+    });
+
     function actualizarNavegacion(user, data) {
       const esPrivilegiado = user && (ADMIN_EMAILS.includes(user.email) || USER_MANAGER_EMAILS.includes(user.email));
 
       if (user && (data?.estado === 'aprobado' || esPrivilegiado)) {
-        // Usuario aprobado o con permisos elevados
+        // Usuario aprobado o con permisos elevados - MOSTRAR CATÁLOGO
+        mostrarCatalogo(true);
+
         navNoAuth.classList.remove('nav-visible');
         navNoAuth.classList.add('nav-hidden');
         navAuth.classList.remove('nav-hidden');
@@ -522,7 +582,10 @@
         btnLoginParaOrden.style.display = 'none';
 
       } else if (user) {
-        // Usuario pendiente: ocultar login/registro, mostrar menú autenticado
+        // Usuario pendiente - OCULTAR CATÁLOGO, mostrar gate pendiente
+        mostrarCatalogo(false);
+        mostrarGate('pendiente');
+
         navNoAuth.classList.remove('nav-visible');
         navNoAuth.classList.add('nav-hidden');
         navAuth.classList.remove('nav-hidden');
@@ -530,12 +593,15 @@
         navUserName.textContent = (data?.nombre || user.email).split(' ')[0] + ' (Pendiente)';
         navAdminLink.style.display = 'none';
 
-        btnSolicitarCotizacion.style.display = 'inline-block';
+        btnSolicitarCotizacion.style.display = 'none';
         btnCrearOrden.style.display = 'none';
         btnLoginParaOrden.style.display = 'none';
 
       } else {
-        // Sin usuario: mostrar login/registro, ocultar menú autenticado
+        // Sin usuario - OCULTAR CATÁLOGO, mostrar gate login
+        mostrarCatalogo(false);
+        mostrarGate('login');
+
         navNoAuth.classList.remove('nav-hidden');
         navNoAuth.classList.add('nav-visible');
         navAuth.classList.remove('nav-visible');
@@ -543,7 +609,7 @@
 
         btnSolicitarCotizacion.style.display = 'none';
         btnCrearOrden.style.display = 'none';
-        btnLoginParaOrden.style.display = 'inline-block';
+        btnLoginParaOrden.style.display = 'none';
       }
     }
 

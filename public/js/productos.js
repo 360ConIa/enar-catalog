@@ -1284,7 +1284,7 @@ function inicializarSelect2() {
   });
 }
 
-// Cargar productos al iniciar la página
+// Cargar productos al iniciar la página (solo si usuario aprobado)
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('Iniciando catálogo ENAR (Vista Tabla)...');
 
@@ -1299,6 +1299,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         cambiarOrdenamiento(columna);
       }
     });
+  });
+
+  // Esperar a que el usuario esté autenticado y aprobado antes de cargar productos
+  // Registrar listener ANTES de inicializarUsuario para no perder el evento
+  let productosCargados = false;
+  const ADMIN_EMAILS = ['sebastianbumq@enarapp.com'];
+  const USER_MANAGER_EMAILS = ['ventas@enar.com.co'];
+
+  function verificarYCargar(user, userData) {
+    const esPrivilegiado = user && (ADMIN_EMAILS.includes(user.email) || USER_MANAGER_EMAILS.includes(user.email));
+    const esAprobado = user && (userData?.estado === 'aprobado' || esPrivilegiado);
+    if (esAprobado && !productosCargados) {
+      productosCargados = true;
+      cargarTodosLosProductos();
+    }
+  }
+
+  window.addEventListener('userStateChanged', (e) => {
+    verificarYCargar(e.detail.user, e.detail.userData);
   });
 
   // Inicializar módulo de usuario
@@ -1327,5 +1346,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  cargarTodosLosProductos();
+  // Si el evento ya se disparó antes de registrar el listener, verificar estado actual
+  if (window.currentUser && window.currentUserData) {
+    verificarYCargar(window.currentUser, window.currentUserData);
+  }
 });

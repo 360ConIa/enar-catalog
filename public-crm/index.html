@@ -7,287 +7,387 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="shortcut icon" href="/favicon.ico">
-  <title>ENAR CRM - Portal Interno</title>
+  <title>ENAR COMERCIAL - Portal Interno</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/crm-styles.css">
 
   <style>
-    :root {
-      --enar-blue: #1e3a8a;
-      --enar-blue-light: #3b82f6;
-      --enar-red: #D9232D;
-      --enar-red-light: #ff6b6b;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%);
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
       min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+
+    /* --- Login card (mismo estilo que login.html B2B) --- */
+    .login-card {
+      max-width: 440px;
+      width: 100%;
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .login-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
       color: white;
-      overflow-x: hidden;
+      padding: 2rem;
+      text-align: center;
+      position: relative;
     }
+    .login-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 4px;
+      background: #D9232D;
+    }
+    .login-header img { max-width: 100px; margin-bottom: 1rem; }
+    .login-header h4 { font-weight: 700; margin-bottom: 0.25rem; }
+    .login-header p { opacity: 0.9; font-size: 0.9rem; margin-bottom: 0; }
+    .login-body { padding: 2rem; }
+    .form-control {
+      padding: 0.75rem 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 15px;
+    }
+    .form-control:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.15);
+    }
+    .form-label {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+    .btn-login {
+      background: linear-gradient(135deg, #D9232D 0%, #ff6b6b 100%);
+      border: none;
+      padding: 0.85rem;
+      font-weight: 600;
+      font-size: 16px;
+      transition: all 0.3s;
+      color: white;
+      border-radius: 10px;
+    }
+    .btn-login:hover {
+      background: linear-gradient(135deg, #c82333 0%, #ff5252 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(220, 53, 69, 0.4);
+      color: white;
+    }
+    .btn-login:disabled {
+      background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+      transform: none;
+      box-shadow: none;
+    }
+    .btn-google {
+      background: white;
+      border: 2px solid #e0e0e0;
+      padding: 0.75rem;
+      font-weight: 500;
+      transition: all 0.3s;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      cursor: pointer;
+      font-size: 15px;
+      color: #333;
+    }
+    .btn-google:hover { background: #f8f9fa; border-color: #ccc; }
+    .btn-google:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-google svg { width: 20px; height: 20px; }
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 1.5rem 0;
+    }
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e0e0e0;
+    }
+    .divider span {
+      padding: 0 15px;
+      color: #888;
+      font-size: 13px;
+    }
+    .alert { border-radius: 10px; font-size: 14px; }
 
-    .bg-animation {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      z-index: -1; overflow: hidden;
+    /* --- Portal (after auth) --- */
+    .portal-body {
+      background: #f8f9fa;
+      min-height: 100vh;
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-    .bg-animation::before {
-      content: ''; position: absolute; top: -50%; left: -50%;
-      width: 200%; height: 200%;
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
-      animation: rotate 30s linear infinite;
+    .portal-header-bar {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: relative;
     }
-    @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .portal-header-bar::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 4px;
+      background: #D9232D;
+    }
+    .portal-header-bar img { height: 36px; }
+    .portal-header-left { display: flex; align-items: center; gap: 12px; }
+    .portal-header-left h1 { font-size: 1.2rem; font-weight: 700; margin: 0; }
+    .portal-header-right { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; }
+    .portal-role-badge {
+      background: rgba(255,255,255,0.2); padding: 3px 12px; border-radius: 12px;
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    }
+    .portal-logout-btn {
+      background: none; border: 1px solid rgba(255,255,255,0.3); color: white;
+      padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;
+      font-family: inherit; transition: all 0.3s;
+    }
+    .portal-logout-btn:hover { background: rgba(255,255,255,0.1); }
 
-    .portal-header { padding: 30px 0; text-align: center; }
-    .logo-container { margin-bottom: 20px; }
-    .logo-container img { height: 80px; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.3)); }
-    .portal-title { font-size: 2.5rem; font-weight: 800; margin-bottom: 10px; text-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-    .portal-title span { background: linear-gradient(135deg, #fff 0%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .portal-subtitle { font-size: 1.1rem; color: rgba(255,255,255,0.7); font-weight: 300; max-width: 600px; margin: 0 auto; }
+    .portal-container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+    .portal-title { text-align: center; margin-bottom: 40px; }
+    .portal-title h2 { font-size: 1.5rem; font-weight: 600; color: #1e3a8a; }
 
-    .portal-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
-
-    /* Login form */
-    .login-container {
-      max-width: 400px; margin: 40px auto;
-      background: rgba(255,255,255,0.08); backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.15); border-radius: 20px;
-      padding: 40px;
-    }
-    .login-container h2 { font-size: 1.3rem; font-weight: 600; margin-bottom: 20px; text-align: center; }
-    .login-group { margin-bottom: 16px; }
-    .login-group label { display: block; font-size: 0.85rem; margin-bottom: 6px; color: rgba(255,255,255,0.7); }
-    .login-input {
-      width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(255,255,255,0.05); color: white; font-size: 0.95rem; font-family: 'Poppins', sans-serif;
-      transition: border-color 0.3s;
-    }
-    .login-input:focus { outline: none; border-color: var(--enar-blue-light); }
-    .login-input::placeholder { color: rgba(255,255,255,0.3); }
-    .login-btn {
-      width: 100%; padding: 12px; border: none; border-radius: 10px;
-      background: linear-gradient(135deg, var(--enar-blue-light) 0%, var(--enar-blue) 100%);
-      color: white; font-size: 1rem; font-weight: 600; cursor: pointer;
-      font-family: 'Poppins', sans-serif; transition: all 0.3s; margin-top: 8px;
-    }
-    .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3); }
-    .login-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-    .login-error { background: rgba(217,35,45,0.2); border: 1px solid rgba(217,35,45,0.3); border-radius: 10px; padding: 10px 16px; font-size: 0.85rem; margin-top: 12px; display: none; }
-    .login-divider { text-align: center; margin: 16px 0; color: rgba(255,255,255,0.4); font-size: 0.85rem; }
-
-    /* User bar */
-    .user-bar {
-      display: flex; align-items: center; justify-content: flex-end;
-      gap: 12px; padding: 10px 20px; margin-bottom: 20px;
-    }
-    .user-bar-name { font-size: 0.85rem; color: rgba(255,255,255,0.7); }
-    .user-bar-role {
-      background: linear-gradient(135deg, var(--enar-blue-light), var(--enar-blue));
-      padding: 3px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
-    }
-    .user-bar-logout {
-      background: none; border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7);
-      padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem;
-      font-family: 'Poppins', sans-serif; transition: all 0.3s;
-    }
-    .user-bar-logout:hover { background: rgba(255,255,255,0.1); color: white; }
-
-    /* Apps grid */
-    .section-title { text-align: center; margin-bottom: 40px; }
-    .section-title h2 { font-size: 1.5rem; font-weight: 600; color: rgba(255,255,255,0.9); }
-    .apps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-bottom: 50px; }
+    .apps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
 
     .app-card {
-      background: rgba(255,255,255,0.05); backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
-      padding: 30px; text-align: center; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      cursor: pointer; text-decoration: none; color: white; display: block; position: relative; overflow: hidden;
+      background: white; border: 1px solid #e2e8f0; border-radius: 16px;
+      padding: 28px; text-align: center; transition: all 0.3s ease;
+      cursor: pointer; text-decoration: none; color: #1e293b; display: block;
+      position: relative; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
     .app-card::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-      background: linear-gradient(90deg, var(--enar-blue-light), var(--enar-red));
+      background: linear-gradient(90deg, #3b82f6, #D9232D);
       transform: scaleX(0); transition: transform 0.3s ease;
     }
     .app-card:hover {
-      transform: translateY(-10px); background: rgba(255,255,255,0.1);
-      border-color: rgba(255,255,255,0.2); box-shadow: 0 20px 40px rgba(0,0,0,0.3); color: white;
+      transform: translateY(-6px); border-color: #bfdbfe;
+      box-shadow: 0 12px 24px rgba(30,58,138,0.1); color: #1e293b;
     }
     .app-card:hover::before { transform: scaleX(1); }
 
-    .app-icon { width: 80px; height: 80px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; transition: all 0.3s ease; }
+    .app-icon {
+      width: 70px; height: 70px; margin: 0 auto 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; color: #1e3a8a; transition: all 0.3s ease;
+    }
+    .app-icon img { width: 100%; height: 100%; object-fit: contain; }
     .app-card:hover .app-icon { transform: scale(1.1); }
-    .app-name { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
-    .app-description { font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-bottom: 12px; line-height: 1.5; }
+    .app-name { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; color: #1e3a8a; }
+    .app-description { font-size: 0.82rem; color: #64748b; line-height: 1.5; margin: 0; }
 
     /* No access */
-    .no-access {
-      text-align: center; padding: 60px 20px; max-width: 500px; margin: 40px auto;
-      background: rgba(255,255,255,0.05); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+    .no-access-card {
+      text-align: center; padding: 60px 20px; max-width: 500px; margin: 0 auto;
     }
-    .no-access i { font-size: 3rem; color: var(--enar-red); display: block; margin-bottom: 16px; }
-    .no-access h2 { font-size: 1.5rem; margin-bottom: 8px; }
-    .no-access p { color: rgba(255,255,255,0.6); font-size: 0.9rem; }
-
-    .portal-footer { text-align: center; padding: 40px 20px; color: rgba(255,255,255,0.4); font-size: 0.85rem; }
-    .portal-footer a { color: rgba(255,255,255,0.6); text-decoration: none; }
-    .portal-footer a:hover { color: white; }
+    .no-access-card i { font-size: 3rem; color: #D9232D; display: block; margin-bottom: 16px; }
+    .no-access-card h2 { color: #1e3a8a; font-weight: 700; margin-bottom: 12px; }
+    .no-access-card p { color: #666; font-size: 0.9rem; }
 
     .hidden { display: none !important; }
 
     @media (max-width: 768px) {
-      .portal-title { font-size: 1.8rem; }
-      .portal-subtitle { font-size: 1rem; padding: 0 20px; }
       .apps-grid { grid-template-columns: 1fr; }
-      .login-container { margin: 20px; padding: 30px 20px; }
+      .portal-header-bar { padding: 12px 16px; }
     }
   </style>
 </head>
 <body>
-  <div class="bg-animation"></div>
 
-  <!-- Header -->
-  <header class="portal-header">
-    <div class="logo-container">
+  <!-- Gate: Loading -->
+  <div id="loadingSection" class="login-card" style="text-align:center;">
+    <div class="login-header">
       <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+      <h4>ENAR COMERCIAL</h4>
+      <p>Sistema Interno de Gestión Comercial</p>
     </div>
-    <h1 class="portal-title"><span>CRM ENAR</span></h1>
-    <p class="portal-subtitle">
-      Sistema interno de gestión comercial, clientes y despachos
-    </p>
-  </header>
-
-  <!-- Login Form (visible when not authenticated) -->
-  <div id="loginSection" class="login-container hidden">
-    <h2><i class="bi bi-shield-lock me-2"></i>Iniciar Sesión</h2>
-    <form id="loginForm">
-      <div class="login-group">
-        <label for="inputEmail">Correo electrónico</label>
-        <input type="email" id="inputEmail" class="login-input" placeholder="tu@enarapp.com" required>
-      </div>
-      <div class="login-group">
-        <label for="inputPassword">Contraseña</label>
-        <input type="password" id="inputPassword" class="login-input" placeholder="Tu contraseña" required>
-      </div>
-      <button type="submit" class="login-btn" id="btnLogin">
-        <i class="bi bi-box-arrow-in-right me-2"></i>Ingresar al CRM
-      </button>
-      <div id="loginError" class="login-error"></div>
-    </form>
-  </div>
-
-  <!-- Loading -->
-  <div id="loadingSection" style="display:flex;align-items:center;justify-content:center;min-height:40vh;">
-    <div style="text-align:center;">
-      <div class="spinner-border text-light" role="status" style="width:3rem;height:3rem;">
+    <div class="login-body">
+      <div class="spinner-border text-danger" role="status" style="width:2.5rem;height:2.5rem;">
         <span class="visually-hidden">Cargando...</span>
       </div>
-      <p style="margin-top:16px;color:rgba(255,255,255,0.6);">Verificando acceso...</p>
+      <p class="mt-3 text-muted">Verificando acceso...</p>
+    </div>
+  </div>
+
+  <!-- Gate: Login -->
+  <div id="loginSection" class="login-card hidden">
+    <div class="login-header">
+      <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+      <h4>ENAR COMERCIAL</h4>
+      <p>Sistema Interno de Gestión Comercial</p>
+    </div>
+    <div class="login-body">
+      <div id="loginMessage" class="alert" style="display: none;">
+        <i class="bi bi-exclamation-circle me-2"></i>
+        <span id="loginMessageText"></span>
+      </div>
+
+      <!-- Botón Google -->
+      <button type="button" class="btn-google mb-3" id="googleBtn">
+        <svg viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continuar con Google
+      </button>
+
+      <div class="divider"><span>o usa tu email</span></div>
+
+      <form id="loginForm">
+        <div class="mb-3">
+          <label class="form-label">
+            <i class="bi bi-envelope me-2"></i>Correo Electrónico
+          </label>
+          <input type="email" class="form-control" id="inputEmail"
+                 placeholder="tu@enarapp.com" required autocomplete="email">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">
+            <i class="bi bi-lock me-2"></i>Contraseña
+          </label>
+          <input type="password" class="form-control" id="inputPassword"
+                 placeholder="Ingresa tu contraseña" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-login w-100" id="btnLogin">
+          <i class="bi bi-box-arrow-in-right me-2"></i>
+          Iniciar Sesión
+        </button>
+      </form>
+
+      <div class="text-center mt-4">
+        <small class="text-muted">Acceso exclusivo para equipo ENAR</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gate: No Access -->
+  <div id="noAccessSection" class="login-card hidden">
+    <div class="login-header">
+      <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+      <h4>ENAR COMERCIAL</h4>
+      <p>Sistema Interno de Gestión Comercial</p>
+    </div>
+    <div class="login-body text-center">
+      <i class="bi bi-shield-exclamation" style="font-size:2.5rem;color:#D9232D;"></i>
+      <h5 class="mt-3" style="font-weight:700;color:#1e3a8a;">Sin acceso</h5>
+      <p class="text-muted">Este sistema es exclusivo para el equipo interno de ENAR.</p>
+      <p class="text-muted">Si crees que deberías tener acceso, contacta al administrador.</p>
+      <button class="btn btn-login w-100 mt-3" id="btnLogoutNoAccess">
+        <i class="bi bi-box-arrow-right me-1"></i>Cerrar sesión
+      </button>
     </div>
   </div>
 
   <!-- Portal Content (visible after auth + role verified) -->
-  <main id="portalSection" class="portal-container hidden">
-    <!-- User bar -->
-    <div class="user-bar">
-      <span class="user-bar-name" id="userName"></span>
-      <span class="user-bar-role" id="userRole"></span>
-      <button class="user-bar-logout" id="btnLogout"><i class="bi bi-box-arrow-right me-1"></i>Salir</button>
-    </div>
+  <div id="portalSection" class="hidden portal-body">
+    <header class="portal-header-bar">
+      <div class="portal-header-left">
+        <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
+        <h1>ENAR COMERCIAL</h1>
+      </div>
+      <div class="portal-header-right">
+        <span id="userName"></span>
+        <span class="portal-role-badge" id="userRole"></span>
+        <button class="portal-logout-btn" id="btnLogout"><i class="bi bi-box-arrow-right me-1"></i>Salir</button>
+      </div>
+    </header>
 
-    <div class="section-title">
-      <h2><i class="bi bi-grid-3x3-gap me-2"></i>Módulos CRM</h2>
-    </div>
+    <main class="portal-container">
+      <div class="portal-title">
+        <h2><i class="bi bi-grid-3x3-gap me-2"></i>Módulos CRM</h2>
+      </div>
 
-    <div class="apps-grid" id="appsGrid">
-      <!-- CRM Dashboard -->
-      <a href="crm-dashboard.html" class="app-card" data-roles="admin,vendedor" id="app-dashboard">
-        <div class="app-icon"><i class="bi bi-speedometer2"></i></div>
-        <h3 class="app-name">Dashboard</h3>
-        <p class="app-description">Panel general con KPIs, ventas, clientes en riesgo y actividad reciente.</p>
-      </a>
+      <div class="apps-grid" id="appsGrid">
+        <a href="crm-dashboard.html" class="app-card" data-roles="admin,vendedor">
+          <div class="app-icon"><i class="bi bi-speedometer2"></i></div>
+          <h3 class="app-name">Dashboard</h3>
+          <p class="app-description">Panel general con KPIs, ventas, clientes en riesgo y actividad reciente.</p>
+        </a>
 
-      <!-- Gestión Comercial (legacy) -->
-      <a href="https://script.google.com/macros/s/AKfycbxjv5GjrYXFWccoHIPCHVkDO20K286gDfxaxASkFN4I7I0fOPYF_nzRzlf-1S6bLQwtTQ/exec" class="app-card" data-roles="admin,vendedor" target="_blank" id="app-gestion">
-        <div class="app-icon">
-          <img src="img/icons/gestion-comercial.png" alt="Gestión Comercial"
-               onerror="this.parentElement.innerHTML='<i class=\'bi bi-graph-up-arrow\'></i>'" style="width:100%;height:100%;object-fit:contain;">
-        </div>
-        <h3 class="app-name">Gestión Comercial</h3>
-        <p class="app-description">Control de ventas, seguimiento de clientes distribuidores y reportes comerciales.</p>
-      </a>
+        <a href="https://script.google.com/macros/s/AKfycbxjv5GjrYXFWccoHIPCHVkDO20K286gDfxaxASkFN4I7I0fOPYF_nzRzlf-1S6bLQwtTQ/exec" class="app-card" data-roles="admin,vendedor" target="_blank">
+          <div class="app-icon">
+            <img src="img/icons/gestion-comercial.png" alt="Gestión Comercial"
+                 onerror="this.parentElement.innerHTML='<i class=\'bi bi-graph-up-arrow\'></i>'">
+          </div>
+          <h3 class="app-name">Gestión Comercial</h3>
+          <p class="app-description">Control de ventas, seguimiento de clientes distribuidores y reportes comerciales.</p>
+        </a>
 
-      <!-- Clientes -->
-      <a href="crm-clientes.html" class="app-card" data-roles="admin,vendedor" id="app-clientes">
-        <div class="app-icon"><i class="bi bi-people"></i></div>
-        <h3 class="app-name">Clientes</h3>
-        <p class="app-description">Gestión de clientes con métricas de salud, ABC, riesgo y tendencias.</p>
-      </a>
+        <a href="crm-clientes.html" class="app-card" data-roles="admin,vendedor">
+          <div class="app-icon"><i class="bi bi-people"></i></div>
+          <h3 class="app-name">Clientes</h3>
+          <p class="app-description">Gestión de clientes con métricas de salud, ABC, riesgo y tendencias.</p>
+        </a>
 
-      <!-- Órdenes CRM -->
-      <a href="crm-ordenes.html" class="app-card" data-roles="admin,vendedor" id="app-ordenes">
-        <div class="app-icon"><i class="bi bi-receipt"></i></div>
-        <h3 class="app-name">Órdenes CRM</h3>
-        <p class="app-description">Crear y gestionar órdenes de compra, seguimiento de estado y facturación.</p>
-      </a>
+        <a href="crm-ordenes.html" class="app-card" data-roles="admin,vendedor">
+          <div class="app-icon"><i class="bi bi-receipt"></i></div>
+          <h3 class="app-name">Órdenes CRM</h3>
+          <p class="app-description">Crear y gestionar órdenes de compra, seguimiento de estado y facturación.</p>
+        </a>
 
-      <!-- Despachos -->
-      <a href="crm-despachos.html" class="app-card" data-roles="admin,despachos" id="app-despachos">
-        <div class="app-icon">
-          <img src="img/icons/despachos.png" alt="Despachos"
-               onerror="this.parentElement.innerHTML='<i class=\'bi bi-truck\'></i>'" style="width:100%;height:100%;object-fit:contain;">
-        </div>
-        <h3 class="app-name">Despachos</h3>
-        <p class="app-description">Alistamiento, preparación, logística de envíos y chat en tiempo real.</p>
-      </a>
+        <a href="crm-despachos.html" class="app-card" data-roles="admin,despachos">
+          <div class="app-icon">
+            <img src="img/icons/despachos.png" alt="Despachos"
+                 onerror="this.parentElement.innerHTML='<i class=\'bi bi-truck\'></i>'">
+          </div>
+          <h3 class="app-name">Despachos</h3>
+          <p class="app-description">Alistamiento, preparación, logística de envíos y chat en tiempo real.</p>
+        </a>
 
-      <!-- Reportes -->
-      <a href="crm-reportes.html" class="app-card" data-roles="admin,vendedor" id="app-reportes">
-        <div class="app-icon"><i class="bi bi-bar-chart-line"></i></div>
-        <h3 class="app-name">Reportes</h3>
-        <p class="app-description">Análisis de ventas, inventario e inteligencia de clientes con recomendaciones.</p>
-      </a>
+        <a href="crm-reportes.html" class="app-card" data-roles="admin,vendedor">
+          <div class="app-icon"><i class="bi bi-bar-chart-line"></i></div>
+          <h3 class="app-name">Reportes</h3>
+          <p class="app-description">Análisis de ventas, inventario e inteligencia de clientes con recomendaciones.</p>
+        </a>
 
-      <!-- Pedidos B2B (link externo a la app B2B) -->
-      <a href="https://enar-b2b.web.app" class="app-card" data-roles="admin,vendedor" target="_blank" id="app-b2b">
-        <div class="app-icon">
-          <img src="img/icons/pedidos-b2b.png" alt="Pedidos B2B"
-               onerror="this.parentElement.innerHTML='<i class=\'bi bi-cart-check\'></i>'" style="width:100%;height:100%;object-fit:contain;">
-        </div>
-        <h3 class="app-name">Pedidos B2B</h3>
-        <p class="app-description">Catálogo de productos, pedidos mayoristas y órdenes de compra para distribuidores.</p>
-      </a>
-    </div>
-  </main>
+        <a href="https://enar-b2b.web.app" class="app-card" data-roles="admin,vendedor" target="_blank">
+          <div class="app-icon">
+            <img src="img/icons/pedidos-b2b.png" alt="Pedidos B2B"
+                 onerror="this.parentElement.innerHTML='<i class=\'bi bi-cart-check\'></i>'">
+          </div>
+          <h3 class="app-name">Pedidos B2B</h3>
+          <p class="app-description">Catálogo de productos, pedidos mayoristas y órdenes de compra para distribuidores.</p>
+        </a>
+      </div>
+    </main>
 
-  <!-- No Access Section -->
-  <div id="noAccessSection" class="no-access hidden">
-    <i class="bi bi-shield-exclamation"></i>
-    <h2>Sin acceso al CRM</h2>
-    <p>Este sistema es exclusivo para el equipo interno de ENAR.</p>
-    <p style="margin-top:12px;">Si crees que deberías tener acceso, contacta al administrador.</p>
-    <button class="login-btn" style="max-width:200px;margin:20px auto 0;" id="btnLogoutNoAccess">
-      <i class="bi bi-box-arrow-right me-1"></i>Cerrar sesión
-    </button>
+    <footer style="text-align:center;padding:30px 20px;color:#94a3b8;font-size:0.85rem;">
+      <strong>ENAR COMERCIAL</strong> - Sistema Interno<br>
+      <small>v1.0 &copy; 2025 | <a href="mailto:soporte@enarapp.com" style="color:#64748b;">soporte@enarapp.com</a></small>
+    </footer>
   </div>
-
-  <!-- Footer -->
-  <footer class="portal-footer">
-    <p>
-      <strong>ENAR CRM</strong> - Sistema Interno<br>
-      <small>v1.0 &copy; 2025 | <a href="mailto:soporte@enarapp.com">soporte@enarapp.com</a></small>
-    </p>
-  </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
     const app = initializeApp({
       apiKey: "AIzaSyCMPflYHuPnAWaUhv90wi3uBOhP9AoA8e0",
@@ -301,6 +401,7 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
+    const googleProvider = new GoogleAuthProvider();
     const ADMIN_EMAIL = 'sebastianbumq@enarapp.com';
     const CRM_ROLES = ['admin', 'vendedor', 'despachos'];
 
@@ -309,41 +410,76 @@
     const portalSection = document.getElementById('portalSection');
     const noAccessSection = document.getElementById('noAccessSection');
     const loginForm = document.getElementById('loginForm');
-    const loginError = document.getElementById('loginError');
+    const loginMessage = document.getElementById('loginMessage');
+    const loginMessageText = document.getElementById('loginMessageText');
     const btnLogin = document.getElementById('btnLogin');
 
     function showSection(section) {
       [loginSection, loadingSection, portalSection, noAccessSection].forEach(s => s.classList.add('hidden'));
       section.classList.remove('hidden');
+      // Switch body style for portal vs login
+      if (section === portalSection) {
+        document.body.style.background = '#f8f9fa';
+        document.body.style.display = 'block';
+        document.body.style.padding = '0';
+        document.body.style.alignItems = 'unset';
+        document.body.style.justifyContent = 'unset';
+      }
     }
 
-    // Login form handler
+    function showMessage(texto, tipo) {
+      loginMessageText.textContent = texto;
+      loginMessage.className = `alert alert-${tipo === 'error' ? 'danger' : tipo === 'warning' ? 'warning' : 'success'}`;
+      loginMessage.style.display = 'block';
+    }
+
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('inputEmail').value.trim();
       const password = document.getElementById('inputPassword').value;
 
       btnLogin.disabled = true;
-      btnLogin.textContent = 'Ingresando...';
-      loginError.style.display = 'none';
+      btnLogin.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Ingresando...';
+      loginMessage.style.display = 'none';
 
       try {
         await signInWithEmailAndPassword(auth, email, password);
       } catch (err) {
-        loginError.textContent = err.code === 'auth/invalid-credential'
+        const msg = err.code === 'auth/invalid-credential'
           ? 'Credenciales incorrectas. Verifica tu correo y contraseña.'
           : 'Error al iniciar sesión: ' + err.message;
-        loginError.style.display = 'block';
+        showMessage(msg, 'error');
         btnLogin.disabled = false;
-        btnLogin.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i>Ingresar al CRM';
+        btnLogin.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión';
       }
     });
 
-    // Logout handlers
-    document.getElementById('btnLogout')?.addEventListener('click', () => signOut(auth));
-    document.getElementById('btnLogoutNoAccess')?.addEventListener('click', () => signOut(auth));
+    // Google Sign In
+    const googleBtn = document.getElementById('googleBtn');
+    googleBtn.addEventListener('click', async () => {
+      googleBtn.disabled = true;
+      googleBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Conectando...';
+      loginMessage.style.display = 'none';
 
-    // Auth state change
+      try {
+        await signInWithPopup(auth, googleProvider);
+      } catch (err) {
+        if (err.code !== 'auth/popup-closed-by-user') {
+          showMessage('Error al iniciar sesión con Google: ' + err.message, 'error');
+        }
+        googleBtn.disabled = false;
+        googleBtn.innerHTML = `<svg viewBox="0 0 24 24" style="width:20px;height:20px">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg> Continuar con Google`;
+      }
+    });
+
+    document.getElementById('btnLogout')?.addEventListener('click', () => { signOut(auth); location.reload(); });
+    document.getElementById('btnLogoutNoAccess')?.addEventListener('click', () => { signOut(auth); location.reload(); });
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         showSection(loginSection);
@@ -359,9 +495,7 @@
         const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
         if (userDoc.exists()) {
           const perfil = userDoc.data();
-          if (!esAdmin) {
-            rol = perfil.rol || null;
-          }
+          if (!esAdmin) rol = perfil.rol || null;
         }
 
         if (!rol || !CRM_ROLES.includes(rol)) {
@@ -369,11 +503,9 @@
           return;
         }
 
-        // Show portal
         document.getElementById('userName').textContent = user.email;
         document.getElementById('userRole').textContent = rol.toUpperCase();
 
-        // Filter apps by role
         const cards = document.querySelectorAll('#appsGrid .app-card');
         cards.forEach(card => {
           const allowedRoles = (card.dataset.roles || '').split(',');
