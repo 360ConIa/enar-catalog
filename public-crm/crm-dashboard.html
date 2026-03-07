@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>ENAR CRM - Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/crm-styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="crm-page">
+
+  <!-- Header -->
+  <header class="crm-header">
+    <div class="crm-header-left">
+      <img src="img/logo-enar.png" alt="ENAR" class="crm-header-logo" onerror="this.style.display='none'">
+      <div>
+        <h1>CRM ENAR</h1>
+        <div class="crm-header-sub">Dashboard</div>
+      </div>
+    </div>
+    <nav class="crm-header-nav">
+      <a href="crm-dashboard.html" style="background:rgba(255,255,255,0.25);color:white;">Dashboard</a>
+      <a href="crm-clientes.html">Clientes</a>
+      <a href="crm-ordenes.html">Órdenes</a>
+      <a href="crm-despachos.html">Despachos</a>
+      <a href="crm-reportes.html">Reportes</a>
+      <a href="index.html" title="Portal"><i class="bi bi-grid"></i></a>
+      <button id="btnLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
+    </nav>
+  </header>
+
+  <!-- Loading -->
+  <div id="loadingScreen" style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
+    <div class="crm-loader"><div class="crm-spinner"></div><p>Cargando dashboard...</p></div>
+  </div>
+
+  <!-- No Access -->
+  <div id="noAccess" class="crm-no-access" style="display:none;">
+    <i class="bi bi-shield-lock"></i>
+    <h2>Sin acceso</h2>
+    <p>No tienes permisos para acceder al CRM.</p>
+    <a href="index.html" class="crm-btn crm-btn--primary" style="margin-top:16px;">Ir al Portal</a>
+  </div>
+
+  <!-- Main Content -->
+  <main id="mainContent" class="crm-container" style="display:none;">
+    <!-- Welcome -->
+    <div style="margin-bottom:24px;">
+      <h2 style="font-size:1.3rem;font-weight:700;margin:0;" id="welcomeMsg">Bienvenido</h2>
+      <p style="color:var(--crm-text-light);font-size:0.85rem;margin:4px 0 0;">Resumen de actividad comercial</p>
+    </div>
+
+    <!-- KPIs -->
+    <div class="crm-kpis">
+      <div class="crm-kpi">
+        <div class="crm-kpi-label">Total Órdenes</div>
+        <div class="crm-kpi-value" id="kpiOrdenes">0</div>
+        <div class="crm-kpi-sub" id="kpiOrdenesSub"></div>
+      </div>
+      <div class="crm-kpi crm-kpi--yellow">
+        <div class="crm-kpi-label">Pendientes</div>
+        <div class="crm-kpi-value" id="kpiPendientes">0</div>
+      </div>
+      <div class="crm-kpi crm-kpi--green">
+        <div class="crm-kpi-label">Ventas del Mes</div>
+        <div class="crm-kpi-value" id="kpiVentasMes">$0</div>
+      </div>
+      <div class="crm-kpi crm-kpi--red">
+        <div class="crm-kpi-label">Clientes en Riesgo</div>
+        <div class="crm-kpi-value" id="kpiRiesgo">0</div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px;">
+      <div class="crm-chart-container">
+        <div class="crm-chart-title">Ventas por Mes</div>
+        <canvas id="chartVentas" height="280"></canvas>
+      </div>
+      <div class="crm-chart-container">
+        <div class="crm-chart-title">Distribución Órdenes</div>
+        <canvas id="chartDistribucion" height="280"></canvas>
+      </div>
+    </div>
+
+    <!-- Bottom Row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <!-- Clientes en riesgo -->
+      <div class="crm-card">
+        <div class="crm-card-header">
+          <h4 style="font-size:0.95rem;font-weight:600;margin:0;">
+            <i class="bi bi-exclamation-triangle" style="color:var(--crm-red);"></i> Clientes en Riesgo
+          </h4>
+          <a href="crm-reportes.html" style="font-size:0.78rem;color:var(--crm-primary-light);text-decoration:none;">Ver todos &rarr;</a>
+        </div>
+        <div id="clientesRiesgo"></div>
+      </div>
+
+      <!-- Órdenes recientes -->
+      <div class="crm-card">
+        <div class="crm-card-header">
+          <h4 style="font-size:0.95rem;font-weight:600;margin:0;">
+            <i class="bi bi-clock-history" style="color:var(--crm-primary-light);"></i> Órdenes Recientes
+          </h4>
+          <a href="crm-ordenes.html" style="font-size:0.78rem;color:var(--crm-primary-light);text-decoration:none;">Ver todas &rarr;</a>
+        </div>
+        <div id="ordenesRecientes"></div>
+      </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-top:24px;">
+      <a href="crm-clientes.html" class="crm-card" style="text-decoration:none;text-align:center;padding:24px;">
+        <i class="bi bi-people" style="font-size:2rem;color:var(--crm-primary-light);display:block;margin-bottom:8px;"></i>
+        <strong>Clientes</strong>
+        <div style="font-size:0.78rem;color:var(--crm-text-light);">Gestionar clientes</div>
+      </a>
+      <a href="crm-ordenes.html" class="crm-card" style="text-decoration:none;text-align:center;padding:24px;">
+        <i class="bi bi-receipt" style="font-size:2rem;color:var(--crm-green);display:block;margin-bottom:8px;"></i>
+        <strong>Órdenes</strong>
+        <div style="font-size:0.78rem;color:var(--crm-text-light);">Gestionar órdenes</div>
+      </a>
+      <a href="crm-despachos.html" class="crm-card" style="text-decoration:none;text-align:center;padding:24px;">
+        <i class="bi bi-truck" style="font-size:2rem;color:var(--crm-orange);display:block;margin-bottom:8px;"></i>
+        <strong>Despachos</strong>
+        <div style="font-size:0.78rem;color:var(--crm-text-light);">Logística y envíos</div>
+      </a>
+      <a href="crm-reportes.html" class="crm-card" style="text-decoration:none;text-align:center;padding:24px;">
+        <i class="bi bi-graph-up" style="font-size:2rem;color:var(--crm-purple);display:block;margin-bottom:8px;"></i>
+        <strong>Reportes</strong>
+        <div style="font-size:0.78rem;color:var(--crm-text-light);">Análisis e inteligencia</div>
+      </a>
+    </div>
+  </main>
+
+  <script type="module" src="js/crm-dashboard.js"></script>
+</body>
+</html>

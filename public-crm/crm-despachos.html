@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>ENAR CRM - Despachos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/crm-styles.css">
+</head>
+<body class="crm-page">
+
+  <!-- Header -->
+  <header class="crm-header">
+    <div class="crm-header-left">
+      <img src="img/logo-enar.png" alt="ENAR" class="crm-header-logo" onerror="this.style.display='none'">
+      <div>
+        <h1>CRM ENAR</h1>
+        <div class="crm-header-sub">Despachos y Logística</div>
+      </div>
+    </div>
+    <nav class="crm-header-nav">
+      <a href="crm-dashboard.html">Dashboard</a>
+      <a href="crm-clientes.html">Clientes</a>
+      <a href="crm-ordenes.html">Órdenes</a>
+      <a href="crm-despachos.html" style="background:rgba(255,255,255,0.25);color:white;">Despachos</a>
+      <a href="crm-reportes.html">Reportes</a>
+      <a href="index.html" title="Portal"><i class="bi bi-grid"></i></a>
+      <button id="btnLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
+    </nav>
+  </header>
+
+  <!-- Loading -->
+  <div id="loadingScreen" style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
+    <div class="crm-loader"><div class="crm-spinner"></div><p>Cargando...</p></div>
+  </div>
+
+  <!-- No Access -->
+  <div id="noAccess" class="crm-no-access" style="display:none;">
+    <i class="bi bi-shield-lock"></i>
+    <h2>Sin acceso</h2>
+    <p>No tienes permisos para acceder a Despachos.</p>
+    <a href="index.html" class="crm-btn crm-btn--primary" style="margin-top:16px;">Ir al Portal</a>
+  </div>
+
+  <!-- Main Content -->
+  <main id="mainContent" class="crm-container" style="display:none;">
+    <!-- KPIs -->
+    <div class="crm-kpis">
+      <div class="crm-kpi crm-kpi--yellow">
+        <div class="crm-kpi-label">Alistamiento</div>
+        <div class="crm-kpi-value" id="kpiAlistamiento">0</div>
+      </div>
+      <div class="crm-kpi crm-kpi--purple">
+        <div class="crm-kpi-label">En Espera</div>
+        <div class="crm-kpi-value" id="kpiEspera">0</div>
+      </div>
+      <div class="crm-kpi">
+        <div class="crm-kpi-label">En Proceso / Parcial</div>
+        <div class="crm-kpi-value" id="kpiProceso">0</div>
+      </div>
+      <div class="crm-kpi crm-kpi--green">
+        <div class="crm-kpi-label">Completadas</div>
+        <div class="crm-kpi-value" id="kpiCompletas">0</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="crm-tabs">
+      <button class="crm-tab active" data-tab="alistamiento">
+        <i class="bi bi-box-seam"></i> Alistamiento <span class="crm-tab-count" id="tabCountAlistamiento">0</span>
+      </button>
+      <button class="crm-tab" data-tab="espera">
+        <i class="bi bi-hourglass-split"></i> En Espera <span class="crm-tab-count" id="tabCountEspera">0</span>
+      </button>
+      <button class="crm-tab" data-tab="proceso">
+        <i class="bi bi-arrow-repeat"></i> En Proceso <span class="crm-tab-count" id="tabCountProceso">0</span>
+      </button>
+      <button class="crm-tab" data-tab="completadas">
+        <i class="bi bi-check-circle"></i> Completadas <span class="crm-tab-count" id="tabCountCompletadas">0</span>
+      </button>
+    </div>
+
+    <!-- Filtros -->
+    <div class="crm-filtros">
+      <div class="crm-filtro-group">
+        <label>Buscar</label>
+        <input type="text" class="crm-input crm-input--search" id="filtroTexto" placeholder="Orden, cliente, NIT...">
+      </div>
+      <div class="crm-filtro-group">
+        <label>Ruta</label>
+        <select class="crm-select" id="filtroRuta">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="crm-filtro-group">
+        <label>Desde</label>
+        <input type="date" class="crm-input" id="filtroDesde">
+      </div>
+      <div class="crm-filtro-group">
+        <label>Hasta</label>
+        <input type="date" class="crm-input" id="filtroHasta">
+      </div>
+    </div>
+
+    <!-- Orders Container -->
+    <div id="ordenesContainer"></div>
+
+    <!-- Pagination -->
+    <div id="paginacionDespachos"></div>
+  </main>
+
+  <!-- Modal Detalle Orden -->
+  <div id="modalDetalle" class="crm-modal-overlay">
+    <div class="crm-modal crm-modal--lg">
+      <div class="crm-modal-header">
+        <h3 id="modalDetalleTitulo">Detalle de Orden</h3>
+        <button class="crm-modal-close" onclick="cerrarModal('modalDetalle')">&times;</button>
+      </div>
+      <div class="crm-modal-body" id="modalDetalleBody">
+      </div>
+      <div class="crm-modal-footer" id="modalDetalleFooter">
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/crm-despachos.js"></script>
+</body>
+</html>

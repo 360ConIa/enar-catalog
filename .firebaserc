@@ -1,1 +1,13 @@
-{"projects":{"default":"enar-b2b"}}
+{
+  "projects": {
+    "default": "enar-b2b"
+  },
+  "targets": {
+    "enar-b2b": {
+      "hosting": {
+        "b2b": ["enar-b2b"],
+        "crm": ["enar-comercial"]
+      }
+    }
+  }
+}

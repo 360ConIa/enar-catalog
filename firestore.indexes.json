@@ -29,6 +29,20 @@
       ]
     },
     {
+      "collectionGroup": "ordenes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "usuarios",
       "queryScope": "COLLECTION",
       "fields": [
@@ -38,6 +52,62 @@
         },
         {
           "fieldPath": "created_at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "usuarios",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estado",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nombre",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "chat_ordenes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "orden_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "created_at",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "metricas_clientes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "estado_salud",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dias_sin_compra",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "metricas_clientes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "clasificacion_abc",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "total_compras_anio",
           "order": "DESCENDING"
         }
       ]

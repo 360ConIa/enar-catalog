@@ -32,6 +32,18 @@ service cloud.firestore {
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'vendedor';
     }
 
+    // Helper: Despachos (rol guardado en Firestore)
+    function isDespachos() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'despachos';
+    }
+
+    // Helper: CRM user (admin, vendedor o despachos)
+    function isCRM() {
+      return isAdmin() || isVendedor() || isDespachos();
+    }
+
     // Productos: lectura pública, escritura solo admin
     match /productos/{document=**} {
       allow read: if true;
@@ -56,13 +68,14 @@ service cloud.firestore {
 
       // Usuario puede leer su propio documento, admin puede leer todos,
       // gestores pueden leer usuarios que crearon O usuarios pendientes (auto-registrados),
-      // vendedores pueden leer usuarios aprobados (para buscar clientes)
+      // vendedores y despachos pueden leer usuarios aprobados (para buscar clientes)
       allow read: if isAuthenticated() && (
         request.auth.uid == userId ||
         isAdmin() ||
         (isUserManager() && resource.data.creado_por == request.auth.token.email) ||
         (isUserManager() && resource.data.estado == 'pendiente') ||
-        (isVendedor() && resource.data.estado == 'aprobado')
+        (isVendedor() && resource.data.estado == 'aprobado') ||
+        (isDespachos() && resource.data.estado == 'aprobado')
       );
 
       // Usuario puede actualizar su propio documento (datos limitados)
@@ -96,18 +109,19 @@ service cloud.firestore {
         (isVendedor() && request.resource.data.creadaPor == request.auth.uid)
       );
 
-      // Usuarios pueden leer sus propias órdenes, admin/gestores/vendedores pueden leer
+      // Usuarios pueden leer sus propias órdenes, admin/gestores/vendedores/despachos pueden leer
       allow read: if isAuthenticated() && (
         resource.data.user_id == request.auth.uid ||
         isAdmin() ||
         isUserManager() ||
-        (isVendedor() && resource.data.creadaPor == request.auth.uid)
+        (isVendedor() && resource.data.creadaPor == request.auth.uid) ||
+        isDespachos()
       );
 
-      // Admin y gestores pueden actualizar cualquier orden
+      // Admin, gestores y despachos pueden actualizar órdenes
       // Usuarios aprobados pueden actualizar sus propias órdenes pendientes
       // Vendedores NO pueden modificar ni eliminar órdenes existentes
-      allow update: if isAdmin() || isUserManager() ||
+      allow update: if isAdmin() || isUserManager() || isDespachos() ||
         (isApproved() && resource.data.user_id == request.auth.uid && resource.data.estado == 'pendiente');
 
       // Solo admin puede eliminar
@@ -117,6 +131,26 @@ service cloud.firestore {
     // Cotizaciones (legacy): solo autenticados
     match /cotizaciones/{document=**} {
       allow read, write: if isAuthenticated();
+    }
+
+    // Métricas de clientes CRM: lectura para CRM users, escritura solo admin/functions
+    match /metricas_clientes/{clienteId} {
+      allow read: if isCRM();
+      allow write: if isAdmin();
+    }
+
+    // Chat de órdenes CRM: lectura/escritura para CRM users
+    match /chat_ordenes/{mensajeId} {
+      allow read: if isCRM();
+      allow create: if isCRM();
+      allow update: if isCRM();
+      allow delete: if isAdmin();
+    }
+
+    // Despachos CRM: lectura para CRM users, escritura para admin/despachos
+    match /despachos/{despachoId} {
+      allow read: if isCRM();
+      allow write: if isAdmin() || isDespachos();
     }
   }
 }

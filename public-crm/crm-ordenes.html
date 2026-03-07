@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>ENAR CRM - Órdenes</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/crm-styles.css">
+</head>
+<body class="crm-page">
+
+  <!-- Header -->
+  <header class="crm-header">
+    <div class="crm-header-left">
+      <img src="img/logo-enar.png" alt="ENAR" class="crm-header-logo" onerror="this.style.display='none'">
+      <div>
+        <h1>CRM ENAR</h1>
+        <div class="crm-header-sub">Gestión de Órdenes</div>
+      </div>
+    </div>
+    <nav class="crm-header-nav">
+      <a href="crm-dashboard.html">Dashboard</a>
+      <a href="crm-clientes.html">Clientes</a>
+      <a href="crm-ordenes.html" style="background:rgba(255,255,255,0.25);color:white;">Órdenes</a>
+      <a href="crm-despachos.html">Despachos</a>
+      <a href="crm-reportes.html">Reportes</a>
+      <a href="index.html" title="Portal"><i class="bi bi-grid"></i></a>
+      <button id="btnLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
+    </nav>
+  </header>
+
+  <!-- Loading -->
+  <div id="loadingScreen" style="display:flex;align-items:center;justify-content:center;min-height:60vh;">
+    <div class="crm-loader"><div class="crm-spinner"></div><p>Cargando órdenes...</p></div>
+  </div>
+
+  <!-- No Access -->
+  <div id="noAccess" class="crm-no-access" style="display:none;">
+    <i class="bi bi-shield-lock"></i>
+    <h2>Sin acceso</h2>
+    <p>No tienes permisos para acceder a Órdenes.</p>
+    <a href="index.html" class="crm-btn crm-btn--primary" style="margin-top:16px;">Ir al Portal</a>
+  </div>
+
+  <!-- Main Content -->
+  <main id="mainContent" class="crm-container" style="display:none;">
+    <!-- KPIs -->
+    <div class="crm-kpis">
+      <div class="crm-kpi">
+        <div class="crm-kpi-label">Total Órdenes</div>
+        <div class="crm-kpi-value" id="kpiTotal">0</div>
+      </div>
+      <div class="crm-kpi crm-kpi--yellow">
+        <div class="crm-kpi-label">Pendientes</div>
+        <div class="crm-kpi-value" id="kpiPendientes">0</div>
+      </div>
+      <div class="crm-kpi crm-kpi--green">
+        <div class="crm-kpi-label">Ventas del Mes</div>
+        <div class="crm-kpi-value" id="kpiVentas">$0</div>
+      </div>
+      <div class="crm-kpi crm-kpi--green">
+        <div class="crm-kpi-label">Completadas</div>
+        <div class="crm-kpi-value" id="kpiCompletadas">0</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="crm-filtros">
+      <div class="crm-filtro-group" style="flex:1;">
+        <label>Buscar</label>
+        <input type="text" class="crm-input crm-input--search" id="filtroTexto" placeholder="Orden, cliente, NIT..." style="width:100%;">
+      </div>
+      <div class="crm-filtro-group">
+        <label>Estado</label>
+        <select class="crm-select" id="filtroEstado">
+          <option value="">Todos</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="aprobada">Aprobada</option>
+          <option value="en_proceso">En Proceso</option>
+          <option value="en_espera">En Espera</option>
+          <option value="completada">Completada</option>
+          <option value="parcial">Parcial</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+      </div>
+      <div class="crm-filtro-group">
+        <label>Desde</label>
+        <input type="date" class="crm-input" id="filtroDesde">
+      </div>
+      <div class="crm-filtro-group">
+        <label>Hasta</label>
+        <input type="date" class="crm-input" id="filtroHasta">
+      </div>
+      <div class="crm-filtro-group" style="align-self:flex-end;">
+        <button class="crm-btn crm-btn--primary" id="btnNuevaOrden">
+          <i class="bi bi-plus-lg"></i> Nueva Orden
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabla Órdenes -->
+    <div class="crm-tabla-wrapper">
+      <table class="crm-tabla">
+        <thead>
+          <tr>
+            <th>ID Orden</th>
+            <th>Cliente</th>
+            <th>Fecha</th>
+            <th style="text-align:center;">Items</th>
+            <th style="text-align:right;">Total</th>
+            <th>Estado</th>
+            <th style="text-align:center;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="ordenesBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <div id="paginacionOrdenes"></div>
+  </main>
+
+  <!-- Modal 1: Buscar Cliente -->
+  <div id="modalBuscarCliente" class="crm-modal-overlay">
+    <div class="crm-modal">
+      <div class="crm-modal-header">
+        <h3>Seleccionar Cliente</h3>
+        <button class="crm-modal-close" onclick="cerrarModal('modalBuscarCliente')">&times;</button>
+      </div>
+      <div class="crm-modal-body">
+        <input type="text" class="crm-input" id="inputBuscarCliente" placeholder="Buscar por nombre, NIT, email..." style="width:100%;margin-bottom:16px;">
+        <div id="clienteResultados" style="max-height:400px;overflow-y:auto;">
+          <div class="crm-empty" style="padding:30px;"><i class="bi bi-people"></i><p>Los resultados aparecerán aquí</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Agregar Productos -->
+  <div id="modalProductos" class="crm-modal-overlay">
+    <div class="crm-modal crm-modal--lg">
+      <div class="crm-modal-header">
+        <h3>Nueva Orden</h3>
+        <button class="crm-modal-close" onclick="cerrarModal('modalProductos')">&times;</button>
+      </div>
+      <div class="crm-modal-body">
+        <!-- Selected client info -->
+        <div style="background:#f0f7ff;border-radius:8px;padding:12px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+          <i class="bi bi-person-circle" style="font-size:1.5rem;color:var(--crm-primary-light);"></i>
+          <div>
+            <div style="font-weight:600;" id="selClienteNombre">-</div>
+            <div style="font-size:0.78rem;color:var(--crm-text-light);">NIT: <span id="selClienteNit">-</span> · <span id="selClienteTipo" class="badge-estado">-</span></div>
+          </div>
+        </div>
+
+        <!-- Product search -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <input type="text" class="crm-input" id="inputBuscarProducto" placeholder="Buscar producto por código o nombre..." style="flex:1;">
+          <button class="crm-btn crm-btn--primary" id="btnBuscarProd"><i class="bi bi-search"></i></button>
+        </div>
+        <div id="productoResultados" style="max-height:200px;overflow-y:auto;display:none;margin-bottom:16px;border:1px solid var(--crm-border);border-radius:8px;"></div>
+
+        <!-- Cart -->
+        <div id="cartEmpty" style="text-align:center;padding:20px;color:var(--crm-text-light);font-size:0.85rem;">
+          <i class="bi bi-cart3" style="font-size:2rem;display:block;margin-bottom:8px;opacity:0.3;"></i>
+          Agrega productos para crear la orden
+        </div>
+        <div id="cartTableWrapper" style="display:none;">
+          <table class="crm-tabla" style="margin-bottom:0;">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Precio</th>
+                <th style="text-align:center;">Cant.</th>
+                <th style="text-align:right;">Subtotal</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="cartBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Totals -->
+        <div id="ordenTotales" style="display:none;margin-top:12px;background:#f8fafc;border-radius:8px;padding:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:4px;">
+            <span>Subtotal (sin IVA)</span><span id="totalSubtotal">$0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:4px;">
+            <span>IVA (19%)</span><span id="totalIva">$0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:700;border-top:2px solid var(--crm-border);padding-top:8px;">
+            <span>Total</span><span id="totalGeneral">$0</span>
+          </div>
+        </div>
+
+        <!-- Observations -->
+        <div class="crm-form-group" style="margin-top:12px;">
+          <label>Observaciones</label>
+          <textarea class="crm-input" id="inputObservaciones" rows="2" style="width:100%;resize:vertical;" placeholder="Notas adicionales..."></textarea>
+        </div>
+      </div>
+      <div class="crm-modal-footer">
+        <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalProductos')">Cancelar</button>
+        <button class="crm-btn crm-btn--success" id="btnConfirmarOrden" disabled>
+          <i class="bi bi-check2-circle"></i> Confirmar Orden
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Detalle Orden -->
+  <div id="modalDetalle" class="crm-modal-overlay">
+    <div class="crm-modal crm-modal--lg">
+      <div class="crm-modal-header">
+        <h3 id="modalDetalleTitulo">Detalle de Orden</h3>
+        <button class="crm-modal-close" onclick="cerrarModal('modalDetalle')">&times;</button>
+      </div>
+      <div class="crm-modal-body" id="modalDetalleBody"></div>
+      <div class="crm-modal-footer" id="modalDetalleFooter"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/crm-ordenes.js"></script>
+</body>
+</html>
