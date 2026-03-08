@@ -30,7 +30,7 @@
       <a href="crm-clientes.html">Clientes</a>
       <a href="crm-ordenes.html">Órdenes</a>
       <a href="crm-despachos.html">Despachos</a>
-      <a href="crm-reportes.html" style="background:rgba(255,255,255,0.25);color:white;">Reportes</a>
+      <a href="crm-reportes.html" style="background:#D9232D;color:white;">Reportes</a>
       <a href="index.html" title="Portal"><i class="bi bi-grid"></i></a>
       <button id="btnLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
     </nav>
@@ -67,64 +67,99 @@
       </button>
     </div>
 
-    <!-- Tab: General -->
+    <!-- Tab 1: Visión General -->
     <div class="crm-tab-panel active" id="panelGeneral">
       <div class="crm-kpis" id="kpisGeneral"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;">
         <div class="crm-chart-container">
-          <div class="crm-chart-title">Distribución de Órdenes por Estado</div>
-          <canvas id="chartEstados" height="250"></canvas>
+          <div class="crm-chart-title">Ventas por Mes</div>
+          <canvas id="chartVentasGeneral" height="280"></canvas>
         </div>
         <div class="crm-chart-container">
-          <div class="crm-chart-title">Clientes por Estado de Salud</div>
-          <canvas id="chartSalud" height="250"></canvas>
+          <div class="crm-chart-title">Distribución de Estados</div>
+          <canvas id="chartEstados" height="280"></canvas>
         </div>
+      </div>
+      <div class="crm-chart-container">
+        <div class="crm-chart-title">Top 10 Productos por Revenue</div>
+        <canvas id="chartTopProductos" height="250"></canvas>
       </div>
     </div>
 
-    <!-- Tab: Ventas -->
+    <!-- Tab 2: Ventas -->
     <div class="crm-tab-panel" id="panelVentas">
       <div class="crm-kpis" id="kpisVentas"></div>
-      <div class="crm-chart-container">
-        <div class="crm-chart-title">Ventas por Mes (Últimos 6 Meses)</div>
-        <canvas id="chartVentasMes" height="300"></canvas>
+      <div class="crm-chart-container" style="margin-bottom:16px;">
+        <div class="crm-chart-title">Ventas por Vendedor</div>
+        <canvas id="chartVentasVendedor" height="280"></canvas>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
-        <div class="crm-card">
-          <h4 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;">Top 5 Productos</h4>
-          <div id="topProductos"></div>
+      <div class="crm-card">
+        <div class="crm-card-header">
+          <h4 style="font-size:0.95rem;font-weight:600;margin:0;">Detalle por Vendedor</h4>
+          <div>
+            <select class="crm-select" id="filtroPeriodoVentas" style="font-size:0.82rem;">
+              <option value="mes">Este mes</option>
+              <option value="trimestre">Último trimestre</option>
+              <option value="anio">Este año</option>
+              <option value="todo">Todo</option>
+            </select>
+          </div>
         </div>
-        <div class="crm-card">
-          <h4 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;">Tendencia de Ventas</h4>
-          <div id="tendenciaVentas"></div>
-        </div>
+        <div id="tablaVentasVendedor"></div>
       </div>
     </div>
 
-    <!-- Tab: Inventario -->
+    <!-- Tab 3: Inventario -->
     <div class="crm-tab-panel" id="panelInventario">
       <div class="crm-kpis" id="kpisInventario"></div>
-      <div class="crm-card" style="margin-top:16px;">
-        <h4 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;">Productos por Clasificación</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+        <div class="crm-chart-container">
+          <div class="crm-chart-title">Distribución ABC de Productos</div>
+          <canvas id="chartABCProductos" height="250"></canvas>
+        </div>
+        <div class="crm-card">
+          <h4 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;"><i class="bi bi-exclamation-triangle" style="color:var(--crm-red);"></i> Stock Bajo</h4>
+          <div id="stockBajoLista" style="max-height:300px;overflow-y:auto;"></div>
+        </div>
+      </div>
+      <div class="crm-card">
+        <h4 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;">Top Productos por Revenue</h4>
         <div id="tablaInventario"></div>
       </div>
     </div>
 
-    <!-- Tab: Inteligencia Clientes -->
+    <!-- Tab 4: Inteligencia Clientes -->
     <div class="crm-tab-panel" id="panelInteligencia">
       <div class="crm-kpis" id="kpisInteligencia"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
         <div class="crm-chart-container">
-          <div class="crm-chart-title">Distribución ABC</div>
+          <div class="crm-chart-title">Distribución ABC de Clientes</div>
           <canvas id="chartABC" height="250"></canvas>
         </div>
         <div class="crm-card">
-          <h4 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;">Recomendaciones</h4>
+          <h4 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;">Recomendaciones de Acción</h4>
           <div id="recomendaciones" style="max-height:400px;overflow-y:auto;"></div>
         </div>
       </div>
       <div class="crm-card">
-        <h4 style="font-size:0.95rem;font-weight:600;margin-bottom:12px;">Clientes con Acción Requerida</h4>
+        <div class="crm-card-header">
+          <h4 style="font-size:0.95rem;font-weight:600;margin:0;">Clientes con Acción Requerida</h4>
+          <div style="display:flex;gap:8px;">
+            <select class="crm-select" id="filtroABCInteligencia" style="font-size:0.82rem;">
+              <option value="">ABC: Todos</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+            </select>
+            <select class="crm-select" id="filtroRiesgoInteligencia" style="font-size:0.82rem;">
+              <option value="">Riesgo: Todos</option>
+              <option value="Alto">Alto</option>
+              <option value="Medio">Medio</option>
+              <option value="Bajo">Bajo</option>
+            </select>
+            <input type="text" class="crm-input" id="filtroBusquedaInteligencia" placeholder="Buscar cliente..." style="font-size:0.82rem;width:200px;">
+          </div>
+        </div>
         <div id="tablaInteligencia"></div>
       </div>
     </div>

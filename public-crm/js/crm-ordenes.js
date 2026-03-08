@@ -44,15 +44,25 @@ let userPerfil = null;
 let esAdmin = false;
 let todasLasOrdenes = [];
 let ordenesFiltradas = [];
+let todosLosClientes = [];
+let todosLosProductos = [];
 let clienteSeleccionado = null;
 let productosOrden = [];
 const paginador = new Paginador(25);
 const ROLES_EXCLUIDOS = ['vendedor', 'despachos', 'admin', 'gestor', 'administrador'];
 
+function toDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (val.toDate) return val.toDate();
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 // ═══════════ AUTH ═══════════
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = '/login.html';
+    window.location.href = 'index.html';
     return;
   }
 
@@ -76,7 +86,7 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   userPerfil = perfil;
 
-  await cargarOrdenes();
+  await Promise.all([cargarOrdenes(), cargarClientes(), cargarProductos()]);
   initEventListeners();
 
   $('loadingScreen').style.display = 'none';
@@ -85,7 +95,7 @@ onAuthStateChanged(auth, async (user) => {
 
 $('btnLogout').addEventListener('click', async () => {
   await signOut(auth);
-  window.location.href = '/login.html';
+  window.location.href = 'index.html';
 });
 
 // ═══════════ CARGAR ÓRDENES ═══════════
@@ -122,7 +132,7 @@ function actualizarKPIs() {
   $('kpiPendientes').textContent = todasLasOrdenes.filter(o => o.estado === 'pendiente').length;
 
   const ventasMes = todasLasOrdenes
-    .filter(o => o.created_at && new Date(o.created_at) >= inicioMes && o.estado !== 'cancelada')
+    .filter(o => { const f = toDate(o.created_at); return f && f >= inicioMes && o.estado !== 'cancelada'; })
     .reduce((s, o) => s + (o.total || 0), 0);
   $('kpiVentas').textContent = formatearPrecio(ventasMes);
   $('kpiCompletadas').textContent = todasLasOrdenes.filter(o => o.estado === 'completada').length;
@@ -135,7 +145,8 @@ function aplicarFiltros() {
   const texto = $('filtroTexto')?.value;
   if (texto && texto.trim()) {
     filtradas = buscarMultiCampo(filtradas, texto, [
-      'numero_orden', 'clienteNombre', 'clienteNit'
+      'numero_orden', 'clienteNombre', 'clienteNit',
+      'cliente.razon_social', 'cliente.nombre', 'cliente.nit'
     ]);
   }
 
@@ -145,18 +156,26 @@ function aplicarFiltros() {
   const desde = $('filtroDesde')?.value;
   if (desde) {
     const d = new Date(desde);
-    filtradas = filtradas.filter(o => o.created_at && new Date(o.created_at) >= d);
+    filtradas = filtradas.filter(o => { const f = toDate(o.created_at); return f && f >= d; });
   }
 
   const hasta = $('filtroHasta')?.value;
   if (hasta) {
     const d = new Date(hasta + 'T23:59:59');
-    filtradas = filtradas.filter(o => o.created_at && new Date(o.created_at) <= d);
+    filtradas = filtradas.filter(o => { const f = toDate(o.created_at); return f && f <= d; });
   }
 
   ordenesFiltradas = filtradas;
   paginador.paginaActual = 1;
   renderizarOrdenes();
+}
+
+// ═══════════ HELPERS ORDEN→CLIENTE ═══════════
+function nombreCliente(o) {
+  return o.clienteNombre || o.cliente?.razon_social || o.cliente?.nombre || o.cliente?.email || '-';
+}
+function nitCliente(o) {
+  return o.clienteNit || o.cliente?.nit || '-';
 }
 
 // ═══════════ RENDER ═══════════
@@ -174,8 +193,8 @@ function renderizarOrdenes() {
     <tr>
       <td style="font-weight:500;color:var(--crm-primary-light);">${o.numero_orden || o.id.substring(0, 8)}</td>
       <td>
-        <div style="font-weight:500;">${o.clienteNombre || '-'}</div>
-        <div style="font-size:0.73rem;color:var(--crm-text-light);">NIT: ${o.clienteNit || '-'}</div>
+        <div style="font-weight:500;">${nombreCliente(o)}</div>
+        <div style="font-size:0.73rem;color:var(--crm-text-light);">NIT: ${nitCliente(o)}</div>
       </td>
       <td style="white-space:nowrap;">${formatearFecha(o.created_at)}</td>
       <td style="text-align:center;">${o.cantidad_productos || (o.items || o.productos || []).length}</td>
@@ -202,8 +221,8 @@ window.verDetalleOrden = function(ordenId) {
   $('modalDetalleTitulo').textContent = `Orden ${orden.numero_orden || ''}`;
   $('modalDetalleBody').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Cliente</span><br><strong>${orden.clienteNombre || '-'}</strong></div>
-      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">NIT</span><br><strong>${orden.clienteNit || '-'}</strong></div>
+      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Cliente</span><br><strong>${nombreCliente(orden)}</strong></div>
+      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">NIT</span><br><strong>${nitCliente(orden)}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Fecha</span><br><strong>${formatearFecha(orden.created_at)}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Estado</span><br>${badgeEstado(orden.estado)}</div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Creada por</span><br><strong>${orden.creadaPorNombre || orden.creadaPorEmail || '-'}</strong></div>
@@ -224,8 +243,8 @@ window.verDetalleOrden = function(ordenId) {
         <tbody>
           ${items.map(it => `
             <tr>
-              <td style="font-weight:500;color:var(--crm-primary-light);">${it.cod_interno}</td>
-              <td>${it.titulo}</td>
+              <td style="font-weight:500;color:var(--crm-primary-light);">${it.cod_interno || it.sku || '-'}</td>
+              <td>${it.titulo || it.nombre || '-'}</td>
               <td>${formatearPrecio(it.precio_unitario)}</td>
               <td style="text-align:center;">${it.cantidad}</td>
               <td style="text-align:right;font-weight:600;">${formatearPrecio(it.subtotal || it.precio_unitario * it.cantidad)}</td>
@@ -295,76 +314,88 @@ window.cambiarEstadoOrden = async function(ordenId, nuevoEstado) {
   }
 };
 
-// ═══════════ NUEVA ORDEN - PASO 1: BUSCAR CLIENTE ═══════════
-let debounceClienteTimer = null;
+// ═══════════ CARGAR CLIENTES (preload) ═══════════
+async function cargarClientes() {
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'usuarios'),
+      where('estado', '==', 'aprobado')
+    ));
+    todosLosClientes = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (!ROLES_EXCLUIDOS.includes(data.rol)) {
+        todosLosClientes.push({ uid: d.id, ...data });
+      }
+    });
+    todosLosClientes.sort((a, b) =>
+      (a.razon_social || a.nombre || '').localeCompare(b.razon_social || b.nombre || '')
+    );
+  } catch (error) {
+    console.error('Error cargando clientes:', error);
+  }
+}
 
+// ═══════════ NUEVA ORDEN - PASO 1: BUSCAR CLIENTE ═══════════
 function abrirBuscarCliente() {
   $('inputBuscarCliente').value = '';
-  $('clienteResultados').innerHTML = '<div class="crm-empty" style="padding:30px;"><i class="bi bi-people"></i><p>Los resultados aparecerán aquí</p></div>';
+  renderClienteResultados(todosLosClientes.slice(0, 30));
   $('modalBuscarCliente').classList.add('open');
   setTimeout(() => $('inputBuscarCliente').focus(), 200);
 }
 
-async function buscarCliente(texto) {
-  if (!texto || texto.length < 3) {
-    $('clienteResultados').innerHTML = '<div class="crm-empty" style="padding:20px;"><p style="font-size:0.85rem;">Escribe al menos 3 caracteres</p></div>';
+function buscarCliente(texto) {
+  if (!texto || texto.length < 2) {
+    renderClienteResultados(todosLosClientes.slice(0, 30));
     return;
   }
 
-  $('clienteResultados').innerHTML = '<div class="crm-loader" style="padding:20px;"><div class="crm-spinner"></div><p>Buscando...</p></div>';
+  const textoLower = texto.toLowerCase();
+  const resultados = todosLosClientes.filter(c => {
+    const nombre = (c.nombre || '').toLowerCase();
+    const nit = (c.nit || '').toLowerCase();
+    const razon = (c.razon_social || '').toLowerCase();
+    const email = (c.email || '').toLowerCase();
+    const ubicacion = (c.ubicacion || '').toLowerCase();
+    const comercial = (c.nombre_comercial || '').toLowerCase();
+    return nombre.includes(textoLower) || nit.includes(textoLower) || razon.includes(textoLower) || email.includes(textoLower) || ubicacion.includes(textoLower) || comercial.includes(textoLower);
+  });
 
-  try {
-    const snap = await getDocs(query(
-      collection(db, 'usuarios'),
-      where('estado', '==', 'aprobado'),
-      limit(200)
-    ));
+  renderClienteResultados(resultados);
+}
 
-    const resultados = [];
-    const textoLower = texto.toLowerCase();
+function renderClienteResultados(resultados) {
+  const container = $('clienteResultados');
 
-    snap.forEach(d => {
-      const data = d.data();
-      if (ROLES_EXCLUIDOS.includes(data.rol)) return;
+  if (todosLosClientes.length === 0) {
+    container.innerHTML = '<div class="crm-empty" style="padding:20px;color:var(--crm-red);"><i class="bi bi-exclamation-circle"></i><p>No se pudieron cargar los clientes. Recarga la página.</p></div>';
+    return;
+  }
 
-      const nombre = (data.nombre || '').toLowerCase();
-      const nit = (data.nit || '').toLowerCase();
-      const razon = (data.razon_social || '').toLowerCase();
-      const email = (data.email || '').toLowerCase();
+  if (resultados.length === 0) {
+    container.innerHTML = '<div class="crm-empty" style="padding:20px;"><i class="bi bi-person-x"></i><p>No se encontraron clientes</p></div>';
+    return;
+  }
 
-      if (nombre.includes(textoLower) || nit.includes(textoLower) || razon.includes(textoLower) || email.includes(textoLower)) {
-        resultados.push({ uid: d.id, ...data });
-      }
-    });
-
-    if (resultados.length === 0) {
-      $('clienteResultados').innerHTML = '<div class="crm-empty" style="padding:20px;"><i class="bi bi-person-x"></i><p>No se encontraron clientes</p></div>';
-      return;
-    }
-
-    $('clienteResultados').innerHTML = resultados.map(c => `
-      <div class="crm-cliente-card" style="margin-bottom:8px;padding:12px;" data-uid="${c.uid}">
-        <div class="crm-cliente-header" style="margin-bottom:0;">
-          <div class="crm-cliente-avatar" style="width:36px;height:36px;font-size:0.9rem;">${(c.razon_social || c.nombre || 'C')[0].toUpperCase()}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:600;font-size:0.9rem;">${c.razon_social || c.nombre || c.email}</div>
-            <div style="font-size:0.73rem;color:var(--crm-text-light);">NIT: ${c.nit || 'N/A'} · ${c.ciudad || '-'} · ${c.tipo_cliente || '-'}</div>
-          </div>
+  container.innerHTML = resultados.map(c => `
+    <div class="crm-cliente-card" style="margin-bottom:8px;padding:12px;cursor:pointer;" data-uid="${c.uid}">
+      <div class="crm-cliente-header" style="margin-bottom:0;">
+        <div class="crm-cliente-avatar" style="width:36px;height:36px;font-size:0.9rem;">${(c.razon_social || c.nombre || 'C')[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:0.9rem;">${c.razon_social || c.nombre || c.email}</div>
+          <div style="font-size:0.73rem;color:var(--crm-text-light);">NIT: ${c.nit || 'N/A'} · ${c.ubicacion || c.ciudad || '-'} · Lista: ${c.lista_precios || c.lista_precio || 'L1'}</div>
         </div>
       </div>
-    `).join('');
+    </div>
+  `).join('');
 
-    $('clienteResultados').querySelectorAll('.crm-cliente-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const uid = card.dataset.uid;
-        const cliente = resultados.find(c => c.uid === uid);
-        if (cliente) seleccionarCliente(cliente);
-      });
+  container.querySelectorAll('.crm-cliente-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const uid = card.dataset.uid;
+      const cliente = resultados.find(c => c.uid === uid);
+      if (cliente) seleccionarCliente(cliente);
     });
-  } catch (error) {
-    console.error('Error buscando clientes:', error);
-    $('clienteResultados').innerHTML = '<div class="crm-empty" style="padding:20px;color:var(--crm-red);"><p>Error al buscar</p></div>';
-  }
+  });
 }
 
 // ═══════════ NUEVA ORDEN - PASO 2: PRODUCTOS ═══════════
@@ -390,89 +421,110 @@ function seleccionarCliente(cliente) {
   setTimeout(() => $('inputBuscarProducto').focus(), 200);
 }
 
-function obtenerPrecioPorTipo(producto, tipoCliente) {
-  switch (tipoCliente) {
-    case 'mayorista': return producto.precio_mayorista || producto.p_real || 0;
-    case 'negocio': return producto.precio_negocio || producto.p_real || 0;
-    case 'persona_natural':
-    default: return producto.precio_persona_natural || producto.p_corriente || producto.p_real || 0;
+function obtenerPrecioCliente(producto, cliente) {
+  const tipoCliente = cliente?.tipo_cliente || 'persona_natural';
+
+  // 1. Precio por tipo_cliente (lógica B2B principal)
+  const preciosPorTipo = {
+    'mayorista': producto.precio_mayorista,
+    'negocio': producto.precio_negocio,
+    'persona_natural': producto.precio_persona_natural
+  };
+  const precioTipo = preciosPorTipo[tipoCliente];
+  if (precioTipo && precioTipo > 0) return precioTipo;
+
+  // 2. Fallback: Precio por lista_precios (datos migrados)
+  const listaPrecios = cliente?.lista_precios || cliente?.lista_precio || '';
+  if (listaPrecios) {
+    const preciosPorLista = {
+      'L1': producto.Precio_L1,
+      'L4': producto.Precio_L4,
+      'L7': producto.Precio_L7,
+      'L8': producto.Precio_L8,
+      'L9': producto.Precio_L9,
+      'L10': producto.Precio_L10
+    };
+    const precioLista = preciosPorLista[listaPrecios];
+    if (precioLista && precioLista > 0) return precioLista;
+  }
+
+  // 3. Fallback final
+  return producto.precio_persona_natural || producto.p_real || producto.Precio_L1 || producto.p_corriente || 0;
+}
+
+// ═══════════ CARGAR PRODUCTOS (preload) ═══════════
+async function cargarProductos() {
+  try {
+    const snap = await getDocs(collection(db, 'productos'));
+    todosLosProductos = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.cod_interno && data.cod_interno !== 'COD_INTERNO' && data.titulo !== 'TITULO') {
+        todosLosProductos.push({ id: d.id, ...data });
+      }
+    });
+    todosLosProductos.sort((a, b) => (a.titulo || '').localeCompare(b.titulo || ''));
+  } catch (error) {
+    console.error('Error cargando productos:', error);
   }
 }
 
-async function buscarProducto(termino) {
+function buscarProducto(termino) {
   if (!termino) return;
 
   const container = $('productoResultados');
   container.style.display = 'block';
-  container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--crm-text-light);font-size:0.82rem;"><div class="crm-spinner" style="width:20px;height:20px;margin:0 auto 6px;"></div>Buscando...</div>';
 
-  try {
-    const resultados = [];
-    const productosRef = collection(db, 'productos');
+  const textoLower = termino.toLowerCase();
+  const filtrados = todosLosProductos.filter(p => {
+    const cod = (p.cod_interno || '').toLowerCase();
+    const titulo = (p.titulo || '').toLowerCase();
+    const marca = (p.marca || '').toLowerCase();
+    const ean = (p.ean || '').toLowerCase();
+    return cod.includes(textoLower) || titulo.includes(textoLower) || marca.includes(textoLower) || ean.includes(textoLower);
+  }).slice(0, 20);
 
-    // Search by cod_interno
-    const qCod = query(productosRef, where('cod_interno', '==', termino.toUpperCase()), limit(10));
-    const snapCod = await getDocs(qCod);
-    snapCod.forEach(d => resultados.push({ id: d.id, ...d.data() }));
-
-    // If not found, search by titulo prefix
-    if (resultados.length === 0) {
-      const upper = termino.toUpperCase();
-      const qTit = query(productosRef, where('titulo', '>=', upper), where('titulo', '<=', upper + '\uf8ff'), limit(15));
-      const snapTit = await getDocs(qTit);
-      snapTit.forEach(d => resultados.push({ id: d.id, ...d.data() }));
-    }
-
-    const filtrados = resultados.filter(p => p.cod_interno !== 'COD_INTERNO' && p.titulo !== 'TITULO');
-
-    if (filtrados.length === 0) {
-      container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--crm-text-light);font-size:0.82rem;">No se encontraron productos</div>';
-      return;
-    }
-
-    const tipoCliente = clienteSeleccionado?.tipo_cliente || 'persona_natural';
-
-    container.innerHTML = filtrados.map(p => {
-      const precio = obtenerPrecioPorTipo(p, tipoCliente);
-      const yaEnOrden = productosOrden.some(po => po.cod_interno === p.cod_interno);
-      return `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--crm-border);font-size:0.82rem;">
-          <img src="${p.imagen_principal || 'img/placeholder.png'}" alt="" style="width:36px;height:36px;border-radius:4px;object-fit:cover;" onerror="this.src='img/placeholder.png'">
-          <div style="flex:1;min-width:0;">
-            <div style="font-weight:500;">${p.titulo}</div>
-            <div style="font-size:0.73rem;color:var(--crm-text-light);">${p.cod_interno} · ${p.marca || ''}</div>
-          </div>
-          <div style="font-weight:600;">${formatearPrecio(precio)}</div>
-          <input type="number" value="1" min="1" style="width:50px;padding:4px;border:1px solid var(--crm-border);border-radius:4px;text-align:center;font-size:0.82rem;" data-cod="${p.cod_interno}">
-          <button class="crm-btn crm-btn--success crm-btn--sm btn-add-prod" data-cod="${p.cod_interno}" ${yaEnOrden ? 'disabled style="opacity:0.5;"' : ''}>
-            ${yaEnOrden ? 'Agregado' : '+ Agregar'}
-          </button>
-        </div>
-      `;
-    }).join('');
-
-    container.querySelectorAll('.btn-add-prod').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.disabled) return;
-        const cod = btn.dataset.cod;
-        const prod = filtrados.find(p => p.cod_interno === cod);
-        const qtyInput = container.querySelector(`input[data-cod="${cod}"]`);
-        const cantidad = parseInt(qtyInput?.value) || 1;
-        if (prod) agregarProducto(prod, cantidad);
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-        btn.textContent = 'Agregado';
-      });
-    });
-  } catch (error) {
-    console.error('Error buscando productos:', error);
-    container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--crm-red);font-size:0.82rem;">Error al buscar</div>';
+  if (filtrados.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--crm-text-light);font-size:0.82rem;">No se encontraron productos</div>';
+    return;
   }
+
+  container.innerHTML = filtrados.map(p => {
+    const precio = obtenerPrecioCliente(p, clienteSeleccionado);
+    const yaEnOrden = productosOrden.some(po => po.cod_interno === p.cod_interno);
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--crm-border);font-size:0.82rem;">
+        <img src="${p.imagen_principal || 'img/placeholder.png'}" alt="" style="width:36px;height:36px;border-radius:4px;object-fit:cover;" onerror="this.src='img/placeholder.png'">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:500;">${p.titulo}</div>
+          <div style="font-size:0.73rem;color:var(--crm-text-light);">${p.cod_interno} · ${p.marca || ''}</div>
+        </div>
+        <div style="font-weight:600;">${formatearPrecio(precio)}</div>
+        <input type="number" value="1" min="1" style="width:50px;padding:4px;border:1px solid var(--crm-border);border-radius:4px;text-align:center;font-size:0.82rem;" data-cod="${p.cod_interno}">
+        <button class="crm-btn crm-btn--success crm-btn--sm btn-add-prod" data-cod="${p.cod_interno}" ${yaEnOrden ? 'disabled style="opacity:0.5;"' : ''}>
+          ${yaEnOrden ? 'Agregado' : '+ Agregar'}
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.btn-add-prod').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      const cod = btn.dataset.cod;
+      const prod = filtrados.find(p => p.cod_interno === cod);
+      const qtyInput = container.querySelector(`input[data-cod="${cod}"]`);
+      const cantidad = parseInt(qtyInput?.value) || 1;
+      if (prod) agregarProducto(prod, cantidad);
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      btn.textContent = 'Agregado';
+    });
+  });
 }
 
 function agregarProducto(producto, cantidad) {
-  const tipoCliente = clienteSeleccionado?.tipo_cliente || 'persona_natural';
-  const precio = obtenerPrecioPorTipo(producto, tipoCliente);
+  const precio = obtenerPrecioCliente(producto, clienteSeleccionado);
 
   const existente = productosOrden.find(p => p.cod_interno === producto.cod_interno);
   if (existente) {
@@ -676,12 +728,18 @@ function initEventListeners() {
 
   $('inputBuscarCliente')?.addEventListener('input', debounce((e) => {
     buscarCliente(e.target.value.trim());
-  }, 400));
+  }, 250));
 
   $('btnBuscarProd')?.addEventListener('click', () => {
     const t = $('inputBuscarProducto')?.value.trim();
     if (t) buscarProducto(t);
   });
+
+  $('inputBuscarProducto')?.addEventListener('input', debounce((e) => {
+    const t = e.target.value.trim();
+    if (t.length >= 2) buscarProducto(t);
+    else $('productoResultados').style.display = 'none';
+  }, 250));
 
   $('inputBuscarProducto')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {

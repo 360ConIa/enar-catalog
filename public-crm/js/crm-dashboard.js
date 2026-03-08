@@ -2,7 +2,8 @@
  * ============================================
  * CRM DASHBOARD - ENAR
  * ============================================
- * KPIs, gráficos, clientes en riesgo, órdenes recientes
+ * KPIs, gráficos, clientes en riesgo, órdenes recientes.
+ * Datos reales desde Firestore.
  * ============================================
  */
 
@@ -36,47 +37,62 @@ const auth = getAuth(app);
 
 let charts = {};
 
+// ═══════════ HELPERS ═══════════
+
+function toDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (val.toDate) return val.toDate(); // Firestore Timestamp
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 // ═══════════ AUTH ═══════════
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = '/login.html';
+    window.location.href = 'index.html';
     return;
   }
 
-  const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
-  if (!userDoc.exists()) {
+  try {
+    const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
+    if (!userDoc.exists()) {
+      $('loadingScreen').style.display = 'none';
+      $('noAccess').style.display = 'flex';
+      return;
+    }
+
+    const perfil = userDoc.data();
+    const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin';
+    const esCRM = esAdmin || ['vendedor', 'despachos', 'gestor'].includes(perfil.rol);
+
+    if (!esCRM) {
+      $('loadingScreen').style.display = 'none';
+      $('noAccess').style.display = 'flex';
+      return;
+    }
+
+    $('welcomeMsg').textContent = `Bienvenido, ${(perfil.nombre || user.email).split(' ')[0]}`;
+
+    await cargarDashboard(user, perfil, esAdmin);
+
     $('loadingScreen').style.display = 'none';
-    $('noAccess').style.display = 'flex';
-    return;
+    $('mainContent').style.display = 'block';
+  } catch (error) {
+    console.error('Error en auth:', error);
+    showToast('Error al verificar acceso', 'error');
   }
-
-  const perfil = userDoc.data();
-  const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin';
-  const esCRM = esAdmin || ['vendedor', 'despachos', 'gestor'].includes(perfil.rol);
-
-  if (!esCRM) {
-    $('loadingScreen').style.display = 'none';
-    $('noAccess').style.display = 'flex';
-    return;
-  }
-
-  $('welcomeMsg').textContent = `Bienvenido, ${(perfil.nombre || user.email).split(' ')[0]}`;
-
-  await cargarDashboard(user, perfil, esAdmin);
-
-  $('loadingScreen').style.display = 'none';
-  $('mainContent').style.display = 'block';
 });
 
 $('btnLogout').addEventListener('click', async () => {
   await signOut(auth);
-  window.location.href = '/login.html';
+  window.location.href = 'index.html';
 });
 
 // ═══════════ CARGAR DASHBOARD ═══════════
 async function cargarDashboard(user, perfil, esAdmin) {
   try {
-    // Cargar órdenes
+    // Cargar órdenes según rol
     let ordenesQuery;
     if (esAdmin || perfil.rol === 'despachos') {
       ordenesQuery = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'));
@@ -97,45 +113,101 @@ async function cargarDashboard(user, perfil, esAdmin) {
     ordenesSnap.forEach(d => ordenes.push({ id: d.id, ...d.data() }));
 
     const metricas = [];
-    metricasSnap.forEach(d => metricas.push({ id: d.id, ...d.data() }));
+    const metricasPorId = {};
+    metricasSnap.forEach(d => {
+      const data = { id: d.id, ...d.data() };
+      metricas.push(data);
+      metricasPorId[d.id] = data;
+    });
 
-    // KPIs
+    // Resolver nombres de clientes para la lista de riesgo
+    const clientesRiesgo = metricas
+      .filter(m => m.riesgo_abandono === 'Alto')
+      .sort((a, b) => (b.dias_sin_compra || 0) - (a.dias_sin_compra || 0))
+      .slice(0, 5);
+
+    // Batch fetch nombres si no están en las métricas
+    const uidsSinNombre = clientesRiesgo
+      .filter(m => !m.nombre_cliente)
+      .map(m => m.cliente_id || m.id);
+
+    if (uidsSinNombre.length > 0) {
+      const batchPromises = uidsSinNombre.map(uid =>
+        getDoc(doc(db, 'usuarios', uid))
+      );
+      const userDocs = await Promise.all(batchPromises);
+      userDocs.forEach(ud => {
+        if (ud.exists()) {
+          const data = ud.data();
+          const metrica = clientesRiesgo.find(m => (m.cliente_id || m.id) === ud.id);
+          if (metrica) metrica.nombre_cliente = data.nombre || data.email;
+        }
+      });
+    }
+
+    // ─── KPIs ───
     const ahora = new Date();
     const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
 
-    $('kpiOrdenes').textContent = formatearNumero(ordenes.length);
-    $('kpiOrdenesSub').textContent = `${ordenes.filter(o => o.created_at && new Date(o.created_at) >= inicioMes).length} este mes`;
-    $('kpiPendientes').textContent = ordenes.filter(o => o.estado === 'pendiente').length;
+    const ordenesActivas = ordenes.filter(o =>
+      !['completada', 'cancelada'].includes(o.estado)
+    ).length;
 
     const ventasMes = ordenes
-      .filter(o => o.created_at && new Date(o.created_at) >= inicioMes && o.estado !== 'cancelada')
+      .filter(o => {
+        const fecha = toDate(o.created_at);
+        return fecha && fecha >= inicioMes && o.estado !== 'cancelada';
+      })
       .reduce((s, o) => s + (o.total || 0), 0);
-    $('kpiVentasMes').textContent = formatearPrecio(ventasMes);
-    $('kpiRiesgo').textContent = metricas.filter(m => m.riesgo_abandono === 'Alto').length;
 
-    // Chart: Ventas por mes
+    const ordenesCompletadas = ordenes.filter(o => o.estado === 'completada');
+    const ticketPromedio = ordenesCompletadas.length > 0
+      ? ordenesCompletadas.reduce((s, o) => s + (o.total || 0), 0) / ordenesCompletadas.length
+      : 0;
+
+    const clientesEnRiesgo = metricas.filter(m => m.riesgo_abandono === 'Alto').length;
+
+    $('kpiVentasMes').textContent = formatearPrecio(ventasMes);
+    $('kpiVentasMesSub').textContent = `${ordenes.filter(o => {
+      const f = toDate(o.created_at);
+      return f && f >= inicioMes;
+    }).length} órdenes este mes`;
+
+    $('kpiOrdenesActivas').textContent = formatearNumero(ordenesActivas);
+
+    $('kpiRiesgo').textContent = formatearNumero(clientesEnRiesgo);
+
+    $('kpiTicket').textContent = formatearPrecio(ticketPromedio);
+    $('kpiTicketSub').textContent = `${ordenesCompletadas.length} completadas`;
+
+    // ─── Chart: Ventas por Mes (line) ───
     const ventasPorMes = [];
     for (let i = 5; i >= 0; i--) {
-      const fecha = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
-      const finMes = new Date(ahora.getFullYear(), ahora.getMonth() - i + 1, 0, 23, 59, 59);
+      const inicio = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
+      const fin = new Date(ahora.getFullYear(), ahora.getMonth() - i + 1, 0, 23, 59, 59);
       const ventas = ordenes
-        .filter(o => o.created_at && new Date(o.created_at) >= fecha && new Date(o.created_at) <= finMes && o.estado !== 'cancelada')
+        .filter(o => {
+          const f = toDate(o.created_at);
+          return f && f >= inicio && f <= fin && o.estado !== 'cancelada';
+        })
         .reduce((s, o) => s + (o.total || 0), 0);
       ventasPorMes.push({
-        nombre: fecha.toLocaleDateString('es-CO', { month: 'short' }),
+        label: inicio.toLocaleDateString('es-CO', { month: 'short' }),
         ventas
       });
     }
 
-    renderChart('chartVentas', 'bar', {
-      labels: ventasPorMes.map(v => v.nombre),
+    renderChart('chartVentas', 'line', {
+      labels: ventasPorMes.map(v => v.label),
       datasets: [{
         label: 'Ventas',
         data: ventasPorMes.map(v => v.ventas),
-        backgroundColor: 'rgba(59, 130, 246, 0.7)',
         borderColor: '#3b82f6',
-        borderWidth: 1,
-        borderRadius: 6
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: '#3b82f6'
       }]
     }, {
       scales: {
@@ -144,7 +216,7 @@ async function cargarDashboard(user, perfil, esAdmin) {
       plugins: { legend: { display: false } }
     });
 
-    // Chart: Distribución
+    // ─── Chart: Distribución Estados (doughnut) ───
     const estadoCounts = {};
     ordenes.forEach(o => { estadoCounts[o.estado] = (estadoCounts[o.estado] || 0) + 1; });
 
@@ -161,18 +233,13 @@ async function cargarDashboard(user, perfil, esAdmin) {
       }]
     });
 
-    // Clientes en riesgo (top 5)
-    const clientesRiesgo = metricas
-      .filter(m => m.riesgo_abandono === 'Alto')
-      .sort((a, b) => (b.dias_sin_compra || 0) - (a.dias_sin_compra || 0))
-      .slice(0, 5);
-
+    // ─── Clientes en Riesgo (top 5, nombres reales) ───
     $('clientesRiesgo').innerHTML = clientesRiesgo.length === 0
       ? '<p style="color:var(--crm-text-light);font-size:0.85rem;padding:8px 0;">Sin clientes en riesgo alto</p>'
       : clientesRiesgo.map(m => `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--crm-border);font-size:0.82rem;">
           <div>
-            <div style="font-weight:500;">${m.cliente_id?.substring(0, 15) || 'N/A'}</div>
+            <div style="font-weight:500;">${m.nombre_cliente || 'Sin nombre'}</div>
             <div style="color:var(--crm-text-light);font-size:0.73rem;">${m.dias_sin_compra || 0} días sin compra</div>
           </div>
           <div style="display:flex;gap:6px;align-items:center;">
@@ -182,7 +249,7 @@ async function cargarDashboard(user, perfil, esAdmin) {
         </div>
       `).join('');
 
-    // Órdenes recientes (últimas 10)
+    // ─── Órdenes Recientes (últimas 10) ───
     const recientes = ordenes.slice(0, 10);
     $('ordenesRecientes').innerHTML = recientes.length === 0
       ? '<p style="color:var(--crm-text-light);font-size:0.85rem;padding:8px 0;">Sin órdenes recientes</p>'
@@ -201,7 +268,7 @@ async function cargarDashboard(user, perfil, esAdmin) {
 
   } catch (error) {
     console.error('Error cargando dashboard:', error);
-    showToast('Error al cargar datos', 'error');
+    showToast('Error al cargar datos del dashboard', 'error');
   }
 }
 

@@ -7,6 +7,7 @@
  *   node migrate.js --clientes      (solo clientes)
  *   node migrate.js --productos     (solo productos)
  *   node migrate.js --ordenes       (solo órdenes)
+ *   node migrate.js --metricas      (solo métricas de clientes)
  *   node migrate.js --full          (migración completa)
  */
 
@@ -24,6 +25,7 @@ const MODE_TEST = process.argv.includes('--test');
 const MODE_CLIENTES = process.argv.includes('--clientes');
 const MODE_PRODUCTOS = process.argv.includes('--productos');
 const MODE_ORDENES = process.argv.includes('--ordenes');
+const MODE_METRICAS = process.argv.includes('--metricas');
 const MODE_FULL = process.argv.includes('--full');
 
 const TEST_LIMIT = 100; // Límite para modo testing
@@ -39,17 +41,13 @@ if (MODE_TEST) {
 // ============================================
 
 try {
-  const serviceAccount = require('../credentials/firebase-admin-key.json');
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.applicationDefault(),
+    projectId: 'enar-b2b'
   });
-  console.log(chalk.green('✅ Firebase Admin inicializado\n'));
+  console.log(chalk.green('✅ Firebase Admin inicializado con ADC\n'));
 } catch (error) {
-  console.error(chalk.red('❌ Error cargando credenciales Firebase:'));
-  console.error(chalk.red('   Archivo: ../credentials/firebase-admin-key.json'));
-  console.error(chalk.red('   Error: ' + error.message));
-  console.log(chalk.yellow('\n💡 Descarga las credenciales desde:'));
-  console.log(chalk.cyan('   https://console.firebase.google.com/project/enar-b2b/settings/serviceaccounts\n'));
+  console.error(chalk.red('❌ Error inicializando Firebase: ' + error.message));
   process.exit(1);
 }
 
@@ -62,7 +60,6 @@ const db = admin.firestore();
 let sheets;
 try {
   const auth = new google.auth.GoogleAuth({
-    keyFile: '../credentials/sheets-api-key.json',
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
   });
   sheets = google.sheets({ version: 'v4', auth });
@@ -127,7 +124,7 @@ async function migrarClientes() {
     console.log('📖 Leyendo hoja "Clientes"...');
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Clientes!A4:O' // Hasta columna O (Dirección)
+      range: 'Clientes!A4:Q' // Hasta columna Q (Localidad)
     });
 
     let rows = response.data.values || [];
@@ -149,8 +146,8 @@ async function migrarClientes() {
       const [
         ID_Cliente, Nombre, Email, Teléfono, Ubicación, Tipo,
         Vendedor_Asignado, Fecha_Primer_Compra, Nombre_Comercial,
-        Lista_Precio, Url_Ubicación, Ruta, Segmento, Canal_Captacion,
-        Direccion
+        Lista_Precio, Url_Ubicación, Ruta, Segmento, Ultima_Compra,
+        Direccion, Barrio_Google, Localidad
       ] = row;
 
       if (!ID_Cliente || !Nombre) {
@@ -194,9 +191,10 @@ async function migrarClientes() {
           lista_precios: Lista_Precio || 'L1',
           ruta: Ruta || '',
           segmento: Segmento || '',
-          canal_captacion: Canal_Captacion || '',
           nombre_comercial: Nombre_Comercial || Nombre,
           url_ubicacion: Url_Ubicación || '',
+          barrio: Barrio_Google || '',
+          localidad: Localidad || '',
           creado_por: Vendedor_Asignado || 'admin@360conia.com',
           created_at: admin.firestore.FieldValue.serverTimestamp(),
           migrated_from_sheets: true,
@@ -289,19 +287,15 @@ async function actualizarProductos() {
       if (!ID_Producto) continue;
 
       try {
-        // Buscar producto en Firestore por SKU
-        const productosSnap = await db.collection('productos')
-          .where('SKU', '==', ID_Producto)
-          .limit(1)
-          .get();
+        // Buscar producto en Firestore por DocID (cod_interno)
+        const docRef = db.collection('productos').doc(ID_Producto);
+        const docSnap = await docRef.get();
 
-        if (productosSnap.empty) {
+        if (!docSnap.exists) {
           noEncontrados++;
           progressBar.update(i + 1);
           continue;
         }
-
-        const docRef = productosSnap.docs[0].ref;
 
         // Actualizar con datos del CRM
         await docRef.update({
@@ -379,7 +373,7 @@ async function migrarOrdenes() {
     console.log('📖 Leyendo hoja "Detalle_Órdenes"...');
     const responseDetalle = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Detalle_Órdenes!A4:J'
+      range: 'Detalle_Órdenes!A4:J' // ID_Orden, ID_Producto, Nombre, Cantidad, Precio, Subtotal, Preparado, Cant_Real, Fecha_Prep, Preparado_Por
     });
 
     const rowsDetalle = responseDetalle.data.values || [];
@@ -388,7 +382,10 @@ async function migrarOrdenes() {
     // Crear índice de detalles por ID_Orden
     const detallesPorOrden = {};
     for (const detRow of rowsDetalle) {
-      const [ID_Orden, ID_Producto, Nombre_Producto, Cantidad, Precio_Unitario, Subtotal] = detRow;
+      const [
+        ID_Orden, ID_Producto, Nombre_Producto, Cantidad, Precio_Unitario,
+        Subtotal, Producto_Preparado, Cantidad_Real, Fecha_Preparado, Preparado_Por
+      ] = detRow;
       if (!detallesPorOrden[ID_Orden]) {
         detallesPorOrden[ID_Orden] = [];
       }
@@ -397,7 +394,11 @@ async function migrarOrdenes() {
         nombre: Nombre_Producto,
         cantidad: parseInt(Cantidad) || 0,
         precio_unitario: parseFloat(Precio_Unitario) || 0,
-        subtotal: parseFloat(Subtotal) || 0
+        subtotal: parseFloat(Subtotal) || 0,
+        preparado: Producto_Preparado === 'SI',
+        cantidad_real: parseInt(Cantidad_Real) || 0,
+        fecha_preparado: Fecha_Preparado || null,
+        preparado_por: Preparado_Por || ''
       });
     }
 
@@ -440,6 +441,7 @@ async function migrarOrdenes() {
         }
 
         const userId = usuariosSnap.docs[0].id;
+        const clienteData = usuariosSnap.docs[0].data();
         const items = detallesPorOrden[ID_Orden] || [];
 
         // Calcular totales
@@ -451,7 +453,10 @@ async function migrarOrdenes() {
         await db.collection('ordenes').add({
           numero_orden: ID_Orden,
           user_id: userId,
+          clienteNombre: Nombre_Cliente || clienteData.nombre || '',
+          clienteNit: clienteData.nit || ID_Cliente,
           items: items,
+          cantidad_productos: items.length,
           subtotal: Math.round(subtotal),
           iva: Math.round(iva),
           total: parseFloat(Total_Orden) || Math.round(total),
@@ -504,6 +509,131 @@ async function migrarOrdenes() {
 }
 
 // ============================================
+// MIGRAR MÉTRICAS DE CLIENTES
+// ============================================
+
+async function migrarMetricas() {
+  console.log(chalk.blue.bold('📈 MIGRANDO MÉTRICAS DE CLIENTES\n'));
+
+  const progressBar = new cliProgress.SingleBar({
+    format: 'Progreso |' + chalk.cyan('{bar}') + '| {percentage}% || {value}/{total} métricas',
+    barCompleteChar: '\u2588',
+    barIncompleteChar: '\u2591',
+    hideCursor: true
+  });
+
+  try {
+    console.log('📖 Leyendo hoja "Métricas_Clientes"...');
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Métricas_Clientes!A4:P'
+    });
+
+    let rows = response.data.values || [];
+    console.log(chalk.green(`✅ ${rows.length} métricas encontradas\n`));
+
+    if (MODE_TEST) {
+      rows = rows.slice(0, TEST_LIMIT);
+      console.log(chalk.yellow(`⚠️  Limitando a ${rows.length} métricas (modo test)\n`));
+    }
+
+    // Crear índice de usuarios por sheets_id_cliente para resolver UIDs
+    console.log('🔍 Cargando índice de usuarios...');
+    const usuariosSnap = await db.collection('usuarios')
+      .where('migrated_from_sheets', '==', true)
+      .get();
+
+    const uidPorSheetId = {};
+    const nombrePorUid = {};
+    usuariosSnap.forEach(d => {
+      const data = d.data();
+      if (data.sheets_id_cliente) {
+        uidPorSheetId[data.sheets_id_cliente] = d.id;
+        nombrePorUid[d.id] = data.nombre || data.email;
+      }
+    });
+    console.log(chalk.green(`✅ ${Object.keys(uidPorSheetId).length} usuarios indexados\n`));
+
+    progressBar.start(rows.length, 0);
+
+    let migradas = 0;
+    let sinCliente = 0;
+    let errores = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const [
+        ID_Cliente, Ultima_Compra, Dias_Sin_Compra, Frecuencia_Compra_Dias,
+        Ticket_Promedio, Productos_Ticket, Unidades_Ticket, Total_Compras_Anio,
+        Compra_Minima, Compra_Maxima, Promedio_Mensual, Tendencia,
+        Riesgo_Abandono, Estado_Salud, Clasificacion_ABC, Nombre_Cliente
+      ] = row;
+
+      if (!ID_Cliente) {
+        progressBar.update(i + 1);
+        continue;
+      }
+
+      const uid = uidPorSheetId[ID_Cliente];
+      if (!uid) {
+        sinCliente++;
+        progressBar.update(i + 1);
+        continue;
+      }
+
+      try {
+        await db.collection('metricas_clientes').doc(uid).set({
+          cliente_id: uid,
+          sheets_id_cliente: ID_Cliente,
+          nombre_cliente: Nombre_Cliente || nombrePorUid[uid] || '',
+          ultima_compra: parseFecha(Ultima_Compra),
+          dias_sin_compra: parseInt(Dias_Sin_Compra) || 0,
+          frecuencia_compra_dias: parseInt(Frecuencia_Compra_Dias) || 0,
+          ticket_promedio: parseFloat(Ticket_Promedio) || 0,
+          productos_ticket: parseFloat(Productos_Ticket) || 0,
+          unidades_ticket: parseFloat(Unidades_Ticket) || 0,
+          total_compras_anio: parseFloat(Total_Compras_Anio) || 0,
+          compra_minima: parseFloat(Compra_Minima) || 0,
+          compra_maxima: parseFloat(Compra_Maxima) || 0,
+          promedio_mensual: parseFloat(Promedio_Mensual) || 0,
+          tendencia: Tendencia || '',
+          riesgo_abandono: Riesgo_Abandono || '',
+          estado_salud: Estado_Salud || '',
+          clasificacion_abc: Clasificacion_ABC || '',
+          updated_at: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        migradas++;
+      } catch (error) {
+        errores++;
+      }
+
+      progressBar.update(i + 1);
+    }
+
+    progressBar.stop();
+
+    console.log('\n');
+    console.log(chalk.green.bold(`✅ Migración de métricas completada:`));
+    console.log(chalk.green(`   • Migradas: ${migradas}`));
+    if (sinCliente > 0) {
+      console.log(chalk.yellow(`   • Sin cliente en Firestore: ${sinCliente}`));
+    }
+    if (errores > 0) {
+      console.log(chalk.red(`   • Errores: ${errores}`));
+    }
+    console.log('\n');
+
+    return { migradas, sinCliente, errores };
+
+  } catch (error) {
+    progressBar.stop();
+    console.error(chalk.red('\n❌ Error en migrarMetricas:'), error);
+    throw error;
+  }
+}
+
+// ============================================
 // MAIN
 // ============================================
 
@@ -513,7 +643,9 @@ async function main() {
   try {
     let resultados = {};
 
-    if (MODE_CLIENTES || MODE_FULL || (!MODE_CLIENTES && !MODE_PRODUCTOS && !MODE_ORDENES && !MODE_FULL)) {
+    const noModeSelected = !MODE_CLIENTES && !MODE_PRODUCTOS && !MODE_ORDENES && !MODE_METRICAS && !MODE_FULL;
+
+    if (MODE_CLIENTES || MODE_FULL || noModeSelected) {
       resultados.clientes = await migrarClientes();
     }
 
@@ -523,6 +655,10 @@ async function main() {
 
     if (MODE_ORDENES || MODE_FULL) {
       resultados.ordenes = await migrarOrdenes();
+    }
+
+    if (MODE_METRICAS || MODE_FULL) {
+      resultados.metricas = await migrarMetricas();
     }
 
     const elapsed = Math.round((Date.now() - startTime) / 1000);
@@ -539,6 +675,9 @@ async function main() {
     }
     if (resultados.ordenes) {
       console.log(chalk.cyan(`📋 Órdenes: ${resultados.ordenes.migradas} migradas, ${resultados.ordenes.errores} errores`));
+    }
+    if (resultados.metricas) {
+      console.log(chalk.cyan(`📈 Métricas: ${resultados.metricas.migradas} migradas, ${resultados.metricas.sinCliente} sin cliente, ${resultados.metricas.errores} errores`));
     }
 
     console.log(chalk.cyan(`\n⏱️  Tiempo total: ${elapsed}s\n`));

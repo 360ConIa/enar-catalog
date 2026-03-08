@@ -39,9 +39,16 @@ service cloud.firestore {
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'despachos';
     }
 
-    // Helper: CRM user (admin, vendedor o despachos)
+    // Helper: Gestor
+    function isGestor() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'gestor';
+    }
+
+    // Helper: CRM user (admin, vendedor, despachos o gestor)
     function isCRM() {
-      return isAdmin() || isVendedor() || isDespachos();
+      return isAdmin() || isVendedor() || isDespachos() || isGestor();
     }
 
     // Productos: lectura pública, escritura solo admin
@@ -103,9 +110,10 @@ service cloud.firestore {
     // Órdenes: usuarios aprobados pueden crear y leer sus propias órdenes
     match /ordenes/{ordenId} {
       // Usuarios aprobados pueden crear órdenes (solo sus propias)
-      // Vendedores pueden crear órdenes en nombre de clientes (creadaPor === su uid)
+      // Admin y vendedores pueden crear órdenes en nombre de clientes
       allow create: if isAuthenticated() && (
         (isApproved() && request.resource.data.user_id == request.auth.uid) ||
+        isAdmin() ||
         (isVendedor() && request.resource.data.creadaPor == request.auth.uid)
       );
 
@@ -120,8 +128,9 @@ service cloud.firestore {
 
       // Admin, gestores y despachos pueden actualizar órdenes
       // Usuarios aprobados pueden actualizar sus propias órdenes pendientes
-      // Vendedores NO pueden modificar ni eliminar órdenes existentes
+      // Vendedores pueden actualizar órdenes que ellos crearon
       allow update: if isAdmin() || isUserManager() || isDespachos() ||
+        (isVendedor() && resource.data.creadaPor == request.auth.uid) ||
         (isApproved() && resource.data.user_id == request.auth.uid && resource.data.estado == 'pendiente');
 
       // Solo admin puede eliminar

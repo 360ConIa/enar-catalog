@@ -571,10 +571,10 @@
           navAdminLink.style.display = 'none';
         }
 
-        // Mostrar link Panel Ventas si es vendedor
+        // Mostrar link Panel Ventas si es vendedor o admin
         const navVendedorLink = document.getElementById('navVendedorLink');
         if (navVendedorLink) {
-          navVendedorLink.style.display = (data?.rol === 'vendedor') ? 'inline-block' : 'none';
+          navVendedorLink.style.display = (data?.rol === 'vendedor' || data?.rol === 'admin') ? 'inline-block' : 'none';
         }
 
         btnSolicitarCotizacion.style.display = 'none';

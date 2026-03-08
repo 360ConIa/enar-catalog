@@ -6,7 +6,8 @@
     "enar-b2b": {
       "hosting": {
         "b2b": ["enar-b2b"],
-        "crm": ["enar-comercial"]
+        "crm": ["enar-comercial"],
+        "portal": ["enar-digital"]
       }
     }
   }

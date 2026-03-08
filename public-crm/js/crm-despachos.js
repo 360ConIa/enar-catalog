@@ -17,10 +17,6 @@ import {
   getAuth, onAuthStateChanged, signOut
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
-  getFunctions, httpsCallable
-} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
-
-import {
   $, ESTADOS_ORDEN, ESTADOS_ORDEN_LABELS, ADMIN_EMAIL,
   formatearPrecio, formatearFecha, formatearFechaHora, formatearPeso, formatearNumero,
   tiempoRelativo, badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
@@ -39,7 +35,6 @@ const app = initializeApp({
 
 const db = getFirestore(app);
 const auth = getAuth(app);
-const functions = getFunctions(app);
 
 // ═══════════ STATE ═══════════
 let currentUser = null;
@@ -48,8 +43,17 @@ let todasLasOrdenes = [];
 let ordenesFiltradas = [];
 let tabActual = 'alistamiento';
 let chatUnsubscribers = {};
-let productosCache = {};
+let productosCache = {}; // SKU/cod_interno → { Peso_Kg, nombre, ... }
+let usuariosCache = {}; // uid → { telefono, ubicacion, ruta, direccion }
 const paginador = new Paginador(15);
+
+function toDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (val.toDate) return val.toDate();
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+}
 
 const TAB_ESTADOS = {
   alistamiento: ['aprobada'],
@@ -61,7 +65,7 @@ const TAB_ESTADOS = {
 // ═══════════ AUTH ═══════════
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = '/login.html';
+    window.location.href = 'index.html';
     return;
   }
 
@@ -94,7 +98,7 @@ onAuthStateChanged(auth, async (user) => {
 
 $('btnLogout').addEventListener('click', async () => {
   await signOut(auth);
-  window.location.href = '/login.html';
+  window.location.href = 'index.html';
 });
 
 // ═══════════ CARGAR ÓRDENES ═══════════
@@ -106,13 +110,63 @@ async function cargarOrdenes() {
       collection(db, 'ordenes'),
       orderBy('created_at', 'desc')
     );
-    const snap = await getDocs(q);
+
+    const [snap, productosSnap] = await Promise.all([
+      getDocs(q),
+      Object.keys(productosCache).length === 0
+        ? getDocs(collection(db, 'productos'))
+        : Promise.resolve(null)
+    ]);
+
+    // Build products cache for weight lookup
+    if (productosSnap) {
+      productosSnap.forEach(d => {
+        const data = d.data();
+        const key = data.SKU || data.cod_interno;
+        if (key) productosCache[key] = data;
+      });
+    }
+
     todasLasOrdenes = [];
     snap.forEach(d => todasLasOrdenes.push({ id: d.id, ...d.data() }));
 
-    // Cargar rutas únicas para filtro
-    cargarFiltroRutas();
+    // Enrich items with product weight
+    todasLasOrdenes.forEach(o => {
+      const items = o.items || o.productos || [];
+      items.forEach(item => {
+        if (!item.peso_kg) {
+          const sku = item.sku || item.cod_interno;
+          const prod = productosCache[sku];
+          if (prod) item.peso_kg = prod.Peso_Kg || 0;
+        }
+      });
+    });
 
+    // Load user info for orders that need contact/route data
+    const uidsToFetch = new Set();
+    todasLasOrdenes.forEach(o => {
+      if (o.user_id && !usuariosCache[o.user_id]) uidsToFetch.add(o.user_id);
+    });
+    if (uidsToFetch.size > 0) {
+      const batchPromises = [...uidsToFetch].map(uid => getDoc(doc(db, 'usuarios', uid)));
+      const userDocs = await Promise.all(batchPromises);
+      userDocs.forEach(ud => {
+        if (ud.exists()) usuariosCache[ud.id] = ud.data();
+      });
+    }
+
+    // Enrich orders with user data for route filtering
+    todasLasOrdenes.forEach(o => {
+      if (o.user_id && usuariosCache[o.user_id]) {
+        const u = usuariosCache[o.user_id];
+        o._ruta = o.direccion_entrega?.ruta || u.ruta || '';
+        o._telefono = o.cliente?.telefono || o.direccion_entrega?.telefono_contacto || u.telefono || '';
+        o._ubicacion = o.direccion_entrega?.ciudad || u.ubicacion || '';
+        o._direccion = o.direccion_entrega?.direccion || u.direccion || '';
+      }
+    });
+
+    cargarFiltroRutas();
     actualizarKPIs();
     actualizarTabCounts();
     aplicarFiltrosYRender();
@@ -125,7 +179,7 @@ async function cargarOrdenes() {
 function cargarFiltroRutas() {
   const rutas = new Set();
   todasLasOrdenes.forEach(o => {
-    const ruta = o.direccion_entrega?.ruta || o.cliente?.ruta;
+    const ruta = o._ruta || o.direccion_entrega?.ruta || o.cliente?.ruta;
     if (ruta) rutas.add(ruta);
   });
 
@@ -177,7 +231,7 @@ function aplicarFiltrosYRender() {
   const ruta = $('filtroRuta')?.value;
   if (ruta) {
     filtradas = filtradas.filter(o =>
-      (o.direccion_entrega?.ruta || o.cliente?.ruta) === ruta
+      (o._ruta || o.direccion_entrega?.ruta || o.cliente?.ruta) === ruta
     );
   }
 
@@ -186,11 +240,11 @@ function aplicarFiltrosYRender() {
   const hasta = $('filtroHasta')?.value;
   if (desde) {
     const dDesde = new Date(desde);
-    filtradas = filtradas.filter(o => o.created_at && new Date(o.created_at) >= dDesde);
+    filtradas = filtradas.filter(o => { const f = toDate(o.created_at); return f && f >= dDesde; });
   }
   if (hasta) {
     const dHasta = new Date(hasta + 'T23:59:59');
-    filtradas = filtradas.filter(o => o.created_at && new Date(o.created_at) <= dHasta);
+    filtradas = filtradas.filter(o => { const f = toDate(o.created_at); return f && f <= dHasta; });
   }
 
   ordenesFiltradas = filtradas;
@@ -247,8 +301,9 @@ function renderCardOrden(orden) {
           <h4>${orden.numero_orden || orden.id.substring(0, 8)} ${badgeEstado(orden.estado)}</h4>
           <div class="crm-despacho-meta">
             <span><i class="bi bi-person"></i> ${orden.clienteNombre || 'Sin cliente'}</span>
-            <span><i class="bi bi-telephone"></i> ${orden.cliente?.telefono || orden.direccion_entrega?.telefono_contacto || '-'}</span>
-            <span><i class="bi bi-geo-alt"></i> ${orden.direccion_entrega?.ciudad || orden.cliente?.ciudad || '-'}</span>
+            <span><i class="bi bi-telephone"></i> ${orden._telefono || orden.cliente?.telefono || '-'}</span>
+            <span><i class="bi bi-geo-alt"></i> ${orden._ubicacion || orden.direccion_entrega?.ciudad || '-'}</span>
+            ${orden._ruta ? `<span><i class="bi bi-signpost-2"></i> ${orden._ruta}</span>` : ''}
             <span><i class="bi bi-calendar3"></i> ${formatearFecha(orden.created_at)}</span>
           </div>
         </div>
@@ -292,8 +347,8 @@ async function cargarDetalleOrden(ordenId, container) {
                 ${item.preparado ? 'checked' : ''}
                 onchange="marcarPreparado('${ordenId}', ${idx}, this.checked)">
               <div class="crm-checklist-producto">
-                <div class="crm-checklist-producto-nombre">${item.titulo || item.cod_interno}</div>
-                <div class="crm-checklist-producto-cod">${item.cod_interno} · ${formatearPrecio(item.precio_unitario)}</div>
+                <div class="crm-checklist-producto-nombre">${item.titulo || item.nombre || item.cod_interno || item.sku || '-'}</div>
+                <div class="crm-checklist-producto-cod">${item.cod_interno || item.sku || '-'} · ${formatearPrecio(item.precio_unitario)}</div>
               </div>
               <div class="crm-checklist-qty">
                 <span class="crm-checklist-qty-label">Pedido: ${item.cantidad}</span>
@@ -425,14 +480,6 @@ window.cambiarEstado = async function(ordenId, nuevoEstado) {
       updated_at: new Date().toISOString()
     });
 
-    // Notificar
-    try {
-      const enviarNotificacion = httpsCallable(functions, 'enviarNotificacion');
-      await enviarNotificacion({ ordenId, nuevoEstado });
-    } catch (e) {
-      console.warn('Notificación no enviada:', e);
-    }
-
     orden.estado = nuevoEstado;
     orden.historial = historial;
 
@@ -519,29 +566,67 @@ window.enviarMensaje = async function(ordenId) {
   }
 };
 
-// ═══════════ CSV ═══════════
+// ═══════════ CSV (CLIENT-SIDE) ═══════════
 window.generarCSVOrden = async function(ordenId) {
   try {
-    showToast('Generando CSV...', 'info');
-    const generarCSV = httpsCallable(functions, 'generarCSV');
-    const result = await generarCSV({ ordenId });
+    const orden = todasLasOrdenes.find(o => o.id === ordenId);
+    if (!orden) return;
 
-    if (result.data.success) {
-      // Descargar CSV
-      const blob = new Blob([result.data.csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = result.data.filename;
-      link.click();
-      URL.revokeObjectURL(url);
+    const items = orden.items || orden.productos || [];
+    const clienteInfo = usuariosCache[orden.user_id] || {};
 
-      // Actualizar local
-      const orden = todasLasOrdenes.find(o => o.id === ordenId);
-      if (orden) orden.csv_generado = true;
+    // Build CSV content
+    const headers = ['ID_Orden', 'Cliente', 'NIT', 'Direccion', 'Ciudad', 'Ruta', 'Telefono',
+      'Producto', 'Codigo', 'Cantidad_Pedida', 'Cantidad_Real', 'Precio_Unitario', 'Subtotal',
+      'Peso_Kg', 'Preparado', 'Preparado_Por'];
 
-      showToast('CSV generado exitosamente', 'success');
-    }
+    const rows = items.map(item => [
+      orden.numero_orden || ordenId,
+      orden.clienteNombre || clienteInfo.nombre || '',
+      orden.clienteNit || clienteInfo.nit || '',
+      orden._direccion || '',
+      orden._ubicacion || '',
+      orden._ruta || '',
+      orden._telefono || '',
+      item.titulo || item.nombre || '',
+      item.cod_interno || item.sku || '',
+      item.cantidad || 0,
+      item.cantidad_real || item.cantidad || 0,
+      item.precio_unitario || 0,
+      item.subtotal || (item.precio_unitario || 0) * (item.cantidad || 0),
+      (item.peso_kg || 0) * (item.cantidad || 0),
+      item.preparado ? 'SI' : 'NO',
+      item.preparado_por || ''
+    ]);
+
+    // Add totals row
+    const pesoTotal = items.reduce((s, i) => s + ((i.peso_kg || 0) * (i.cantidad || 0)), 0);
+    rows.push(['', '', '', '', '', '', '', 'TOTAL', '', '',
+      items.reduce((s, i) => s + (i.cantidad_real || i.cantidad || 0), 0),
+      '', orden.total || 0, pesoTotal, '', '']);
+
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    // BOM for Excel UTF-8
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `despacho_${orden.numero_orden || ordenId}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    // Mark CSV as generated in Firestore
+    await updateDoc(doc(db, 'ordenes', ordenId), {
+      csv_generado: true,
+      csv_fecha: new Date().toISOString()
+    });
+    orden.csv_generado = true;
+
+    showToast('CSV descargado exitosamente', 'success');
   } catch (error) {
     console.error('Error generando CSV:', error);
     showToast('Error al generar CSV', 'error');

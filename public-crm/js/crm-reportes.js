@@ -3,7 +3,7 @@
  * CRM REPORTES - ENAR
  * ============================================
  * 4 tabs: General, Ventas, Inventario, Inteligencia Clientes
- * Gráficos con Chart.js, métricas pre-calculadas, recomendaciones
+ * Charts (Chart.js), métricas, recommendation engine
  * ============================================
  */
 
@@ -19,7 +19,7 @@ import {
   $, ADMIN_EMAIL, ESTADOS_ORDEN_LABELS,
   formatearPrecio, formatearFecha, formatearNumero,
   badgeSalud, badgeABC, badgeRiesgo, badgeTendencia, badgeEstado,
-  showToast, mostrarLoader
+  showToast, debounce, buscarMultiCampo, mostrarLoader
 } from './crm-utils.js';
 
 // ═══════════ FIREBASE INIT ═══════════
@@ -41,56 +41,77 @@ let userPerfil = null;
 let ordenes = [];
 let metricas = [];
 let productos = [];
+let vendedoresMap = {}; // uid → { nombre, email }
 let charts = {};
+
+function toDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (val.toDate) return val.toDate();
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+const COLORES_ESTADO = {
+  pendiente: '#fbbf24', aprobada: '#60a5fa', en_proceso: '#818cf8',
+  en_espera: '#c084fc', completada: '#34d399', parcial: '#fb923c', cancelada: '#f87171'
+};
 
 // ═══════════ AUTH ═══════════
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = '/login.html';
+    window.location.href = 'index.html';
     return;
   }
 
-  const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
-  if (!userDoc.exists()) {
+  try {
+    const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
+    if (!userDoc.exists()) {
+      $('loadingScreen').style.display = 'none';
+      $('noAccess').style.display = 'flex';
+      return;
+    }
+
+    const perfil = userDoc.data();
+    const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin';
+    const esVendedor = perfil.rol === 'vendedor';
+
+    if (!esAdmin && !esVendedor) {
+      $('loadingScreen').style.display = 'none';
+      $('noAccess').style.display = 'flex';
+      return;
+    }
+
+    currentUser = user;
+    userPerfil = perfil;
+
+    await cargarDatos();
+
     $('loadingScreen').style.display = 'none';
-    $('noAccess').style.display = 'flex';
-    return;
+    $('mainContent').style.display = 'block';
+
+    renderGeneral();
+    initTabs();
+    initFiltros();
+  } catch (error) {
+    console.error('Error en auth:', error);
+    showToast('Error al verificar acceso', 'error');
   }
-
-  const perfil = userDoc.data();
-  const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin';
-  const esVendedor = perfil.rol === 'vendedor';
-
-  if (!esAdmin && !esVendedor) {
-    $('loadingScreen').style.display = 'none';
-    $('noAccess').style.display = 'flex';
-    return;
-  }
-
-  currentUser = user;
-  userPerfil = perfil;
-
-  await cargarDatos();
-
-  $('loadingScreen').style.display = 'none';
-  $('mainContent').style.display = 'block';
-
-  renderGeneral();
-  initTabs();
 });
 
 $('btnLogout').addEventListener('click', async () => {
   await signOut(auth);
-  window.location.href = '/login.html';
+  window.location.href = 'index.html';
 });
 
 // ═══════════ CARGAR DATOS ═══════════
 async function cargarDatos() {
   try {
-    const [ordenesSnap, metricasSnap, productosSnap] = await Promise.all([
+    const [ordenesSnap, metricasSnap, productosSnap, vendedoresSnap] = await Promise.all([
       getDocs(query(collection(db, 'ordenes'), orderBy('created_at', 'desc'))),
       getDocs(collection(db, 'metricas_clientes')),
-      getDocs(collection(db, 'productos'))
+      getDocs(collection(db, 'productos')),
+      getDocs(query(collection(db, 'usuarios'), where('rol', 'in', ['vendedor', 'admin'])))
     ]);
 
     ordenes = [];
@@ -101,6 +122,12 @@ async function cargarDatos() {
 
     productos = [];
     productosSnap.forEach(d => productos.push({ id: d.id, ...d.data() }));
+
+    vendedoresMap = {};
+    vendedoresSnap.forEach(d => {
+      const data = d.data();
+      vendedoresMap[d.id] = { nombre: data.nombre || data.email, email: data.email };
+    });
   } catch (error) {
     console.error('Error cargando datos:', error);
     showToast('Error al cargar datos', 'error');
@@ -118,7 +145,6 @@ function initTabs() {
       const panelId = `panel${tab.dataset.tab.charAt(0).toUpperCase() + tab.dataset.tab.slice(1)}`;
       $(panelId)?.classList.add('active');
 
-      // Render tab content
       switch (tab.dataset.tab) {
         case 'general': renderGeneral(); break;
         case 'ventas': renderVentas(); break;
@@ -129,240 +155,201 @@ function initTabs() {
   });
 }
 
-// ═══════════ TAB: GENERAL ═══════════
+function initFiltros() {
+  $('filtroPeriodoVentas')?.addEventListener('change', () => renderVentas());
+  $('filtroABCInteligencia')?.addEventListener('change', () => renderTablaInteligencia());
+  $('filtroRiesgoInteligencia')?.addEventListener('change', () => renderTablaInteligencia());
+  $('filtroBusquedaInteligencia')?.addEventListener('input', debounce(() => renderTablaInteligencia(), 400));
+}
+
+// ═══════════ TAB 1: GENERAL ═══════════
 function renderGeneral() {
   const ahora = new Date();
   const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
 
-  const totalOrdenes = ordenes.length;
-  const pendientes = ordenes.filter(o => o.estado === 'pendiente').length;
-  const ventasMes = ordenes
-    .filter(o => o.created_at && new Date(o.created_at) >= inicioMes && o.estado !== 'cancelada')
-    .reduce((s, o) => s + (o.total || 0), 0);
-  const clientesRiesgo = metricas.filter(m => m.riesgo_abandono === 'Alto').length;
+  const ordenesValidas = ordenes.filter(o => o.estado !== 'cancelada');
+  const totalVentas = ordenesValidas.reduce((s, o) => s + (o.total || 0), 0);
+  const ticketPromedio = ordenesValidas.length > 0 ? totalVentas / ordenesValidas.length : 0;
+  const clientesActivos = metricas.filter(m => m.estado_salud === 'Saludable').length;
 
   $('kpisGeneral').innerHTML = `
+    <div class="crm-kpi crm-kpi--green">
+      <div class="crm-kpi-label">Total Ventas</div>
+      <div class="crm-kpi-value">${formatearPrecio(totalVentas)}</div>
+    </div>
     <div class="crm-kpi">
       <div class="crm-kpi-label">Total Órdenes</div>
-      <div class="crm-kpi-value">${formatearNumero(totalOrdenes)}</div>
+      <div class="crm-kpi-value">${formatearNumero(ordenes.length)}</div>
     </div>
-    <div class="crm-kpi crm-kpi--yellow">
-      <div class="crm-kpi-label">Pendientes</div>
-      <div class="crm-kpi-value">${pendientes}</div>
-    </div>
-    <div class="crm-kpi crm-kpi--green">
-      <div class="crm-kpi-label">Ventas del Mes</div>
-      <div class="crm-kpi-value">${formatearPrecio(ventasMes)}</div>
-    </div>
-    <div class="crm-kpi crm-kpi--red">
-      <div class="crm-kpi-label">Clientes en Riesgo</div>
-      <div class="crm-kpi-value">${clientesRiesgo}</div>
-    </div>
-  `;
-
-  // Chart: Distribución estados
-  const estadoCounts = {};
-  ordenes.forEach(o => {
-    estadoCounts[o.estado] = (estadoCounts[o.estado] || 0) + 1;
-  });
-
-  const coloresEstado = {
-    pendiente: '#fbbf24',
-    aprobada: '#60a5fa',
-    en_proceso: '#818cf8',
-    en_espera: '#c084fc',
-    completada: '#34d399',
-    parcial: '#fb923c',
-    cancelada: '#f87171'
-  };
-
-  renderChart('chartEstados', 'doughnut', {
-    labels: Object.keys(estadoCounts).map(k => ESTADOS_ORDEN_LABELS[k] || k),
-    datasets: [{
-      data: Object.values(estadoCounts),
-      backgroundColor: Object.keys(estadoCounts).map(k => coloresEstado[k] || '#94a3b8')
-    }]
-  });
-
-  // Chart: Salud clientes
-  const saludCounts = { Saludable: 0, En_Riesgo: 0, Inactivo: 0 };
-  metricas.forEach(m => {
-    if (saludCounts[m.estado_salud] !== undefined) saludCounts[m.estado_salud]++;
-  });
-
-  renderChart('chartSalud', 'doughnut', {
-    labels: ['Saludable', 'En Riesgo', 'Inactivo'],
-    datasets: [{
-      data: [saludCounts.Saludable, saludCounts.En_Riesgo, saludCounts.Inactivo],
-      backgroundColor: ['#34d399', '#fbbf24', '#f87171']
-    }]
-  });
-}
-
-// ═══════════ TAB: VENTAS ═══════════
-function renderVentas() {
-  const ahora = new Date();
-  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-
-  const ordenesValidas = ordenes.filter(o => o.estado !== 'cancelada');
-  const ventasMes = ordenesValidas
-    .filter(o => o.created_at && new Date(o.created_at) >= inicioMes)
-    .reduce((s, o) => s + (o.total || 0), 0);
-  const ticketPromedio = ordenesValidas.length > 0
-    ? ordenesValidas.reduce((s, o) => s + (o.total || 0), 0) / ordenesValidas.length : 0;
-
-  // Ventas por mes (últimos 6)
-  const ventasPorMes = [];
-  for (let i = 5; i >= 0; i--) {
-    const fecha = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
-    const finMes = new Date(ahora.getFullYear(), ahora.getMonth() - i + 1, 0, 23, 59, 59);
-    const ventas = ordenesValidas
-      .filter(o => o.created_at && new Date(o.created_at) >= fecha && new Date(o.created_at) <= finMes)
-      .reduce((s, o) => s + (o.total || 0), 0);
-    const nombre = fecha.toLocaleDateString('es-CO', { month: 'short', year: '2-digit' });
-    ventasPorMes.push({ nombre, ventas });
-  }
-
-  // Tendencia
-  let tendencia = 'Estable';
-  let cambio = 0;
-  if (ventasPorMes.length >= 2) {
-    const actual = ventasPorMes[ventasPorMes.length - 1].ventas;
-    const anterior = ventasPorMes[ventasPorMes.length - 2].ventas;
-    if (anterior > 0) {
-      cambio = ((actual - anterior) / anterior) * 100;
-      if (cambio > 5) tendencia = 'Creciente';
-      else if (cambio < -5) tendencia = 'Decreciente';
-    }
-  }
-
-  $('kpisVentas').innerHTML = `
-    <div class="crm-kpi crm-kpi--green">
-      <div class="crm-kpi-label">Ventas del Mes</div>
-      <div class="crm-kpi-value">${formatearPrecio(ventasMes)}</div>
-    </div>
-    <div class="crm-kpi">
+    <div class="crm-kpi crm-kpi--purple">
       <div class="crm-kpi-label">Ticket Promedio</div>
       <div class="crm-kpi-value">${formatearPrecio(ticketPromedio)}</div>
     </div>
-    <div class="crm-kpi">
-      <div class="crm-kpi-label">Órdenes Válidas</div>
-      <div class="crm-kpi-value">${formatearNumero(ordenesValidas.length)}</div>
-    </div>
-    <div class="crm-kpi ${cambio > 0 ? 'crm-kpi--green' : cambio < 0 ? 'crm-kpi--red' : ''}">
-      <div class="crm-kpi-label">Tendencia</div>
-      <div class="crm-kpi-value">${cambio >= 0 ? '+' : ''}${cambio.toFixed(1)}%</div>
-      <div class="crm-kpi-sub">${tendencia}</div>
+    <div class="crm-kpi crm-kpi--yellow">
+      <div class="crm-kpi-label">Clientes Activos</div>
+      <div class="crm-kpi-value">${clientesActivos}</div>
     </div>
   `;
 
-  // Chart ventas/mes
-  renderChart('chartVentasMes', 'bar', {
-    labels: ventasPorMes.map(v => v.nombre),
+  // Chart: Ventas por Mes (bar)
+  const ventasPorMes = [];
+  for (let i = 5; i >= 0; i--) {
+    const inicio = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
+    const fin = new Date(ahora.getFullYear(), ahora.getMonth() - i + 1, 0, 23, 59, 59);
+    const ventas = ordenesValidas
+      .filter(o => { const f = toDate(o.created_at); return f && f >= inicio && f <= fin; })
+      .reduce((s, o) => s + (o.total || 0), 0);
+    ventasPorMes.push({
+      label: inicio.toLocaleDateString('es-CO', { month: 'short', year: '2-digit' }),
+      ventas
+    });
+  }
+
+  renderChart('chartVentasGeneral', 'bar', {
+    labels: ventasPorMes.map(v => v.label),
     datasets: [{
       label: 'Ventas',
       data: ventasPorMes.map(v => v.ventas),
       backgroundColor: 'rgba(59, 130, 246, 0.7)',
       borderColor: '#3b82f6',
       borderWidth: 1,
-      borderRadius: 4
+      borderRadius: 6
     }]
   }, {
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          callback: v => formatearPrecio(v)
-        }
-      }
-    }
+    scales: { y: { beginAtZero: true, ticks: { callback: v => formatearPrecio(v) } } },
+    plugins: { legend: { display: false } }
   });
 
-  // Top productos
+  // Chart: Distribución Estados (doughnut)
+  const estadoCounts = {};
+  ordenes.forEach(o => { estadoCounts[o.estado] = (estadoCounts[o.estado] || 0) + 1; });
+
+  renderChart('chartEstados', 'doughnut', {
+    labels: Object.keys(estadoCounts).map(k => ESTADOS_ORDEN_LABELS[k] || k),
+    datasets: [{
+      data: Object.values(estadoCounts),
+      backgroundColor: Object.keys(estadoCounts).map(k => COLORES_ESTADO[k] || '#94a3b8')
+    }]
+  });
+
+  // Chart: Top 10 Productos (horizontal bar)
   const prodVentas = {};
   ordenesValidas.forEach(o => {
     (o.items || o.productos || []).forEach(item => {
-      const key = item.cod_interno || item.titulo;
-      if (!prodVentas[key]) prodVentas[key] = { titulo: item.titulo, total: 0, cantidad: 0 };
+      const key = item.cod_interno || item.sku || item.titulo || item.nombre;
+      const nombre = item.titulo || item.nombre || key;
+      if (!prodVentas[key]) prodVentas[key] = { nombre, total: 0 };
       prodVentas[key].total += (item.precio_unitario || 0) * (item.cantidad || 0);
-      prodVentas[key].cantidad += item.cantidad || 0;
     });
   });
 
-  const topProds = Object.values(prodVentas).sort((a, b) => b.total - a.total).slice(0, 5);
-  $('topProductos').innerHTML = topProds.length === 0
-    ? '<p style="color:var(--crm-text-light);font-size:0.85rem;">Sin datos</p>'
-    : topProds.map((p, i) => `
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--crm-border);font-size:0.85rem;">
-        <span><strong>${i + 1}.</strong> ${p.titulo}</span>
-        <span style="font-weight:600;">${formatearPrecio(p.total)}</span>
-      </div>
-    `).join('');
+  const top10 = Object.values(prodVentas).sort((a, b) => b.total - a.total).slice(0, 10);
 
-  // Tendencia info
-  $('tendenciaVentas').innerHTML = `
-    <div style="text-align:center;padding:20px;">
-      <div style="font-size:2.5rem;font-weight:700;color:${cambio > 0 ? 'var(--crm-green)' : cambio < 0 ? 'var(--crm-red)' : 'var(--crm-primary-light)'}">
-        ${cambio > 0 ? '<i class="bi bi-arrow-up-right"></i>' : cambio < 0 ? '<i class="bi bi-arrow-down-right"></i>' : '<i class="bi bi-arrow-right"></i>'}
-        ${Math.abs(cambio).toFixed(1)}%
-      </div>
-      <p style="color:var(--crm-text-light);font-size:0.85rem;margin-top:8px;">
-        ${tendencia === 'Creciente' ? 'Las ventas muestran crecimiento' : tendencia === 'Decreciente' ? 'Las ventas están disminuyendo' : 'Las ventas se mantienen estables'}
-        respecto al mes anterior.
-      </p>
-    </div>
-  `;
+  renderChart('chartTopProductos', 'bar', {
+    labels: top10.map(p => p.nombre.length > 25 ? p.nombre.substring(0, 25) + '...' : p.nombre),
+    datasets: [{
+      label: 'Revenue',
+      data: top10.map(p => p.total),
+      backgroundColor: 'rgba(16, 185, 129, 0.7)',
+      borderColor: '#10b981',
+      borderWidth: 1,
+      borderRadius: 4
+    }]
+  }, {
+    indexAxis: 'y',
+    scales: { x: { beginAtZero: true, ticks: { callback: v => formatearPrecio(v) } } },
+    plugins: { legend: { display: false } }
+  });
 }
 
-// ═══════════ TAB: INVENTARIO ═══════════
-function renderInventario() {
-  const activos = productos.filter(p => p.activo !== false);
-  const inactivos = productos.filter(p => p.activo === false);
-  const stockCero = activos.filter(p => (p.cantidad || 0) === 0);
+// ═══════════ TAB 2: VENTAS ═══════════
+function renderVentas() {
+  const periodo = $('filtroPeriodoVentas')?.value || 'todo';
+  const ahora = new Date();
+  let fechaInicio;
 
-  $('kpisInventario').innerHTML = `
+  switch (periodo) {
+    case 'mes': fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1); break;
+    case 'trimestre': fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth() - 3, 1); break;
+    case 'anio': fechaInicio = new Date(ahora.getFullYear(), 0, 1); break;
+    default: fechaInicio = null;
+  }
+
+  const ordenesPeriodo = ordenes.filter(o => {
+    if (o.estado === 'cancelada') return false;
+    if (!fechaInicio) return true;
+    const f = toDate(o.created_at);
+    return f && f >= fechaInicio;
+  });
+
+  const totalVentas = ordenesPeriodo.reduce((s, o) => s + (o.total || 0), 0);
+  const ticketPromedio = ordenesPeriodo.length > 0 ? totalVentas / ordenesPeriodo.length : 0;
+
+  // Ventas por vendedor
+  const ventasPorVendedor = {};
+  ordenesPeriodo.forEach(o => {
+    const uid = o.creadaPor || o.creado_por || 'desconocido';
+    if (!ventasPorVendedor[uid]) {
+      const v = vendedoresMap[uid] || {};
+      ventasPorVendedor[uid] = { nombre: v.nombre || o.creadaPorNombre || o.creadaPorEmail || uid.substring(0, 12), count: 0, total: 0 };
+    }
+    ventasPorVendedor[uid].count++;
+    ventasPorVendedor[uid].total += o.total || 0;
+  });
+
+  const vendedores = Object.values(ventasPorVendedor).sort((a, b) => b.total - a.total);
+
+  $('kpisVentas').innerHTML = `
     <div class="crm-kpi crm-kpi--green">
-      <div class="crm-kpi-label">Productos Activos</div>
-      <div class="crm-kpi-value">${formatearNumero(activos.length)}</div>
-    </div>
-    <div class="crm-kpi crm-kpi--red">
-      <div class="crm-kpi-label">Sin Stock</div>
-      <div class="crm-kpi-value">${stockCero.length}</div>
+      <div class="crm-kpi-label">Total Ventas</div>
+      <div class="crm-kpi-value">${formatearPrecio(totalVentas)}</div>
     </div>
     <div class="crm-kpi">
-      <div class="crm-kpi-label">Inactivos</div>
-      <div class="crm-kpi-value">${inactivos.length}</div>
+      <div class="crm-kpi-label">Órdenes</div>
+      <div class="crm-kpi-value">${formatearNumero(ordenesPeriodo.length)}</div>
     </div>
     <div class="crm-kpi crm-kpi--purple">
-      <div class="crm-kpi-label">Total Productos</div>
-      <div class="crm-kpi-value">${formatearNumero(productos.length)}</div>
+      <div class="crm-kpi-label">Ticket Promedio</div>
+      <div class="crm-kpi-value">${formatearPrecio(ticketPromedio)}</div>
+    </div>
+    <div class="crm-kpi crm-kpi--yellow">
+      <div class="crm-kpi-label">Vendedores Activos</div>
+      <div class="crm-kpi-value">${vendedores.length}</div>
     </div>
   `;
 
-  // Tabla de inventario
-  const productosMostrar = stockCero.slice(0, 20);
-  $('tablaInventario').innerHTML = productosMostrar.length === 0
-    ? '<p style="color:var(--crm-text-light);font-size:0.85rem;">No hay productos sin stock</p>'
+  // Chart: Ventas por Vendedor (bar)
+  renderChart('chartVentasVendedor', 'bar', {
+    labels: vendedores.map(v => v.nombre),
+    datasets: [{
+      label: 'Ventas',
+      data: vendedores.map(v => v.total),
+      backgroundColor: 'rgba(139, 92, 246, 0.7)',
+      borderColor: '#8b5cf6',
+      borderWidth: 1,
+      borderRadius: 4
+    }]
+  }, {
+    scales: { y: { beginAtZero: true, ticks: { callback: v => formatearPrecio(v) } } },
+    plugins: { legend: { display: false } }
+  });
+
+  // Table: Detalle por vendedor
+  $('tablaVentasVendedor').innerHTML = vendedores.length === 0
+    ? '<p style="color:var(--crm-text-light);font-size:0.85rem;padding:12px;">Sin ventas en este período</p>'
     : `
     <div class="crm-tabla-wrapper">
       <table class="crm-tabla">
         <thead>
-          <tr>
-            <th>Código</th>
-            <th>Producto</th>
-            <th>Marca</th>
-            <th>Stock</th>
-            <th>Precio</th>
-          </tr>
+          <tr><th>Vendedor</th><th style="text-align:center;">Órdenes</th><th style="text-align:right;">Total</th><th style="text-align:right;">Ticket Prom.</th></tr>
         </thead>
         <tbody>
-          ${productosMostrar.map(p => `
+          ${vendedores.map(v => `
             <tr>
-              <td style="font-weight:500;color:var(--crm-primary-light);">${p.cod_interno}</td>
-              <td>${p.titulo}</td>
-              <td>${p.marca || '-'}</td>
-              <td><span style="color:var(--crm-red);font-weight:600;">0</span></td>
-              <td>${formatearPrecio(p.p_real || p.p_corriente || 0)}</td>
+              <td style="font-weight:500;">${v.nombre}</td>
+              <td style="text-align:center;">${v.count}</td>
+              <td style="text-align:right;font-weight:600;">${formatearPrecio(v.total)}</td>
+              <td style="text-align:right;">${formatearPrecio(v.count > 0 ? v.total / v.count : 0)}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -371,7 +358,109 @@ function renderInventario() {
   `;
 }
 
-// ═══════════ TAB: INTELIGENCIA CLIENTES ═══════════
+// ═══════════ TAB 3: INVENTARIO ═══════════
+function renderInventario() {
+  const conStock = productos.filter(p => p.Stock_Actual !== undefined);
+  const stockBajo = conStock.filter(p => (p.Stock_Actual || 0) <= (p.Stock_Minimo || 0) && (p.Stock_Actual || 0) >= 0);
+  const totalActivos = productos.filter(p => p.activo !== false).length;
+
+  // ABC distribution
+  const abcCounts = { A: 0, B: 0, C: 0, SV: 0 };
+  productos.forEach(p => {
+    const abc = p.Clasificacion_ABC;
+    if (abcCounts[abc] !== undefined) abcCounts[abc]++;
+  });
+
+  $('kpisInventario').innerHTML = `
+    <div class="crm-kpi">
+      <div class="crm-kpi-label">Total Productos</div>
+      <div class="crm-kpi-value">${formatearNumero(totalActivos)}</div>
+    </div>
+    <div class="crm-kpi crm-kpi--red">
+      <div class="crm-kpi-label">Stock Bajo</div>
+      <div class="crm-kpi-value">${stockBajo.length}</div>
+    </div>
+    <div class="crm-kpi crm-kpi--green">
+      <div class="crm-kpi-label">Clase A</div>
+      <div class="crm-kpi-value">${abcCounts.A}</div>
+    </div>
+    <div class="crm-kpi crm-kpi--yellow">
+      <div class="crm-kpi-label">Sin Ventas</div>
+      <div class="crm-kpi-value">${abcCounts.SV}</div>
+    </div>
+  `;
+
+  // Chart: ABC Distribución (pie)
+  renderChart('chartABCProductos', 'pie', {
+    labels: ['A (Alto Valor)', 'B (Medio)', 'C (Bajo)', 'SV (Sin Ventas)'],
+    datasets: [{
+      data: [abcCounts.A, abcCounts.B, abcCounts.C, abcCounts.SV],
+      backgroundColor: ['#3b82f6', '#34d399', '#fbbf24', '#cbd5e1']
+    }]
+  });
+
+  // Stock Bajo lista
+  const stockBajoOrdenado = stockBajo.sort((a, b) => (a.Stock_Actual || 0) - (b.Stock_Actual || 0)).slice(0, 15);
+  $('stockBajoLista').innerHTML = stockBajoOrdenado.length === 0
+    ? '<p style="color:var(--crm-text-light);font-size:0.82rem;">Sin productos con stock bajo</p>'
+    : stockBajoOrdenado.map(p => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--crm-border);font-size:0.82rem;">
+        <div>
+          <div style="font-weight:500;">${p.titulo || p.Nombre_Producto || p.SKU || '-'}</div>
+          <div style="font-size:0.73rem;color:var(--crm-text-light);">${p.SKU || p.cod_interno || '-'}</div>
+        </div>
+        <div style="text-align:right;">
+          <span style="color:var(--crm-red);font-weight:600;">${p.Stock_Actual || 0}</span>
+          <span style="color:var(--crm-text-light);font-size:0.73rem;"> / ${p.Stock_Minimo || 0} min</span>
+        </div>
+      </div>
+    `).join('');
+
+  // Top productos por revenue
+  const prodVentas = {};
+  ordenes.filter(o => o.estado !== 'cancelada').forEach(o => {
+    (o.items || o.productos || []).forEach(item => {
+      const key = item.cod_interno || item.sku;
+      if (!key) return;
+      if (!prodVentas[key]) prodVentas[key] = { nombre: item.titulo || item.nombre || key, total: 0, cantidad: 0 };
+      prodVentas[key].total += (item.precio_unitario || 0) * (item.cantidad || 0);
+      prodVentas[key].cantidad += item.cantidad || 0;
+    });
+  });
+
+  const topProds = Object.entries(prodVentas).sort((a, b) => b[1].total - a[1].total).slice(0, 20);
+  $('tablaInventario').innerHTML = topProds.length === 0
+    ? '<p style="color:var(--crm-text-light);font-size:0.85rem;">Sin datos de ventas</p>'
+    : `
+    <div class="crm-tabla-wrapper">
+      <table class="crm-tabla">
+        <thead>
+          <tr><th>Código</th><th>Producto</th><th style="text-align:center;">Unid. Vendidas</th><th style="text-align:right;">Revenue</th><th>ABC</th></tr>
+        </thead>
+        <tbody>
+          ${topProds.map(([cod, p]) => {
+            const prodInfo = buscarProducto(cod);
+            return `
+              <tr>
+                <td style="font-weight:500;color:var(--crm-primary-light);">${cod}</td>
+                <td>${p.nombre}</td>
+                <td style="text-align:center;">${formatearNumero(p.cantidad)}</td>
+                <td style="text-align:right;font-weight:600;">${formatearPrecio(p.total)}</td>
+                <td>${badgeABC(prodInfo?.Clasificacion_ABC)}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function buscarProducto(cod) {
+  return productos.find(p => p.SKU === cod || p.cod_interno === cod);
+}
+
+// ═══════════ TAB 4: INTELIGENCIA CLIENTES ═══════════
 function renderInteligencia() {
   const saludables = metricas.filter(m => m.estado_salud === 'Saludable').length;
   const enRiesgo = metricas.filter(m => m.estado_salud === 'En_Riesgo').length;
@@ -398,7 +487,7 @@ function renderInteligencia() {
     </div>
   `;
 
-  // Chart ABC
+  // Chart: ABC Distribución de Clientes
   const abcCounts = { A: 0, B: 0, C: 0, SV: 0 };
   metricas.forEach(m => {
     if (abcCounts[m.clasificacion_abc] !== undefined) abcCounts[m.clasificacion_abc]++;
@@ -415,7 +504,7 @@ function renderInteligencia() {
   // Recomendaciones
   const recomendaciones = generarRecomendaciones();
   $('recomendaciones').innerHTML = recomendaciones.length === 0
-    ? '<p style="color:var(--crm-text-light);font-size:0.85rem;">No hay recomendaciones en este momento</p>'
+    ? '<p style="color:var(--crm-text-light);font-size:0.85rem;">Sin recomendaciones</p>'
     : recomendaciones.map(r => `
       <div style="padding:10px;margin-bottom:8px;border-radius:8px;background:${r.bg};border-left:4px solid ${r.color};font-size:0.82rem;">
         <strong>${r.codigo}</strong>: ${r.titulo}<br>
@@ -423,14 +512,35 @@ function renderInteligencia() {
       </div>
     `).join('');
 
-  // Tabla clientes con acción
-  const clientesAccion = metricas
-    .filter(m => m.riesgo_abandono === 'Alto' || m.estado_salud === 'En_Riesgo')
-    .sort((a, b) => (b.dias_sin_compra || 0) - (a.dias_sin_compra || 0))
-    .slice(0, 15);
+  renderTablaInteligencia();
+}
+
+function renderTablaInteligencia() {
+  const filtroABC = $('filtroABCInteligencia')?.value || '';
+  const filtroRiesgo = $('filtroRiesgoInteligencia')?.value || '';
+  const filtroBusqueda = $('filtroBusquedaInteligencia')?.value || '';
+
+  let clientesAccion = metricas
+    .filter(m => m.riesgo_abandono === 'Alto' || m.estado_salud === 'En_Riesgo' || m.estado_salud === 'Inactivo')
+    .sort((a, b) => (b.dias_sin_compra || 0) - (a.dias_sin_compra || 0));
+
+  if (filtroABC) {
+    clientesAccion = clientesAccion.filter(m => m.clasificacion_abc === filtroABC);
+  }
+  if (filtroRiesgo) {
+    clientesAccion = clientesAccion.filter(m => m.riesgo_abandono === filtroRiesgo);
+  }
+  if (filtroBusqueda && filtroBusqueda.trim()) {
+    clientesAccion = buscarMultiCampo(clientesAccion, filtroBusqueda, ['nombre_cliente', 'sheets_id_cliente']);
+  }
+
+  // Assign action codes
+  clientesAccion.forEach(m => {
+    m._accion = asignarAccion(m);
+  });
 
   $('tablaInteligencia').innerHTML = clientesAccion.length === 0
-    ? '<p style="color:var(--crm-text-light);font-size:0.85rem;">Sin clientes con acción requerida</p>'
+    ? '<p style="color:var(--crm-text-light);font-size:0.85rem;padding:12px;">Sin clientes con acción requerida</p>'
     : `
     <div class="crm-tabla-wrapper">
       <table class="crm-tabla">
@@ -440,23 +550,21 @@ function renderInteligencia() {
             <th>Salud</th>
             <th>ABC</th>
             <th>Riesgo</th>
+            <th>Tendencia</th>
             <th>Días s/compra</th>
-            <th>Ticket Prom.</th>
-            <th>Total Año</th>
+            <th>Acción Sugerida</th>
           </tr>
         </thead>
         <tbody>
-          ${clientesAccion.map(m => `
+          ${clientesAccion.slice(0, 50).map(m => `
             <tr>
-              <td>${m.cliente_id?.substring(0, 12) || '-'}</td>
+              <td style="font-weight:500;">${m.nombre_cliente || m.sheets_id_cliente || m.id.substring(0, 12)}</td>
               <td>${badgeSalud(m.estado_salud)}</td>
               <td>${badgeABC(m.clasificacion_abc)}</td>
               <td>${badgeRiesgo(m.riesgo_abandono)}</td>
-              <td style="font-weight:600;color:${(m.dias_sin_compra || 0) > 60 ? 'var(--crm-red)' : 'var(--crm-text)'}">
-                ${m.dias_sin_compra || 0}
-              </td>
-              <td>${formatearPrecio(m.ticket_promedio || 0)}</td>
-              <td>${formatearPrecio(m.total_compras_anio || 0)}</td>
+              <td>${badgeTendencia(m.tendencia)}</td>
+              <td style="font-weight:600;color:${(m.dias_sin_compra || 0) > 60 ? 'var(--crm-red)' : 'var(--crm-text)'}">${m.dias_sin_compra || 0}</td>
+              <td><span style="font-size:0.78rem;padding:2px 8px;border-radius:4px;background:${m._accion?.bg || '#f1f5f9'};color:${m._accion?.color || '#64748b'};">${m._accion?.titulo || '-'}</span></td>
             </tr>
           `).join('')}
         </tbody>
@@ -465,129 +573,91 @@ function renderInteligencia() {
   `;
 }
 
-// ═══════════ RECOMENDACIONES ═══════════
+// ═══════════ RECOMMENDATION ENGINE ═══════════
+// Translated from GAS Reportes.js lines 96-165
+
+function asignarAccion(metrica) {
+  const abc = metrica.clasificacion_abc;
+  const riesgo = metrica.riesgo_abandono;
+  const tendencia = metrica.tendencia;
+  const esVIP = abc === 'A' || abc === 'B';
+
+  // Primera compra (frecuencia = 0 or very few orders)
+  if ((metrica.frecuencia_compra_dias || 0) === 0 || (metrica.total_compras_anio || 0) <= 1) {
+    if (riesgo === 'Bajo') return { codigo: 'PC01', titulo: 'Bienvenida', bg: '#dbeafe', color: '#3b82f6' };
+    if (riesgo === 'Medio') return { codigo: 'PC02', titulo: 'Incentivar 2da compra', bg: '#fef3c7', color: '#f59e0b' };
+    if (riesgo === 'Alto') return { codigo: 'PC03', titulo: 'Indagar motivos', bg: '#fee2e2', color: '#ef4444' };
+  }
+
+  // VIP clients
+  if (esVIP) {
+    if (riesgo === 'Alto') return { codigo: 'CV01', titulo: 'Retención urgente', bg: '#fee2e2', color: '#dc2626' };
+    if (tendencia === 'Decreciente') return { codigo: 'CV02', titulo: 'Plan recuperación', bg: '#ffedd5', color: '#f97316' };
+    if (tendencia === 'Creciente') return { codigo: 'CV03', titulo: 'Fidelización', bg: '#d1fae5', color: '#10b981' };
+    return { codigo: 'CV04', titulo: 'Mantener relación', bg: '#f1f5f9', color: '#64748b' };
+  }
+
+  // Standard clients (C)
+  if (riesgo === 'Alto') return { codigo: 'CE01', titulo: 'Contacto preventivo', bg: '#fef3c7', color: '#f59e0b' };
+  return { codigo: 'CE02', titulo: 'Seguimiento estándar', bg: '#f1f5f9', color: '#64748b' };
+}
+
 function generarRecomendaciones() {
   const recomendaciones = [];
+  const acciones = {};
 
-  // Primera compra + riesgo bajo
-  const pc01 = metricas.filter(m => m.total_ordenes === 1 && m.riesgo_abandono === 'Bajo');
-  if (pc01.length > 0) {
-    recomendaciones.push({
-      codigo: 'PC01', titulo: 'Bienvenida y Onboarding',
-      clientes: pc01.length, accion: 'Enviar kit de bienvenida',
-      bg: '#dbeafe', color: '#3b82f6'
-    });
-  }
+  metricas.forEach(m => {
+    const accion = asignarAccion(m);
+    if (!acciones[accion.codigo]) {
+      acciones[accion.codigo] = { ...accion, clientes: 0, accion: '' };
+    }
+    acciones[accion.codigo].clientes++;
+  });
 
-  // Primera compra + riesgo medio
-  const pc02 = metricas.filter(m => m.total_ordenes === 1 && m.riesgo_abandono === 'Medio');
-  if (pc02.length > 0) {
-    recomendaciones.push({
-      codigo: 'PC02', titulo: 'Incentivo Segunda Compra',
-      clientes: pc02.length, accion: 'Ofrecer descuento en siguiente pedido',
-      bg: '#fef3c7', color: '#f59e0b'
-    });
-  }
+  // Set action descriptions
+  const descripciones = {
+    PC01: 'Enviar kit de bienvenida',
+    PC02: 'Ofrecer descuento en siguiente pedido',
+    PC03: 'Llamar para entender barreras de recompra',
+    CV01: 'Contacto inmediato con oferta personalizada',
+    CV02: 'Visita comercial + análisis de competencia',
+    CV03: 'Premiar lealtad + cross-selling',
+    CV04: 'Mantener comunicación periódica',
+    CE01: 'Llamada de seguimiento + catálogo actualizado',
+    CE02: 'Email con novedades + promociones'
+  };
 
-  // Primera compra + riesgo alto
-  const pc03 = metricas.filter(m => m.total_ordenes === 1 && m.riesgo_abandono === 'Alto');
-  if (pc03.length > 0) {
-    recomendaciones.push({
-      codigo: 'PC03', titulo: 'Indagación de Motivos',
-      clientes: pc03.length, accion: 'Llamar para entender barreras de recompra',
-      bg: '#fee2e2', color: '#ef4444'
-    });
-  }
+  Object.values(acciones).forEach(a => {
+    a.accion = descripciones[a.codigo] || '';
+    if (a.clientes > 0) recomendaciones.push(a);
+  });
 
-  // VIP (A/B) + riesgo alto
-  const cv01 = metricas.filter(m =>
-    (m.clasificacion_abc === 'A' || m.clasificacion_abc === 'B') &&
-    m.riesgo_abandono === 'Alto' && m.total_ordenes > 1
-  );
-  if (cv01.length > 0) {
-    recomendaciones.push({
-      codigo: 'CV01', titulo: 'Retención Urgente VIP',
-      clientes: cv01.length, accion: 'Contacto inmediato con oferta personalizada',
-      bg: '#fee2e2', color: '#dc2626'
-    });
-  }
-
-  // VIP + tendencia decreciente
-  const cv02 = metricas.filter(m =>
-    (m.clasificacion_abc === 'A' || m.clasificacion_abc === 'B') &&
-    m.tendencia === 'Decreciente' && m.total_ordenes > 1
-  );
-  if (cv02.length > 0) {
-    recomendaciones.push({
-      codigo: 'CV02', titulo: 'Plan de Recuperación VIP',
-      clientes: cv02.length, accion: 'Visita comercial + análisis de competencia',
-      bg: '#ffedd5', color: '#f97316'
-    });
-  }
-
-  // VIP + tendencia creciente
-  const cv03 = metricas.filter(m =>
-    (m.clasificacion_abc === 'A' || m.clasificacion_abc === 'B') &&
-    m.tendencia === 'Creciente'
-  );
-  if (cv03.length > 0) {
-    recomendaciones.push({
-      codigo: 'CV03', titulo: 'Programa de Fidelización',
-      clientes: cv03.length, accion: 'Premiar lealtad + cross-selling',
-      bg: '#d1fae5', color: '#10b981'
-    });
-  }
-
-  // Estándar (C) + riesgo alto
-  const ce01 = metricas.filter(m =>
-    m.clasificacion_abc === 'C' && m.riesgo_abandono === 'Alto' && m.total_ordenes > 1
-  );
-  if (ce01.length > 0) {
-    recomendaciones.push({
-      codigo: 'CE01', titulo: 'Contacto Preventivo',
-      clientes: ce01.length, accion: 'Llamada de seguimiento + catálogo actualizado',
-      bg: '#fef3c7', color: '#f59e0b'
-    });
-  }
-
-  // Estándar (C) + otros
-  const ce02 = metricas.filter(m =>
-    m.clasificacion_abc === 'C' && m.riesgo_abandono !== 'Alto' && m.total_ordenes > 1
-  );
-  if (ce02.length > 0) {
-    recomendaciones.push({
-      codigo: 'CE02', titulo: 'Seguimiento Estándar',
-      clientes: ce02.length, accion: 'Email con novedades + promociones',
-      bg: '#f1f5f9', color: '#64748b'
-    });
-  }
-
-  return recomendaciones.filter(r => r.clientes > 0);
+  return recomendaciones.sort((a, b) => {
+    // Priority: CV01 > PC03 > CV02 > CE01 > PC02 > CV03 > PC01 > CE02 > CV04
+    const priority = { CV01: 1, PC03: 2, CV02: 3, CE01: 4, PC02: 5, CV03: 6, PC01: 7, CE02: 8, CV04: 9 };
+    return (priority[a.codigo] || 99) - (priority[b.codigo] || 99);
+  });
 }
 
 // ═══════════ CHART HELPER ═══════════
 function renderChart(canvasId, type, data, extraOptions = {}) {
-  if (charts[canvasId]) {
-    charts[canvasId].destroy();
-  }
-
+  if (charts[canvasId]) charts[canvasId].destroy();
   const canvas = $(canvasId);
   if (!canvas) return;
-
-  const defaultOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: type === 'doughnut' ? 'bottom' : 'top',
-        labels: { font: { family: 'Poppins', size: 12 } }
-      }
-    }
-  };
 
   charts[canvasId] = new Chart(canvas, {
     type,
     data,
-    options: { ...defaultOptions, ...extraOptions }
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: ['doughnut', 'pie'].includes(type) ? 'bottom' : 'top',
+          labels: { font: { family: 'Poppins', size: 11 } }
+        }
+      },
+      ...extraOptions
+    }
   });
 }

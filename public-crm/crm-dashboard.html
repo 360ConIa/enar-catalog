@@ -26,7 +26,7 @@
       </div>
     </div>
     <nav class="crm-header-nav">
-      <a href="crm-dashboard.html" style="background:rgba(255,255,255,0.25);color:white;">Dashboard</a>
+      <a href="crm-dashboard.html" style="background:#D9232D;color:white;">Dashboard</a>
       <a href="crm-clientes.html">Clientes</a>
       <a href="crm-ordenes.html">Órdenes</a>
       <a href="crm-despachos.html">Despachos</a>
@@ -59,22 +59,23 @@
 
     <!-- KPIs -->
     <div class="crm-kpis">
-      <div class="crm-kpi">
-        <div class="crm-kpi-label">Total Órdenes</div>
-        <div class="crm-kpi-value" id="kpiOrdenes">0</div>
-        <div class="crm-kpi-sub" id="kpiOrdenesSub"></div>
-      </div>
-      <div class="crm-kpi crm-kpi--yellow">
-        <div class="crm-kpi-label">Pendientes</div>
-        <div class="crm-kpi-value" id="kpiPendientes">0</div>
-      </div>
       <div class="crm-kpi crm-kpi--green">
         <div class="crm-kpi-label">Ventas del Mes</div>
         <div class="crm-kpi-value" id="kpiVentasMes">$0</div>
+        <div class="crm-kpi-sub" id="kpiVentasMesSub"></div>
+      </div>
+      <div class="crm-kpi crm-kpi--yellow">
+        <div class="crm-kpi-label">Órdenes Activas</div>
+        <div class="crm-kpi-value" id="kpiOrdenesActivas">0</div>
       </div>
       <div class="crm-kpi crm-kpi--red">
         <div class="crm-kpi-label">Clientes en Riesgo</div>
         <div class="crm-kpi-value" id="kpiRiesgo">0</div>
+      </div>
+      <div class="crm-kpi crm-kpi--purple">
+        <div class="crm-kpi-label">Ticket Promedio</div>
+        <div class="crm-kpi-value" id="kpiTicket">$0</div>
+        <div class="crm-kpi-sub" id="kpiTicketSub"></div>
       </div>
     </div>
 

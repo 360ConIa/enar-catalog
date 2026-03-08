@@ -11,7 +11,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
   getFirestore, collection, doc, getDoc, setDoc, getDocs, updateDoc,
-  query, where, orderBy
+  query, where, orderBy, limit
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import {
   getAuth, onAuthStateChanged, signOut
@@ -20,7 +20,7 @@ import {
 import {
   $, ADMIN_EMAIL,
   formatearPrecio, formatearFecha, formatearNumero, tiempoRelativo,
-  badgeSalud, badgeABC, badgeRiesgo, badgeTendencia,
+  badgeEstado, badgeSalud, badgeABC, badgeRiesgo, badgeTendencia,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js';
 
@@ -50,7 +50,7 @@ const ROLES_EXCLUIDOS = ['vendedor', 'despachos', 'admin', 'gestor', 'administra
 // ═══════════ AUTH ═══════════
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = '/login.html';
+    window.location.href = 'index.html';
     return;
   }
 
@@ -83,7 +83,7 @@ onAuthStateChanged(auth, async (user) => {
 
 $('btnLogout').addEventListener('click', async () => {
   await signOut(auth);
-  window.location.href = '/login.html';
+  window.location.href = 'index.html';
 });
 
 // ═══════════ CARGAR CLIENTES ═══════════
@@ -147,7 +147,7 @@ function aplicarFiltros() {
   const texto = $('filtroTexto')?.value;
   if (texto && texto.trim()) {
     filtrados = buscarMultiCampo(filtrados, texto, [
-      'nombre', 'razon_social', 'nit', 'email', 'ciudad', 'nombre_comercial'
+      'nombre', 'razon_social', 'nit', 'email', 'ubicacion', 'ciudad', 'nombre_comercial', 'telefono', 'ruta'
     ]);
   }
 
@@ -201,7 +201,7 @@ function renderizarClientes() {
           <div class="crm-cliente-avatar">${inicial}</div>
           <div style="flex:1;min-width:0;">
             <div class="crm-cliente-nombre">${c.razon_social || c.nombre || c.email}</div>
-            <div class="crm-cliente-nit">NIT: ${c.nit || 'N/A'} · ${c.ciudad || '-'}</div>
+            <div class="crm-cliente-nit">NIT: ${c.nit || 'N/A'} · ${c.ubicacion || c.ciudad || '-'}</div>
           </div>
         </div>
         <div class="crm-cliente-badges">
@@ -236,60 +236,102 @@ function renderizarClientes() {
 }
 
 // ═══════════ DETALLE CLIENTE ═══════════
-window.verDetalle = function(clienteId) {
+window.verDetalle = async function(clienteId) {
   const cliente = todosLosClientes.find(c => c.id === clienteId);
   if (!cliente) return;
 
   const m = cliente._metricas || {};
 
   $('modalDetalleTitulo').textContent = cliente.razon_social || cliente.nombre || 'Cliente';
-  $('modalDetalleBody').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-      <div>
-        <h5 style="font-size:0.9rem;font-weight:600;margin-bottom:12px;">Datos del Cliente</h5>
-        <div style="font-size:0.85rem;display:flex;flex-direction:column;gap:8px;">
-          <div><strong>NIT:</strong> ${cliente.nit || 'N/A'}</div>
-          <div><strong>Nombre:</strong> ${cliente.nombre || '-'}</div>
-          <div><strong>Razón Social:</strong> ${cliente.razon_social || '-'}</div>
-          <div><strong>Nombre Comercial:</strong> ${cliente.nombre_comercial || '-'}</div>
-          <div><strong>Email:</strong> ${cliente.email || '-'}</div>
-          <div><strong>Teléfono:</strong> ${cliente.telefono || '-'}</div>
-          <div><strong>Ciudad:</strong> ${cliente.ciudad || '-'}</div>
-          <div><strong>Ruta:</strong> ${cliente.ruta || '-'}</div>
-          <div><strong>Tipo:</strong> ${cliente.tipo_cliente || cliente.tipo || '-'}</div>
-          <div><strong>Segmento:</strong> ${cliente.segmento || '-'}</div>
-          <div><strong>Lista Precio:</strong> ${cliente.lista_precio || '-'}</div>
+
+  // Render info immediately, load orders async
+  const renderDetalle = (ordenesHTML = '<p style="color:var(--crm-text-light);font-size:0.82rem;">Cargando órdenes...</p>') => {
+    $('modalDetalleBody').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div>
+          <h5 style="font-size:0.9rem;font-weight:600;margin-bottom:12px;">Datos del Cliente</h5>
+          <div style="font-size:0.85rem;display:flex;flex-direction:column;gap:8px;">
+            <div><strong>NIT:</strong> ${cliente.nit || 'N/A'}</div>
+            <div><strong>Nombre:</strong> ${cliente.nombre || '-'}</div>
+            <div><strong>Nombre Comercial:</strong> ${cliente.nombre_comercial || '-'}</div>
+            <div><strong>Email:</strong> ${cliente.email || '-'}</div>
+            <div><strong>Teléfono:</strong> ${cliente.telefono || '-'}</div>
+            <div><strong>Ubicación:</strong> ${cliente.ubicacion || cliente.ciudad || '-'}</div>
+            <div><strong>Dirección:</strong> ${cliente.direccion || '-'}</div>
+            <div><strong>Ruta:</strong> ${cliente.ruta || '-'}</div>
+            <div><strong>Tipo:</strong> ${cliente.tipo_cliente || cliente.tipo || '-'}</div>
+            <div><strong>Segmento:</strong> ${cliente.segmento || '-'}</div>
+            <div><strong>Lista Precio:</strong> ${cliente.lista_precios || cliente.lista_precio || '-'}</div>
+          </div>
+        </div>
+        <div>
+          <h5 style="font-size:0.9rem;font-weight:600;margin-bottom:12px;">Métricas</h5>
+          <div class="crm-cliente-badges" style="margin-bottom:12px;">
+            ${badgeSalud(m.estado_salud)}
+            ${badgeABC(m.clasificacion_abc)}
+            ${badgeRiesgo(m.riesgo_abandono)}
+            ${badgeTendencia(m.tendencia)}
+          </div>
+          <div style="font-size:0.85rem;display:flex;flex-direction:column;gap:8px;">
+            <div><strong>Última compra:</strong> ${m.ultima_compra ? formatearFecha(m.ultima_compra) : 'Nunca'}</div>
+            <div><strong>Días sin compra:</strong> <span style="${(m.dias_sin_compra || 0) > 60 ? 'color:var(--crm-red);font-weight:600' : ''}">${m.dias_sin_compra || 0}</span></div>
+            <div><strong>Frecuencia compra:</strong> cada ${m.frecuencia_compra_dias || 0} días</div>
+            <div><strong>Ticket promedio:</strong> ${formatearPrecio(m.ticket_promedio || 0)}</div>
+            <div><strong>Total compras año:</strong> ${formatearPrecio(m.total_compras_anio || 0)}</div>
+            <div><strong>Promedio mensual:</strong> ${formatearPrecio(m.promedio_mensual || 0)}</div>
+          </div>
         </div>
       </div>
-      <div>
-        <h5 style="font-size:0.9rem;font-weight:600;margin-bottom:12px;">Métricas</h5>
-        <div class="crm-cliente-badges" style="margin-bottom:12px;">
-          ${badgeSalud(m.estado_salud)}
-          ${badgeABC(m.clasificacion_abc)}
-          ${badgeRiesgo(m.riesgo_abandono)}
-          ${badgeTendencia(m.tendencia)}
-        </div>
-        <div style="font-size:0.85rem;display:flex;flex-direction:column;gap:8px;">
-          <div><strong>Última compra:</strong> ${m.ultima_compra ? formatearFecha(m.ultima_compra) : 'Nunca'}</div>
-          <div><strong>Días sin compra:</strong> <span style="${(m.dias_sin_compra || 0) > 60 ? 'color:var(--crm-red);font-weight:600' : ''}">${m.dias_sin_compra || 0}</span></div>
-          <div><strong>Frecuencia compra:</strong> cada ${m.frecuencia_compra_dias || 0} días</div>
-          <div><strong>Ticket promedio:</strong> ${formatearPrecio(m.ticket_promedio || 0)}</div>
-          <div><strong>Total compras año:</strong> ${formatearPrecio(m.total_compras_anio || 0)}</div>
-          <div><strong>Promedio mensual:</strong> ${formatearPrecio(m.promedio_mensual || 0)}</div>
-          <div><strong>Compra mínima:</strong> ${formatearPrecio(m.compra_minima || 0)}</div>
-          <div><strong>Compra máxima:</strong> ${formatearPrecio(m.compra_maxima || 0)}</div>
-          <div><strong>Total órdenes:</strong> ${m.total_ordenes || 0}</div>
-        </div>
+      <div style="margin-top:20px;">
+        <h5 style="font-size:0.9rem;font-weight:600;margin-bottom:12px;">Últimas Órdenes</h5>
+        ${ordenesHTML}
       </div>
-    </div>
-  `;
+    `;
+  };
+
+  renderDetalle();
+  $('modalDetalle').classList.add('open');
 
   $('btnEditarDesdeDetalle').onclick = () => {
     cerrarModal('modalDetalle');
     abrirModalCliente(clienteId);
   };
 
-  $('modalDetalle').classList.add('open');
+  // Fetch recent orders for this client
+  try {
+    const ordenesSnap = await getDocs(
+      query(collection(db, 'ordenes'),
+        where('user_id', '==', clienteId),
+        orderBy('created_at', 'desc'),
+        limit(5)
+      )
+    );
+
+    const ordenes = [];
+    ordenesSnap.forEach(d => ordenes.push({ id: d.id, ...d.data() }));
+
+    const ordenesHTML = ordenes.length === 0
+      ? '<p style="color:var(--crm-text-light);font-size:0.82rem;">Sin órdenes registradas</p>'
+      : `<table class="crm-tabla" style="font-size:0.82rem;">
+          <thead><tr><th>#</th><th>Fecha</th><th>Items</th><th>Total</th><th>Estado</th></tr></thead>
+          <tbody>
+            ${ordenes.map(o => `
+              <tr>
+                <td>${o.numero_orden || o.id.substring(0, 8)}</td>
+                <td>${formatearFecha(o.created_at)}</td>
+                <td>${o.cantidad_productos || (o.items || []).length}</td>
+                <td>${formatearPrecio(o.total || 0)}</td>
+                <td>${badgeEstado(o.estado)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`;
+
+    renderDetalle(ordenesHTML);
+  } catch (error) {
+    console.error('Error cargando órdenes del cliente:', error);
+    renderDetalle('<p style="color:var(--crm-text-light);font-size:0.82rem;">Error al cargar órdenes</p>');
+  }
 };
 
 // ═══════════ CREAR/EDITAR CLIENTE ═══════════
@@ -305,9 +347,9 @@ function abrirModalCliente(clienteId) {
     $('inputNombreComercial').value = cliente.nombre_comercial || '';
     $('inputEmail').value = cliente.email || '';
     $('inputTelefono').value = cliente.telefono || '';
-    $('inputCiudad').value = cliente.ciudad || '';
+    $('inputCiudad').value = cliente.ubicacion || cliente.ciudad || '';
     $('inputRuta').value = cliente.ruta || '';
-    $('inputListaPrecio').value = cliente.lista_precio || '';
+    $('inputListaPrecio').value = cliente.lista_precios || cliente.lista_precio || '';
     $('inputTipo').value = cliente.tipo_cliente || cliente.tipo || '';
     $('inputSegmento').value = cliente.segmento || '';
     $('inputEstado').value = cliente.estado || 'aprobado';
@@ -340,16 +382,14 @@ async function guardarCliente() {
 
   const datos = {
     nombre: nombre,
-    razon_social: nombre,
     nit: nit,
     nombre_comercial: $('inputNombreComercial').value.trim(),
     email: $('inputEmail').value.trim(),
     telefono: $('inputTelefono').value.trim(),
-    ciudad: $('inputCiudad').value.trim(),
+    ubicacion: $('inputCiudad').value.trim(),
     ruta: $('inputRuta').value.trim(),
-    lista_precio: $('inputListaPrecio').value,
+    lista_precios: $('inputListaPrecio').value,
     tipo_cliente: $('inputTipo').value,
-    tipo: $('inputTipo').value,
     segmento: $('inputSegmento').value,
     estado: $('inputEstado').value,
     updated_at: new Date().toISOString()

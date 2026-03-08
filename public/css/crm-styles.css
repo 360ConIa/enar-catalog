@@ -54,6 +54,7 @@
 
 .crm-header-logo {
   height: 36px;
+  filter: brightness(0) invert(1);
 }
 
 .crm-header h1 {
