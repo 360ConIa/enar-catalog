@@ -261,34 +261,37 @@ function renderCardOrden(orden) {
   const totalUnidades = items.reduce((sum, i) => sum + (i.cantidad || 0), 0);
 
   const ubicacion = orden._ubicacion || orden.direccion_entrega?.ciudad || '';
-  const razonSocial = orden.clienteNombre || orden.cliente?.razon_social || orden.cliente?.nombre || '';
-  const nombreCorto = orden.clienteNit ? `NIT ${orden.clienteNit}` : (orden.cliente?.nit ? `NIT ${orden.cliente.nit}` : '');
+  const clienteNombre = orden.clienteNombre || orden.cliente?.razon_social || orden.cliente?.nombre || 'Sin cliente';
+  const userCache = orden.user_id ? usuariosCache[orden.user_id] : null;
+  const nombreComercial = userCache?.nombre_comercial || userCache?.nombre || orden.cliente?.nombre_comercial || '';
+  const clienteNit = orden.clienteNit || orden.cliente?.nit || '';
   const fechaEntrega = orden.fecha_entrega_estimada ? formatearFechaHora(orden.fecha_entrega_estimada) : '';
-  const telefono = orden._telefono || orden.cliente?.telefono || '';
-  const telefonoLimpio = telefono.replace(/\D/g, '');
   const tieneNovedad = orden.novedad || false;
-  const total = orden.total || 0;
 
   return `
     <div class="crm-despacho-card" data-orden-id="${orden.id}">
-      <!-- Zona 1: Cabecera -->
+      <!-- Fila 1: Cabecera -->
       <div class="crm-despacho-header">
-        <div class="crm-despacho-header-left">
-          <div class="crm-despacho-header-row">
+        <div class="crm-despacho-header-row">
+          <div class="crm-despacho-header-id">
             <span class="crm-despacho-orden-id">${orden.numero_orden || orden.id.substring(0, 8)}</span>
-            ${badgeEstado(orden.estado)}
-            ${ubicacion ? `<span class="crm-despacho-ubicacion"><i class="bi bi-cursor-fill"></i> ${ubicacion}</span>` : ''}
+            <div class="crm-despacho-fecha-creacion">${formatearFechaHora(orden.created_at)}</div>
           </div>
-          <div class="crm-despacho-fecha-creacion">${formatearFechaHora(orden.created_at)}</div>
-        </div>
-        <div class="crm-despacho-header-right">
-          ${razonSocial ? `<span class="crm-despacho-razon-social">${razonSocial}</span>` : ''}
-          ${nombreCorto ? `<span class="crm-despacho-nombre-corto">${nombreCorto}</span>` : ''}
-          ${telefonoLimpio ? `<a class="crm-despacho-wa" href="https://wa.me/${telefonoLimpio}" target="_blank" title="WhatsApp"><i class="bi bi-whatsapp"></i></a>` : ''}
+          <span class="crm-despacho-sep"></span>
+          ${badgeEstado(orden.estado)}
+          <span class="crm-despacho-sep"></span>
+          ${ubicacion ? `<span class="crm-despacho-ubicacion"><i class="bi bi-pin-map-fill"></i> ${ubicacion}</span><span class="crm-despacho-sep"></span>` : ''}
+          <div class="crm-despacho-header-cliente">
+            <span class="crm-despacho-cliente-nombre">
+              ${clienteNombre}
+              ${nombreComercial && nombreComercial !== clienteNombre ? `<span class="crm-despacho-nombre-comercial">${nombreComercial}</span>` : ''}
+            </span>
+            ${clienteNit ? `<div class="crm-despacho-cliente-nit">NIT ${clienteNit}</div>` : ''}
+          </div>
         </div>
       </div>
 
-      <!-- Zona 2: Cuerpo -->
+      <!-- Fila 2: Cuerpo -->
       <div class="crm-despacho-body">
         <div class="crm-despacho-body-left">
           <span class="crm-despacho-novedad ${tieneNovedad ? 'crm-despacho-novedad--alerta' : 'crm-despacho-novedad--ok'}">
@@ -297,10 +300,10 @@ function renderCardOrden(orden) {
           ${fechaEntrega ? `<span style="color:var(--crm-text-light);">—</span><span class="crm-despacho-fecha-entrega"><i class="bi bi-calendar3"></i> ${fechaEntrega}</span>` : ''}
         </div>
         <div class="crm-despacho-body-right">
-          <button class="crm-despacho-action-btn" onclick="abrirAlistamiento('${orden.id}')">
-            <i class="bi bi-eye"></i> Ver
+          <button class="crm-despacho-action-btn crm-despacho-action-btn--red" onclick="abrirAlistamiento('${orden.id}')">
+            <i class="bi bi-eye"></i> Alistamiento
           </button>
-          <button class="crm-despacho-action-btn" onclick="toggleChat('${orden.id}', this)">
+          <button class="crm-despacho-action-btn crm-despacho-action-btn--green" onclick="toggleChat('${orden.id}', this)">
             <i class="bi bi-chat-dots"></i> Chat
           </button>
         </div>
@@ -322,13 +325,12 @@ function renderCardOrden(orden) {
         </div>
       </div>
 
-      <!-- Zona 3: Pie -->
+      <!-- Fila 3: Pie -->
       <div class="crm-despacho-footer">
-        <div class="crm-despacho-footer-left" onclick="verDetalleDespacho('${orden.id}')" style="cursor:pointer;">
-          <i class="bi bi-caret-right-fill"></i> Orden de ${totalItems} productos
+        <div class="crm-despacho-footer-left" onclick="toggleDetalle('${orden.id}')" style="cursor:pointer;">
+          <i class="bi bi-caret-right-fill crm-despacho-toggle" id="toggleIcon-${orden.id}"></i> Orden de ${totalItems} productos
         </div>
         <div class="crm-despacho-footer-right">
-          <span class="crm-despacho-pill crm-despacho-pill--total">${formatearPrecio(total)}</span>
           <span class="crm-despacho-pill crm-despacho-pill--uds">${formatearNumero(totalUnidades)}</span>
           <span class="crm-despacho-pill crm-despacho-pill--peso">${formatearPeso(pesoTotal)}</span>
           <span title="${preparados}/${totalItems} preparados" style="display:flex;align-items:center;gap:4px;font-size:0.73rem;color:var(--crm-text-light);">
@@ -337,6 +339,9 @@ function renderCardOrden(orden) {
           </span>
         </div>
       </div>
+
+      <!-- Dropdown detalle inline -->
+      <div class="crm-despacho-dropdown" id="dropdown-${orden.id}"></div>
     </div>
   `;
 }
@@ -351,26 +356,102 @@ window.abrirAlistamiento = function(ordenId) {
   $('modalAlistamientoTitulo').textContent = `Alistamiento — ${orden.numero_orden || ordenId.substring(0, 8)}`;
 
   $('modalAlistamientoBody').innerHTML = `
-    <ul class="crm-checklist" id="checklist-${ordenId}">
-      ${items.map((item, idx) => `
-        <li class="crm-checklist-item" data-idx="${idx}">
-          <input type="checkbox" class="crm-checklist-check"
-            ${item.preparado ? 'checked' : ''}
-            onchange="marcarPreparado('${ordenId}', ${idx}, this.checked)">
-          <div class="crm-checklist-producto">
-            <div class="crm-checklist-producto-nombre">${item.titulo || item.nombre || item.cod_interno || item.sku || '-'}</div>
-            <div class="crm-checklist-producto-cod">${item.cod_interno || item.sku || '-'} · ${formatearPrecio(item.precio_unitario)}</div>
-          </div>
-          <div class="crm-checklist-qty">
-            <span class="crm-checklist-qty-label">Pedido: ${item.cantidad}</span>
-            <input type="number" value="${item.cantidad_real || item.cantidad || 0}" min="0"
-              style="width:60px;" onchange="actualizarCantidadReal('${ordenId}', ${idx}, this.value)">
-            <span class="crm-checklist-qty-label">Real</span>
-          </div>
-        </li>
-      `).join('')}
-    </ul>
+    <div id="progresoAlistamiento-${ordenId}" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span id="progresoTexto-${ordenId}" style="font-size:0.82rem;color:var(--crm-text-light);"></span>
+      <span id="progresoPct-${ordenId}" style="font-size:0.82rem;font-weight:600;"></span>
+    </div>
+    <div style="height:6px;background:white;border:1px solid var(--crm-border);border-radius:3px;overflow:hidden;margin-bottom:16px;">
+      <div id="progresoBar-${ordenId}" style="height:100%;width:0%;border-radius:3px;transition:width 0.3s;"></div>
+    </div>
+    <div class="crm-tabla-wrapper">
+      <table class="crm-tabla" id="tablaAlistamiento-${ordenId}">
+        <thead>
+          <tr>
+            <th style="width:50px;text-align:center;font-size:0.7rem;">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                <span>Comp.</span>
+                <input type="checkbox" class="crm-checklist-check" id="checkAllComp-${ordenId}"
+                  onchange="seleccionarTodosEstado('${ordenId}','comp',this.checked)" title="Marcar todos Completo">
+              </div>
+            </th>
+            <th style="width:50px;text-align:center;font-size:0.7rem;">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                <span>Parcial</span>
+                <input type="checkbox" class="crm-checklist-check" id="checkAllParcial-${ordenId}"
+                  onchange="seleccionarTodosEstado('${ordenId}','parcial',this.checked)" title="Marcar todos Parcial">
+              </div>
+            </th>
+            <th style="width:50px;text-align:center;font-size:0.7rem;">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                <span style="white-space:nowrap;">Sin Stock</span>
+                <input type="checkbox" class="crm-checklist-check" id="checkAllSinstock-${ordenId}"
+                  onchange="seleccionarTodosEstado('${ordenId}','sinstock',this.checked)" title="Marcar todos Sin Stock">
+              </div>
+            </th>
+            <th>Producto</th>
+            <th style="width:50px;text-align:center;">Img</th>
+            <th style="width:70px;text-align:center;">Pedida</th>
+            <th style="width:90px;text-align:center;">Despachada</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map((item, idx) => {
+            const cantPedida = item.cantidad || 0;
+            const cantReal = item.cantidad_real ?? cantPedida;
+            let estadoItem = '';
+            if (item.preparado && cantReal === cantPedida) estadoItem = 'comp';
+            else if (item.preparado && cantReal > 0 && cantReal < cantPedida) estadoItem = 'parcial';
+            else if (cantReal === 0 && item.estado_alistamiento === 'sinstock') estadoItem = 'sinstock';
+            else if (item.estado_alistamiento) estadoItem = item.estado_alistamiento;
+
+            const imgSrc = item.imagen_principal || item.imagen || '';
+            const prod = productosCache[item.cod_interno || item.sku];
+            const imgUrl = imgSrc || (prod && prod.imagen_principal) || '';
+
+            return `
+            <tr data-idx="${idx}" class="${estadoItem === 'comp' ? 'alist-row-comp' : estadoItem === 'sinstock' ? 'alist-row-sinstock' : ''}">
+              <td style="text-align:center;">
+                <button type="button" class="alist-estado-btn alist-comp ${estadoItem === 'comp' ? 'activo' : ''}"
+                  onclick="cambiarEstadoItem('${ordenId}',${idx},'comp',this)" title="Completo">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+              </td>
+              <td style="text-align:center;">
+                <button type="button" class="alist-estado-btn alist-parcial ${estadoItem === 'parcial' ? 'activo' : ''}"
+                  onclick="cambiarEstadoItem('${ordenId}',${idx},'parcial',this)" title="Parcial">
+                  <i class="bi bi-dash-lg"></i>
+                </button>
+              </td>
+              <td style="text-align:center;">
+                <button type="button" class="alist-estado-btn alist-sinstock ${estadoItem === 'sinstock' ? 'activo' : ''}"
+                  onclick="cambiarEstadoItem('${ordenId}',${idx},'sinstock',this)" title="Sin Stock">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </td>
+              <td>
+                <div style="font-weight:500;">${item.titulo || item.nombre || '-'}</div>
+                <div style="font-size:0.73rem;color:var(--crm-text-light);">${item.cod_interno || item.sku || '-'}</div>
+              </td>
+              <td style="text-align:center;">
+                ${imgUrl
+                  ? `<img src="${imgUrl}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:4px;" onerror="this.style.display='none'">`
+                  : `<i class="bi bi-image" style="font-size:1.2rem;color:var(--crm-text-light);"></i>`}
+              </td>
+              <td style="text-align:center;font-weight:600;">${cantPedida}</td>
+              <td style="text-align:center;">
+                <input type="number" id="cantReal-${ordenId}-${idx}" value="${cantReal}" min="0"
+                  style="width:70px;padding:4px 6px;border:1px solid var(--crm-border);border-radius:4px;text-align:center;font-size:0.85rem;${estadoItem !== 'parcial' ? 'background:#f8fafc;' : ''}"
+                  ${estadoItem !== 'parcial' ? 'readonly' : ''}
+                  onchange="actualizarCantidadReal('${ordenId}',${idx},this.value)">
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
   `;
+
+  actualizarProgresoAlistamiento(ordenId);
 
   $('modalAlistamientoFooter').innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:8px;width:100%;justify-content:space-between;">
@@ -386,69 +467,206 @@ window.abrirAlistamiento = function(ordenId) {
   $('modalAlistamiento').classList.add('open');
 };
 
-// ═══════════ MODAL DETALLE DESPACHO ═══════════
-window.verDetalleDespacho = function(ordenId) {
+// ═══════════ ESTADO ITEM (Comp/Parcial/Sin Stock) ═══════════
+window.cambiarEstadoItem = async function(ordenId, idx, tipo, btn) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
 
   const items = orden.items || orden.productos || [];
-  const clienteNombre = orden.clienteNombre || orden.cliente?.nombre || orden.cliente?.razon_social || '-';
-  const clienteNit = orden.clienteNit || orden.cliente?.nit || '-';
-  const creadaPor = orden.creadaPorEmail || orden.creadaPor || '-';
+  if (!items[idx]) return;
 
-  const subtotal = items.reduce((s, i) => s + ((i.precio_unitario || 0) * (i.cantidad || 0)), 0);
-  const total = orden.total || subtotal;
-  const iva = total - subtotal > 0 ? total - subtotal : 0;
+  const tr = btn.closest('tr');
+  const btns = tr.querySelectorAll('.alist-estado-btn');
+  const yaActivo = btn.classList.contains('activo');
 
-  $('modalDetalleTitulo').textContent = `Detalle — ${orden.numero_orden || ordenId.substring(0, 8)}`;
+  // Desactivar todos en esta fila
+  btns.forEach(b => { b.classList.remove('activo'); });
+  tr.className = '';
+  tr.dataset.idx = idx;
 
-  $('modalDetalleBody').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;font-size:0.85rem;">
-      <div><strong>Cliente:</strong> ${clienteNombre}</div>
-      <div><strong>NIT:</strong> ${clienteNit}</div>
-      <div><strong>Estado:</strong> ${badgeEstado(orden.estado)}</div>
-      <div><strong>Fecha:</strong> ${formatearFecha(orden.created_at)}</div>
-      <div><strong>Creada por:</strong> ${creadaPor}</div>
-      <div><strong>Ubicación:</strong> ${orden._ubicacion || orden.direccion_entrega?.ciudad || '-'}</div>
-    </div>
+  const cantPedida = items[idx].cantidad || 0;
+  const inputCant = $(`cantReal-${ordenId}-${idx}`);
 
-    <div class="crm-tabla-wrapper">
-      <table class="crm-tabla">
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Producto</th>
-            <th style="text-align:right;">Precio</th>
-            <th style="text-align:center;">Cant.</th>
-            <th style="text-align:right;">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${items.map(item => `
+  if (yaActivo) {
+    // Toggle off
+    items[idx].preparado = false;
+    items[idx].estado_alistamiento = '';
+    if (inputCant) { inputCant.readOnly = true; inputCant.style.background = '#f8fafc'; }
+  } else {
+    btn.classList.add('activo');
+    if (tipo === 'comp') {
+      tr.classList.add('alist-row-comp');
+      items[idx].preparado = true;
+      items[idx].estado_alistamiento = 'comp';
+      items[idx].cantidad_real = cantPedida;
+      if (inputCant) { inputCant.value = cantPedida; inputCant.readOnly = true; inputCant.style.background = '#f8fafc'; }
+    } else if (tipo === 'parcial') {
+      items[idx].preparado = true;
+      items[idx].estado_alistamiento = 'parcial';
+      if (inputCant) { inputCant.readOnly = false; inputCant.style.background = ''; inputCant.focus(); }
+    } else if (tipo === 'sinstock') {
+      tr.classList.add('alist-row-sinstock');
+      items[idx].preparado = false;
+      items[idx].estado_alistamiento = 'sinstock';
+      items[idx].cantidad_real = 0;
+      if (inputCant) { inputCant.value = 0; inputCant.readOnly = true; inputCant.style.background = '#f8fafc'; }
+    }
+  }
+
+  items[idx].preparado_por = currentUser.email;
+  items[idx].fecha_preparado = new Date().toISOString();
+
+  actualizarProgresoAlistamiento(ordenId);
+
+  try {
+    await updateDoc(doc(db, 'ordenes', ordenId), {
+      items: items, productos: items, updated_at: new Date().toISOString()
+    });
+    orden.items = items;
+    orden.productos = items;
+  } catch (error) {
+    console.error('Error actualizando estado item:', error);
+    showToast('Error al actualizar', 'error');
+  }
+};
+
+// ═══════════ SELECCIONAR TODOS POR ESTADO ═══════════
+window.seleccionarTodosEstado = async function(ordenId, tipo, seleccionar) {
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!orden) return;
+
+  const items = orden.items || orden.productos || [];
+  const filas = document.querySelectorAll(`#tablaAlistamiento-${ordenId} tbody tr`);
+
+  filas.forEach((tr, idx) => {
+    if (!items[idx]) return;
+    const btns = tr.querySelectorAll('.alist-estado-btn');
+    const inputCant = $(`cantReal-${ordenId}-${idx}`);
+    const cantPedida = items[idx].cantidad || 0;
+
+    // Desactivar todos
+    btns.forEach(b => b.classList.remove('activo'));
+    tr.className = '';
+    tr.dataset.idx = idx;
+
+    if (seleccionar) {
+      const btnTarget = tr.querySelector(`.alist-${tipo}`);
+      if (btnTarget) btnTarget.classList.add('activo');
+
+      if (tipo === 'comp') {
+        tr.classList.add('alist-row-comp');
+        items[idx].preparado = true;
+        items[idx].estado_alistamiento = 'comp';
+        items[idx].cantidad_real = cantPedida;
+        if (inputCant) { inputCant.value = cantPedida; inputCant.readOnly = true; inputCant.style.background = '#f8fafc'; }
+      } else if (tipo === 'parcial') {
+        items[idx].preparado = true;
+        items[idx].estado_alistamiento = 'parcial';
+        if (inputCant) { inputCant.readOnly = false; inputCant.style.background = ''; }
+      } else if (tipo === 'sinstock') {
+        tr.classList.add('alist-row-sinstock');
+        items[idx].preparado = false;
+        items[idx].estado_alistamiento = 'sinstock';
+        items[idx].cantidad_real = 0;
+        if (inputCant) { inputCant.value = 0; inputCant.readOnly = true; inputCant.style.background = '#f8fafc'; }
+      }
+    } else {
+      items[idx].preparado = false;
+      items[idx].estado_alistamiento = '';
+      if (inputCant) { inputCant.readOnly = true; inputCant.style.background = '#f8fafc'; }
+    }
+  });
+
+  actualizarProgresoAlistamiento(ordenId);
+
+  try {
+    await updateDoc(doc(db, 'ordenes', ordenId), {
+      items: items, productos: items, updated_at: new Date().toISOString()
+    });
+    orden.items = items;
+    orden.productos = items;
+    showToast(seleccionar ? `Todos marcados como ${tipo}` : 'Selección limpiada', 'success');
+  } catch (error) {
+    console.error('Error masivo:', error);
+    showToast('Error al actualizar', 'error');
+  }
+};
+
+// ═══════════ PROGRESO ALISTAMIENTO ═══════════
+function actualizarProgresoAlistamiento(ordenId) {
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!orden) return;
+  const items = orden.items || orden.productos || [];
+
+  const comp = items.filter(i => i.estado_alistamiento === 'comp').length;
+  const parcial = items.filter(i => i.estado_alistamiento === 'parcial').length;
+  const sinstock = items.filter(i => i.estado_alistamiento === 'sinstock').length;
+  const total = items.length;
+  const pct = total > 0 ? Math.round((comp / total) * 100) : 0;
+
+  let texto = `${comp} completos`;
+  if (parcial > 0) texto += `, ${parcial} parciales`;
+  if (sinstock > 0) texto += `, ${sinstock} sin stock`;
+
+  const textoEl = $(`progresoTexto-${ordenId}`);
+  const pctEl = $(`progresoPct-${ordenId}`);
+  const barEl = $(`progresoBar-${ordenId}`);
+
+  if (textoEl) textoEl.textContent = texto;
+  if (pctEl) pctEl.textContent = `${pct}%`;
+  if (barEl) {
+    barEl.style.width = `${pct}%`;
+    barEl.style.background = pct === 100 ? 'var(--crm-green)' : 'var(--crm-primary-light)';
+  }
+}
+
+// ═══════════ DROPDOWN DETALLE INLINE ═══════════
+window.toggleDetalle = function(ordenId) {
+  const dropdown = $(`dropdown-${ordenId}`);
+  const icon = $(`toggleIcon-${ordenId}`);
+  if (!dropdown) return;
+
+  const isOpen = dropdown.classList.toggle('open');
+  if (icon) icon.classList.toggle('rotated', isOpen);
+
+  // Render content only on first open
+  if (isOpen && !dropdown.dataset.loaded) {
+    const orden = todasLasOrdenes.find(o => o.id === ordenId);
+    if (!orden) return;
+
+    const items = orden.items || orden.productos || [];
+    const subtotal = items.reduce((s, i) => s + ((i.precio_unitario || 0) * (i.cantidad || 0)), 0);
+    const total = orden.total || subtotal;
+    const iva = total - subtotal > 0 ? total - subtotal : 0;
+
+    dropdown.innerHTML = `
+      <div class="crm-tabla-wrapper" style="border:none;box-shadow:none;">
+        <table class="crm-tabla">
+          <thead>
             <tr>
-              <td>${item.cod_interno || item.sku || '-'}</td>
-              <td>${item.titulo || item.nombre || '-'}</td>
-              <td style="text-align:right;">${formatearPrecio(item.precio_unitario)}</td>
-              <td style="text-align:center;">${item.cantidad || 0}</td>
-              <td style="text-align:right;">${formatearPrecio((item.precio_unitario || 0) * (item.cantidad || 0))}</td>
+              <th>Código</th>
+              <th>Producto</th>
+              <th style="text-align:right;">Precio</th>
+              <th style="text-align:center;">Cant.</th>
+              <th style="text-align:right;">Subtotal</th>
             </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
-
-    <div style="margin-top:16px;text-align:right;font-size:0.9rem;">
-      <div style="color:var(--crm-text-light);">Subtotal: ${formatearPrecio(subtotal)}</div>
-      ${iva > 0 ? `<div style="color:var(--crm-text-light);">IVA: ${formatearPrecio(iva)}</div>` : ''}
-      <div style="font-weight:700;font-size:1.05rem;margin-top:4px;">Total: ${formatearPrecio(total)}</div>
-    </div>
-  `;
-
-  $('modalDetalleFooter').innerHTML = `
-    <button class="crm-btn crm-btn--secondary crm-btn--sm" onclick="cerrarModal('modalDetalle')">Cerrar</button>
-  `;
-
-  $('modalDetalle').classList.add('open');
+          </thead>
+          <tbody>
+            ${items.map(item => `
+              <tr>
+                <td>${item.cod_interno || item.sku || '-'}</td>
+                <td>${item.titulo || item.nombre || '-'}</td>
+                <td style="text-align:right;">${formatearPrecio(item.precio_unitario)}</td>
+                <td style="text-align:center;">${item.cantidad || 0}</td>
+                <td style="text-align:right;">${formatearPrecio((item.precio_unitario || 0) * (item.cantidad || 0))}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    dropdown.dataset.loaded = 'true';
+  }
 };
 
 // ═══════════ TOGGLE CHAT INLINE ═══════════
@@ -472,11 +690,17 @@ window.toggleChat = function(ordenId, btn) {
 
 function renderBotonesEstado(orden) {
   const transiciones = obtenerTransicionesPermitidas(orden.estado);
+  const colores = {
+    completada: 'background:#d1fae5;color:#065f46;',
+    parcial: 'background:#ffedd5;color:#9a3412;',
+    en_espera: 'background:#f3e8ff;color:#6b21a8;',
+    en_proceso: 'background:#e0e7ff;color:#3730a3;',
+    cancelada: 'background:#fee2e2;color:#991b1b;',
+    aprobada: 'background:#dbeafe;color:#1e40af;'
+  };
   return transiciones.map(estado => {
-    const esCompletada = estado === 'completada';
-    const esCancelada = estado === 'cancelada';
-    const clase = esCompletada ? 'crm-btn--success' : esCancelada ? 'crm-btn--danger' : 'crm-btn--primary';
-    return `<button class="crm-btn ${clase} crm-btn--sm" onclick="cambiarEstado('${orden.id}', '${estado}')">
+    const estilo = colores[estado] || 'background:var(--crm-primary-light);color:white;';
+    return `<button class="crm-btn crm-btn--sm" style="${estilo}" onclick="cambiarEstado('${orden.id}', '${estado}')">
       ${ESTADOS_ORDEN_LABELS[estado]}
     </button>`;
   }).join('');
