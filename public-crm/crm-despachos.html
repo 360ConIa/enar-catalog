@@ -50,39 +50,22 @@
 
   <!-- Main Content -->
   <main id="mainContent" class="crm-container" style="display:none;">
-    <!-- KPIs -->
-    <div class="crm-kpis">
-      <div class="crm-kpi crm-kpi--yellow">
-        <div class="crm-kpi-label">Alistamiento</div>
-        <div class="crm-kpi-value" id="kpiAlistamiento">0</div>
-      </div>
-      <div class="crm-kpi crm-kpi--purple">
-        <div class="crm-kpi-label">En Espera</div>
-        <div class="crm-kpi-value" id="kpiEspera">0</div>
-      </div>
-      <div class="crm-kpi">
-        <div class="crm-kpi-label">En Proceso / Parcial</div>
-        <div class="crm-kpi-value" id="kpiProceso">0</div>
-      </div>
-      <div class="crm-kpi crm-kpi--green">
-        <div class="crm-kpi-label">Completadas</div>
-        <div class="crm-kpi-value" id="kpiCompletas">0</div>
-      </div>
-    </div>
-
     <!-- Tabs -->
     <div class="crm-tabs">
-      <button class="crm-tab active" data-tab="alistamiento">
-        <i class="bi bi-box-seam"></i> Alistamiento <span class="crm-tab-count" id="tabCountAlistamiento">0</span>
+      <button class="crm-tab active" data-tab="proceso">
+        <i class="bi bi-arrow-repeat"></i> En Proceso <span class="crm-tab-count" id="tabCountProceso">0</span>
+      </button>
+      <button class="crm-tab" data-tab="completadas">
+        <i class="bi bi-check-circle"></i> Completas <span class="crm-tab-count" id="tabCountCompletadas">0</span>
+      </button>
+      <button class="crm-tab" data-tab="parcial">
+        <i class="bi bi-pie-chart"></i> Parcial <span class="crm-tab-count" id="tabCountParcial">0</span>
       </button>
       <button class="crm-tab" data-tab="espera">
         <i class="bi bi-hourglass-split"></i> En Espera <span class="crm-tab-count" id="tabCountEspera">0</span>
       </button>
-      <button class="crm-tab" data-tab="proceso">
-        <i class="bi bi-arrow-repeat"></i> En Proceso <span class="crm-tab-count" id="tabCountProceso">0</span>
-      </button>
-      <button class="crm-tab" data-tab="completadas">
-        <i class="bi bi-check-circle"></i> Completadas <span class="crm-tab-count" id="tabCountCompletadas">0</span>
+      <button class="crm-tab" data-tab="canceladas">
+        <i class="bi bi-x-circle"></i> Canceladas <span class="crm-tab-count" id="tabCountCanceladas">0</span>
       </button>
     </div>
 
@@ -114,6 +97,20 @@
     <!-- Pagination -->
     <div id="paginacionDespachos"></div>
   </main>
+
+  <!-- Modal Alistamiento -->
+  <div id="modalAlistamiento" class="crm-modal-overlay">
+    <div class="crm-modal crm-modal--lg">
+      <div class="crm-modal-header">
+        <h3 id="modalAlistamientoTitulo">Alistamiento</h3>
+        <button class="crm-modal-close" onclick="cerrarModal('modalAlistamiento')">&times;</button>
+      </div>
+      <div class="crm-modal-body" id="modalAlistamientoBody">
+      </div>
+      <div class="crm-modal-footer" id="modalAlistamientoFooter">
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Detalle Orden -->
   <div id="modalDetalle" class="crm-modal-overlay">

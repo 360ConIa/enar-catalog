@@ -178,7 +178,7 @@ async function cargarDashboard(user, perfil, esAdmin) {
     $('kpiRiesgo').textContent = formatearNumero(clientesEnRiesgo);
 
     $('kpiTicket').textContent = formatearPrecio(ticketPromedio);
-    $('kpiTicketSub').textContent = `${ordenesCompletadas.length} completadas`;
+    $('kpiTicketSub').textContent = `${ordenesCompletadas.length} completas`;
 
     // ─── Chart: Ventas por Mes (line) ───
     const ventasPorMes = [];

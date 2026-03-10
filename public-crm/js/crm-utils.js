@@ -25,7 +25,7 @@ export const ESTADOS_ORDEN_LABELS = {
   aprobada: 'Aprobada',
   en_proceso: 'En Proceso',
   en_espera: 'En Espera',
-  completada: 'Completada',
+  completada: 'Completa',
   parcial: 'Parcial',
   cancelada: 'Cancelada'
 };
@@ -160,11 +160,9 @@ export function formatearPeso(kg) {
 // ═══════════ STATE MACHINE ═══════════
 
 const TRANSICIONES_ESTADO = {
-  pendiente: ['aprobada', 'cancelada'],
-  aprobada: ['en_proceso', 'en_espera', 'cancelada'],
+  pendiente: ['en_proceso', 'cancelada'],
   en_proceso: ['completada', 'parcial', 'en_espera', 'cancelada'],
-  en_espera: ['en_proceso', 'aprobada', 'cancelada'],
-  parcial: ['completada', 'en_proceso'],
+  parcial: ['completada', 'en_espera', 'cancelada'],
   completada: [],
   cancelada: []
 };

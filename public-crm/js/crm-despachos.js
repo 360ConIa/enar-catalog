@@ -3,7 +3,7 @@
  * CRM DESPACHOS - ENAR
  * ============================================
  * Módulo de gestión de despachos y logística.
- * Tabs: Alistamiento, En Espera, En Proceso, Completadas
+ * Tabs: Alistamiento, En Espera, En Proceso, Completas
  * Checklist de preparación, chat, CSV, peso.
  * ============================================
  */
@@ -41,7 +41,7 @@ let currentUser = null;
 let userPerfil = null;
 let todasLasOrdenes = [];
 let ordenesFiltradas = [];
-let tabActual = 'alistamiento';
+let tabActual = 'proceso';
 let chatUnsubscribers = {};
 let productosCache = {}; // SKU/cod_interno → { Peso_Kg, nombre, ... }
 let usuariosCache = {}; // uid → { telefono, ubicacion, ruta, direccion }
@@ -56,10 +56,11 @@ function toDate(val) {
 }
 
 const TAB_ESTADOS = {
-  alistamiento: ['aprobada'],
+  proceso: ['en_proceso'],
+  completadas: ['completada'],
+  parcial: ['parcial'],
   espera: ['en_espera'],
-  proceso: ['en_proceso', 'parcial'],
-  completadas: ['completada']
+  canceladas: ['cancelada']
 };
 
 // ═══════════ AUTH ═══════════
@@ -167,7 +168,6 @@ async function cargarOrdenes() {
     });
 
     cargarFiltroRutas();
-    actualizarKPIs();
     actualizarTabCounts();
     aplicarFiltrosYRender();
   } catch (error) {
@@ -188,22 +188,6 @@ function cargarFiltroRutas() {
   [...rutas].sort().forEach(r => {
     select.innerHTML += `<option value="${r}">${r}</option>`;
   });
-}
-
-// ═══════════ KPIs ═══════════
-function actualizarKPIs() {
-  const conteos = { alistamiento: 0, espera: 0, proceso: 0, completas: 0 };
-  todasLasOrdenes.forEach(o => {
-    if (o.estado === 'aprobada') conteos.alistamiento++;
-    else if (o.estado === 'en_espera') conteos.espera++;
-    else if (o.estado === 'en_proceso' || o.estado === 'parcial') conteos.proceso++;
-    else if (o.estado === 'completada') conteos.completas++;
-  });
-
-  $('kpiAlistamiento').textContent = conteos.alistamiento;
-  $('kpiEspera').textContent = conteos.espera;
-  $('kpiProceso').textContent = conteos.proceso;
-  $('kpiCompletas').textContent = conteos.completas;
 }
 
 function actualizarTabCounts() {
@@ -265,20 +249,6 @@ function renderizarOrdenes() {
 
   container.innerHTML = paginadas.map(o => renderCardOrden(o)).join('');
   paginador.renderControles('paginacionDespachos', () => renderizarOrdenes());
-
-  // Attach toggle events
-  container.querySelectorAll('.crm-despacho-top').forEach(el => {
-    el.addEventListener('click', () => {
-      const detail = el.closest('.crm-despacho-card').querySelector('.crm-despacho-detail');
-      if (detail) {
-        detail.classList.toggle('open');
-        if (detail.classList.contains('open')) {
-          const ordenId = el.dataset.ordenId;
-          cargarDetalleOrden(ordenId, detail);
-        }
-      }
-    });
-  });
 }
 
 function renderCardOrden(orden) {
@@ -287,108 +257,218 @@ function renderCardOrden(orden) {
   const preparados = items.filter(i => i.preparado).length;
   const progreso = totalItems > 0 ? Math.round((preparados / totalItems) * 100) : 0;
 
-  // Calcular peso aproximado
-  const pesoTotal = items.reduce((sum, i) => {
-    return sum + ((i.peso_kg || 0) * (i.cantidad || 0));
-  }, 0);
+  const pesoTotal = items.reduce((sum, i) => sum + ((i.peso_kg || 0) * (i.cantidad || 0)), 0);
+  const totalUnidades = items.reduce((sum, i) => sum + (i.cantidad || 0), 0);
 
-  const noLeidos = orden._noLeidos || 0;
+  const ubicacion = orden._ubicacion || orden.direccion_entrega?.ciudad || '';
+  const razonSocial = orden.clienteNombre || orden.cliente?.razon_social || orden.cliente?.nombre || '';
+  const nombreCorto = orden.clienteNit ? `NIT ${orden.clienteNit}` : (orden.cliente?.nit ? `NIT ${orden.cliente.nit}` : '');
+  const fechaEntrega = orden.fecha_entrega_estimada ? formatearFechaHora(orden.fecha_entrega_estimada) : '';
+  const telefono = orden._telefono || orden.cliente?.telefono || '';
+  const telefonoLimpio = telefono.replace(/\D/g, '');
+  const tieneNovedad = orden.novedad || false;
+  const total = orden.total || 0;
 
   return `
-    <div class="crm-despacho-card" data-orden-id="${orden.id}" style="margin-bottom:12px;">
-      <div class="crm-despacho-top" data-orden-id="${orden.id}">
-        <div class="crm-despacho-info">
-          <h4>${orden.numero_orden || orden.id.substring(0, 8)} ${badgeEstado(orden.estado)}</h4>
-          <div class="crm-despacho-meta">
-            <span><i class="bi bi-person"></i> ${orden.clienteNombre || 'Sin cliente'}</span>
-            <span><i class="bi bi-telephone"></i> ${orden._telefono || orden.cliente?.telefono || '-'}</span>
-            <span><i class="bi bi-geo-alt"></i> ${orden._ubicacion || orden.direccion_entrega?.ciudad || '-'}</span>
-            ${orden._ruta ? `<span><i class="bi bi-signpost-2"></i> ${orden._ruta}</span>` : ''}
-            <span><i class="bi bi-calendar3"></i> ${formatearFecha(orden.created_at)}</span>
+    <div class="crm-despacho-card" data-orden-id="${orden.id}">
+      <!-- Zona 1: Cabecera -->
+      <div class="crm-despacho-header">
+        <div class="crm-despacho-header-left">
+          <div class="crm-despacho-header-row">
+            <span class="crm-despacho-orden-id">${orden.numero_orden || orden.id.substring(0, 8)}</span>
+            ${badgeEstado(orden.estado)}
+            ${ubicacion ? `<span class="crm-despacho-ubicacion"><i class="bi bi-cursor-fill"></i> ${ubicacion}</span>` : ''}
+          </div>
+          <div class="crm-despacho-fecha-creacion">${formatearFechaHora(orden.created_at)}</div>
+        </div>
+        <div class="crm-despacho-header-right">
+          ${razonSocial ? `<span class="crm-despacho-razon-social">${razonSocial}</span>` : ''}
+          ${nombreCorto ? `<span class="crm-despacho-nombre-corto">${nombreCorto}</span>` : ''}
+          ${telefonoLimpio ? `<a class="crm-despacho-wa" href="https://wa.me/${telefonoLimpio}" target="_blank" title="WhatsApp"><i class="bi bi-whatsapp"></i></a>` : ''}
+        </div>
+      </div>
+
+      <!-- Zona 2: Cuerpo -->
+      <div class="crm-despacho-body">
+        <div class="crm-despacho-body-left">
+          <span class="crm-despacho-novedad ${tieneNovedad ? 'crm-despacho-novedad--alerta' : 'crm-despacho-novedad--ok'}">
+            ${tieneNovedad ? 'Con Novedad' : 'Sin Novedad'}
+          </span>
+          ${fechaEntrega ? `<span style="color:var(--crm-text-light);">—</span><span class="crm-despacho-fecha-entrega"><i class="bi bi-calendar3"></i> ${fechaEntrega}</span>` : ''}
+        </div>
+        <div class="crm-despacho-body-right">
+          <button class="crm-despacho-action-btn" onclick="abrirAlistamiento('${orden.id}')">
+            <i class="bi bi-eye"></i> Ver
+          </button>
+          <button class="crm-despacho-action-btn" onclick="toggleChat('${orden.id}', this)">
+            <i class="bi bi-chat-dots"></i> Chat
+          </button>
+        </div>
+      </div>
+
+      <!-- Chat inline -->
+      <div class="crm-despacho-chat-wrapper">
+        <div class="crm-despacho-chat" id="chatZone-${orden.id}">
+          <div class="crm-chat">
+            <div class="crm-chat-messages" id="chatMessages-${orden.id}">
+              <p style="color:var(--crm-text-light);font-size:0.82rem;padding:12px;">Cargando...</p>
+            </div>
+            <div class="crm-chat-input">
+              <input type="text" placeholder="Escribir mensaje..." id="chatInput-${orden.id}"
+                onkeydown="if(event.key==='Enter')enviarMensaje('${orden.id}')">
+              <button onclick="enviarMensaje('${orden.id}')"><i class="bi bi-send"></i></button>
+            </div>
           </div>
         </div>
-        <div style="text-align:right;">
-          <div style="font-weight:700;font-size:1.1rem;">${formatearPrecio(orden.total || 0)}</div>
-          ${noLeidos > 0 ? `<span class="crm-chat-badge">${noLeidos} <i class="bi bi-chat-dots"></i></span>` : ''}
+      </div>
+
+      <!-- Zona 3: Pie -->
+      <div class="crm-despacho-footer">
+        <div class="crm-despacho-footer-left" onclick="verDetalleDespacho('${orden.id}')" style="cursor:pointer;">
+          <i class="bi bi-caret-right-fill"></i> Orden de ${totalItems} productos
+        </div>
+        <div class="crm-despacho-footer-right">
+          <span class="crm-despacho-pill crm-despacho-pill--total">${formatearPrecio(total)}</span>
+          <span class="crm-despacho-pill crm-despacho-pill--uds">${formatearNumero(totalUnidades)}</span>
+          <span class="crm-despacho-pill crm-despacho-pill--peso">${formatearPeso(pesoTotal)}</span>
+          <span title="${preparados}/${totalItems} preparados" style="display:flex;align-items:center;gap:4px;font-size:0.73rem;color:var(--crm-text-light);">
+            <div class="crm-despacho-progress-mini"><div class="crm-despacho-progress-mini-bar" style="width:${progreso}%"></div></div>
+            ${progreso}%
+          </span>
         </div>
       </div>
-
-      <div class="crm-despacho-stats">
-        <span class="crm-despacho-stat"><i class="bi bi-box"></i> ${totalItems} items</span>
-        <span class="crm-despacho-stat"><i class="bi bi-speedometer2"></i> ${formatearPeso(pesoTotal)}</span>
-        <span class="crm-despacho-stat"><i class="bi bi-check2-square"></i> ${preparados}/${totalItems} preparados</span>
-      </div>
-
-      <div class="crm-despacho-progress">
-        <div class="crm-despacho-progress-bar" style="width:${progreso}%;${progreso === 100 ? 'background:var(--crm-green)' : ''}"></div>
-      </div>
-
-      <div class="crm-despacho-detail"></div>
     </div>
   `;
 }
 
-// ═══════════ DETALLE + CHECKLIST ═══════════
-async function cargarDetalleOrden(ordenId, container) {
+// ═══════════ MODAL ALISTAMIENTO ═══════════
+window.abrirAlistamiento = function(ordenId) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
 
   const items = orden.items || orden.productos || [];
 
-  container.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      <!-- Checklist -->
-      <div>
-        <h5 style="font-size:0.9rem;font-weight:600;margin-bottom:12px;"><i class="bi bi-clipboard-check"></i> Preparación</h5>
-        <ul class="crm-checklist" id="checklist-${ordenId}">
-          ${items.map((item, idx) => `
-            <li class="crm-checklist-item" data-idx="${idx}">
-              <input type="checkbox" class="crm-checklist-check"
-                ${item.preparado ? 'checked' : ''}
-                onchange="marcarPreparado('${ordenId}', ${idx}, this.checked)">
-              <div class="crm-checklist-producto">
-                <div class="crm-checklist-producto-nombre">${item.titulo || item.nombre || item.cod_interno || item.sku || '-'}</div>
-                <div class="crm-checklist-producto-cod">${item.cod_interno || item.sku || '-'} · ${formatearPrecio(item.precio_unitario)}</div>
-              </div>
-              <div class="crm-checklist-qty">
-                <span class="crm-checklist-qty-label">Pedido: ${item.cantidad}</span>
-                <input type="number" value="${item.cantidad_real || item.cantidad || 0}" min="0"
-                  style="width:60px;" onchange="actualizarCantidadReal('${ordenId}', ${idx}, this.value)">
-                <span class="crm-checklist-qty-label">Real</span>
-              </div>
-            </li>
-          `).join('')}
-        </ul>
-      </div>
+  $('modalAlistamientoTitulo').textContent = `Alistamiento — ${orden.numero_orden || ordenId.substring(0, 8)}`;
 
-      <!-- Chat + Acciones -->
-      <div>
-        <h5 style="font-size:0.9rem;font-weight:600;margin-bottom:12px;"><i class="bi bi-chat-dots"></i> Mensajes</h5>
-        <div class="crm-chat" id="chat-${ordenId}">
-          <div class="crm-chat-messages" id="chatMessages-${ordenId}">
-            <div class="crm-loader" style="padding:20px;"><div class="crm-spinner"></div></div>
+  $('modalAlistamientoBody').innerHTML = `
+    <ul class="crm-checklist" id="checklist-${ordenId}">
+      ${items.map((item, idx) => `
+        <li class="crm-checklist-item" data-idx="${idx}">
+          <input type="checkbox" class="crm-checklist-check"
+            ${item.preparado ? 'checked' : ''}
+            onchange="marcarPreparado('${ordenId}', ${idx}, this.checked)">
+          <div class="crm-checklist-producto">
+            <div class="crm-checklist-producto-nombre">${item.titulo || item.nombre || item.cod_interno || item.sku || '-'}</div>
+            <div class="crm-checklist-producto-cod">${item.cod_interno || item.sku || '-'} · ${formatearPrecio(item.precio_unitario)}</div>
           </div>
-          <div class="crm-chat-input">
-            <input type="text" placeholder="Escribir mensaje..." id="chatInput-${ordenId}"
-              onkeydown="if(event.key==='Enter')enviarMensaje('${ordenId}')">
-            <button onclick="enviarMensaje('${ordenId}')"><i class="bi bi-send"></i></button>
+          <div class="crm-checklist-qty">
+            <span class="crm-checklist-qty-label">Pedido: ${item.cantidad}</span>
+            <input type="number" value="${item.cantidad_real || item.cantidad || 0}" min="0"
+              style="width:60px;" onchange="actualizarCantidadReal('${ordenId}', ${idx}, this.value)">
+            <span class="crm-checklist-qty-label">Real</span>
           </div>
-        </div>
+        </li>
+      `).join('')}
+    </ul>
+  `;
 
-        <!-- Acciones -->
-        <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;">
-          ${renderBotonesEstado(orden)}
-          <button class="crm-btn crm-btn--secondary crm-btn--sm" onclick="generarCSVOrden('${ordenId}')">
-            <i class="bi bi-file-earmark-spreadsheet"></i> CSV
-          </button>
-        </div>
+  $('modalAlistamientoFooter').innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;width:100%;justify-content:space-between;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${renderBotonesEstado(orden)}
       </div>
+      <button class="crm-btn crm-btn--secondary crm-btn--sm" onclick="generarCSVOrden('${ordenId}')">
+        <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+      </button>
     </div>
   `;
 
-  // Iniciar listener de chat
-  iniciarChatListener(ordenId);
-}
+  $('modalAlistamiento').classList.add('open');
+};
+
+// ═══════════ MODAL DETALLE DESPACHO ═══════════
+window.verDetalleDespacho = function(ordenId) {
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!orden) return;
+
+  const items = orden.items || orden.productos || [];
+  const clienteNombre = orden.clienteNombre || orden.cliente?.nombre || orden.cliente?.razon_social || '-';
+  const clienteNit = orden.clienteNit || orden.cliente?.nit || '-';
+  const creadaPor = orden.creadaPorEmail || orden.creadaPor || '-';
+
+  const subtotal = items.reduce((s, i) => s + ((i.precio_unitario || 0) * (i.cantidad || 0)), 0);
+  const total = orden.total || subtotal;
+  const iva = total - subtotal > 0 ? total - subtotal : 0;
+
+  $('modalDetalleTitulo').textContent = `Detalle — ${orden.numero_orden || ordenId.substring(0, 8)}`;
+
+  $('modalDetalleBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;font-size:0.85rem;">
+      <div><strong>Cliente:</strong> ${clienteNombre}</div>
+      <div><strong>NIT:</strong> ${clienteNit}</div>
+      <div><strong>Estado:</strong> ${badgeEstado(orden.estado)}</div>
+      <div><strong>Fecha:</strong> ${formatearFecha(orden.created_at)}</div>
+      <div><strong>Creada por:</strong> ${creadaPor}</div>
+      <div><strong>Ubicación:</strong> ${orden._ubicacion || orden.direccion_entrega?.ciudad || '-'}</div>
+    </div>
+
+    <div class="crm-tabla-wrapper">
+      <table class="crm-tabla">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Producto</th>
+            <th style="text-align:right;">Precio</th>
+            <th style="text-align:center;">Cant.</th>
+            <th style="text-align:right;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+            <tr>
+              <td>${item.cod_interno || item.sku || '-'}</td>
+              <td>${item.titulo || item.nombre || '-'}</td>
+              <td style="text-align:right;">${formatearPrecio(item.precio_unitario)}</td>
+              <td style="text-align:center;">${item.cantidad || 0}</td>
+              <td style="text-align:right;">${formatearPrecio((item.precio_unitario || 0) * (item.cantidad || 0))}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:16px;text-align:right;font-size:0.9rem;">
+      <div style="color:var(--crm-text-light);">Subtotal: ${formatearPrecio(subtotal)}</div>
+      ${iva > 0 ? `<div style="color:var(--crm-text-light);">IVA: ${formatearPrecio(iva)}</div>` : ''}
+      <div style="font-weight:700;font-size:1.05rem;margin-top:4px;">Total: ${formatearPrecio(total)}</div>
+    </div>
+  `;
+
+  $('modalDetalleFooter').innerHTML = `
+    <button class="crm-btn crm-btn--secondary crm-btn--sm" onclick="cerrarModal('modalDetalle')">Cerrar</button>
+  `;
+
+  $('modalDetalle').classList.add('open');
+};
+
+// ═══════════ TOGGLE CHAT INLINE ═══════════
+window.toggleChat = function(ordenId, btn) {
+  const chatZone = $(`chatZone-${ordenId}`);
+  if (!chatZone) return;
+
+  const isOpen = chatZone.classList.toggle('open');
+  if (btn) btn.classList.toggle('active', isOpen);
+
+  if (isOpen) {
+    iniciarChatListener(ordenId);
+  } else {
+    // Stop listener when chat is closed
+    if (chatUnsubscribers[ordenId]) {
+      chatUnsubscribers[ordenId]();
+      delete chatUnsubscribers[ordenId];
+    }
+  }
+};
 
 function renderBotonesEstado(orden) {
   const transiciones = obtenerTransicionesPermitidas(orden.estado);
@@ -483,7 +563,9 @@ window.cambiarEstado = async function(ordenId, nuevoEstado) {
     orden.estado = nuevoEstado;
     orden.historial = historial;
 
-    actualizarKPIs();
+    // Close modals if open
+    $('modalAlistamiento')?.classList.remove('open');
+
     actualizarTabCounts();
     aplicarFiltrosYRender();
 

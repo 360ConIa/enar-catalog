@@ -48,6 +48,8 @@ let todosLosClientes = [];
 let todosLosProductos = [];
 let clienteSeleccionado = null;
 let productosOrden = [];
+let papeleraOrdenPendiente = null;
+let ordenEditandoId = null;
 const paginador = new Paginador(25);
 const ROLES_EXCLUIDOS = ['vendedor', 'despachos', 'admin', 'gestor', 'administrador'];
 
@@ -114,7 +116,10 @@ async function cargarOrdenes() {
 
     const snap = await getDocs(q);
     todasLasOrdenes = [];
-    snap.forEach(d => todasLasOrdenes.push({ id: d.id, ...d.data() }));
+    snap.forEach(d => {
+      const data = d.data();
+      if (!data.eliminado) todasLasOrdenes.push({ id: d.id, ...data });
+    });
 
     actualizarKPIs();
     aplicarFiltros();
@@ -178,6 +183,69 @@ function nitCliente(o) {
   return o.clienteNit || o.cliente?.nit || '-';
 }
 
+// ═══════════ CAMBIO ESTADO INLINE ═══════════
+function renderBtnCambioEstado(orden) {
+  const transiciones = obtenerTransicionesPermitidas(orden.estado);
+  if (transiciones.length === 0) return '';
+  return `
+    <div class="crm-estado-dropdown" style="display:inline-block;position:relative;">
+      <button class="crm-btn crm-btn--primary crm-btn--sm" onclick="toggleEstadoDropdown(event, '${orden.id}')" title="Cambiar estado">
+        <i class="bi bi-arrow-repeat"></i>
+      </button>
+      <div class="crm-estado-menu" id="estadoMenu_${orden.id}">
+        ${transiciones.map(est => `
+          <button class="crm-estado-opcion" onclick="cambiarEstadoDesdeTabla('${orden.id}', '${est}')">
+            ${badgeEstado(est)}
+          </button>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+window.toggleEstadoDropdown = function(event, ordenId) {
+  event.stopPropagation();
+  // Cerrar otros dropdowns abiertos
+  document.querySelectorAll('.crm-estado-menu.open').forEach(m => {
+    if (m.id !== `estadoMenu_${ordenId}`) m.classList.remove('open');
+  });
+  const menu = $(`estadoMenu_${ordenId}`);
+  if (menu) menu.classList.toggle('open');
+};
+
+window.cambiarEstadoDesdeTabla = async function(ordenId, nuevoEstado) {
+  // Cerrar dropdown
+  document.querySelectorAll('.crm-estado-menu.open').forEach(m => m.classList.remove('open'));
+  // Reutilizar la lógica existente
+  await cambiarEstadoOrden(ordenId, nuevoEstado);
+};
+
+window.enviarAPapelera = function(ordenId) {
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!orden) return;
+
+  // Mostrar info de la orden en el modal
+  $('papeleraOrdenInfo').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div><span style="color:var(--crm-text-light);">Orden</span><br><strong>${orden.numero_orden || orden.id.substring(0, 8)}</strong></div>
+      <div><span style="color:var(--crm-text-light);">Estado</span><br>${badgeEstado(orden.estado)}</div>
+      <div><span style="color:var(--crm-text-light);">Cliente</span><br><strong>${nombreCliente(orden)}</strong></div>
+      <div><span style="color:var(--crm-text-light);">Total</span><br><strong>${formatearPrecio(orden.total || 0)}</strong></div>
+    </div>`;
+
+  // Resetear botón y guardar ordenId pendiente
+  const btn = $('btnConfirmarPapelera');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-trash3"></i> Sí, enviar a papelera';
+  papeleraOrdenPendiente = ordenId;
+
+  $('modalPapelera').classList.add('open');
+};
+
+// Cerrar dropdowns al hacer click fuera
+document.addEventListener('click', () => {
+  document.querySelectorAll('.crm-estado-menu.open').forEach(m => m.classList.remove('open'));
+});
+
 // ═══════════ RENDER ═══════════
 function renderizarOrdenes() {
   const body = $('ordenesBody');
@@ -200,9 +268,13 @@ function renderizarOrdenes() {
       <td style="text-align:center;">${o.cantidad_productos || (o.items || o.productos || []).length}</td>
       <td style="text-align:right;font-weight:600;">${formatearPrecio(o.total || 0)}</td>
       <td>${badgeEstado(o.estado)}</td>
-      <td style="text-align:center;">
-        <button class="crm-btn crm-btn--secondary crm-btn--sm" onclick="verDetalleOrden('${o.id}')">
+      <td style="text-align:center;white-space:nowrap;">
+        <button class="crm-btn crm-btn--secondary crm-btn--sm" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">
           <i class="bi bi-eye"></i>
+        </button>
+        ${renderBtnCambioEstado(o)}
+        <button class="crm-btn crm-btn--danger crm-btn--sm" onclick="enviarAPapelera('${o.id}')" title="Enviar a papelera">
+          <i class="bi bi-trash3"></i>
         </button>
       </td>
     </tr>
@@ -260,14 +332,15 @@ window.verDetalleOrden = function(ordenId) {
     </div>
   `;
 
-  // Botones de cambio de estado
-  const transiciones = obtenerTransicionesPermitidas(orden.estado);
+  // Botones de cambio de estado (completada/parcial/en_espera se gestionan desde Despachos)
+  const transiciones = obtenerTransicionesPermitidas(orden.estado)
+    .filter(e => !['completada', 'parcial', 'en_espera', 'en_proceso'].includes(e));
   $('modalDetalleFooter').innerHTML = `
     <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalDetalle')">Cerrar</button>
+    ${orden.estado === 'pendiente' ? `<button class="crm-btn crm-btn--primary" onclick="cerrarModal('modalDetalle');editarOrden('${orden.id}')"><i class="bi bi-pencil"></i> Editar</button>` : ''}
     ${transiciones.map(estado => {
-      const esCompletada = estado === 'completada';
       const esCancelada = estado === 'cancelada';
-      const clase = esCompletada ? 'crm-btn--success' : esCancelada ? 'crm-btn--danger' : 'crm-btn--primary';
+      const clase = esCancelada ? 'crm-btn--danger' : 'crm-btn--primary';
       return `<button class="crm-btn ${clase}" onclick="cambiarEstadoOrden('${orden.id}', '${estado}')">
         ${ESTADOS_ORDEN_LABELS[estado]}
       </button>`;
@@ -344,24 +417,27 @@ function abrirBuscarCliente() {
   setTimeout(() => $('inputBuscarCliente').focus(), 200);
 }
 
+let ultimosClientesFiltrados = [];
+
 function buscarCliente(texto) {
   if (!texto || texto.length < 2) {
-    renderClienteResultados(todosLosClientes.slice(0, 30));
+    ultimosClientesFiltrados = todosLosClientes.slice(0, 30);
+    renderClienteResultados(ultimosClientesFiltrados);
     return;
   }
 
-  const textoLower = texto.toLowerCase();
-  const resultados = todosLosClientes.filter(c => {
-    const nombre = (c.nombre || '').toLowerCase();
-    const nit = (c.nit || '').toLowerCase();
-    const razon = (c.razon_social || '').toLowerCase();
-    const email = (c.email || '').toLowerCase();
-    const ubicacion = (c.ubicacion || '').toLowerCase();
-    const comercial = (c.nombre_comercial || '').toLowerCase();
-    return nombre.includes(textoLower) || nit.includes(textoLower) || razon.includes(textoLower) || email.includes(textoLower) || ubicacion.includes(textoLower) || comercial.includes(textoLower);
+  // Búsqueda AND con coma: "bogota, mayorista" → ambos deben coincidir
+  const terminos = texto.toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
+
+  ultimosClientesFiltrados = todosLosClientes.filter(c => {
+    const campos = [
+      c.nombre, c.nit, c.razon_social, c.email,
+      c.ubicacion, c.nombre_comercial, c.tipo_cliente, c.ciudad
+    ].map(v => (v || '').toLowerCase()).join(' ');
+    return terminos.every(t => campos.includes(t));
   });
 
-  renderClienteResultados(resultados);
+  renderClienteResultados(ultimosClientesFiltrados);
 }
 
 function renderClienteResultados(resultados) {
@@ -469,58 +545,77 @@ async function cargarProductos() {
   }
 }
 
-function buscarProducto(termino) {
+let ultimosFiltrados = [];
+
+function buscarProducto(termino, focusCantidad) {
   if (!termino) return;
 
   const container = $('productoResultados');
   container.style.display = 'block';
 
-  const textoLower = termino.toLowerCase();
+  // Búsqueda AND con coma: "10001, enar" → ambos deben coincidir
+  const terminos = termino.toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
+
   const filtrados = todosLosProductos.filter(p => {
-    const cod = (p.cod_interno || '').toLowerCase();
-    const titulo = (p.titulo || '').toLowerCase();
-    const marca = (p.marca || '').toLowerCase();
-    const ean = (p.ean || '').toLowerCase();
-    return cod.includes(textoLower) || titulo.includes(textoLower) || marca.includes(textoLower) || ean.includes(textoLower);
+    const campos = [
+      p.cod_interno, p.titulo, p.marca, p.ean,
+      p.categoria, p.laboratorio, p.principio_activo
+    ].map(v => (v || '').toLowerCase()).join(' ');
+    return terminos.every(t => campos.includes(t));
   }).slice(0, 20);
+
+  ultimosFiltrados = filtrados;
 
   if (filtrados.length === 0) {
     container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--crm-text-light);font-size:0.82rem;">No se encontraron productos</div>';
     return;
   }
 
-  container.innerHTML = filtrados.map(p => {
+  container.innerHTML = filtrados.map((p, i) => {
     const precio = obtenerPrecioCliente(p, clienteSeleccionado);
     const yaEnOrden = productosOrden.some(po => po.cod_interno === p.cod_interno);
+    const imgSrc = p.imagen_principal || '';
     return `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--crm-border);font-size:0.82rem;">
-        <img src="${p.imagen_principal || 'img/placeholder.png'}" alt="" style="width:36px;height:36px;border-radius:4px;object-fit:cover;" onerror="this.src='img/placeholder.png'">
+      <div class="prod-row${yaEnOrden ? ' prod-row--added' : ''}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--crm-border);font-size:0.82rem;${yaEnOrden ? 'opacity:0.5;' : ''}" data-cod="${p.cod_interno}" data-idx="${i}">
+        ${imgSrc ? `<img src="${imgSrc}" alt="" style="width:36px;height:36px;border-radius:4px;object-fit:cover;" onerror="this.style.display='none'">` : '<div style="width:36px;height:36px;border-radius:4px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#94a3b8;">N/A</div>'}
         <div style="flex:1;min-width:0;">
           <div style="font-weight:500;">${p.titulo}</div>
           <div style="font-size:0.73rem;color:var(--crm-text-light);">${p.cod_interno} · ${p.marca || ''}</div>
         </div>
-        <div style="font-weight:600;">${formatearPrecio(precio)}</div>
-        <input type="number" value="1" min="1" style="width:50px;padding:4px;border:1px solid var(--crm-border);border-radius:4px;text-align:center;font-size:0.82rem;" data-cod="${p.cod_interno}">
-        <button class="crm-btn crm-btn--success crm-btn--sm btn-add-prod" data-cod="${p.cod_interno}" ${yaEnOrden ? 'disabled style="opacity:0.5;"' : ''}>
-          ${yaEnOrden ? 'Agregado' : '+ Agregar'}
-        </button>
+        <div style="font-weight:600;min-width:80px;text-align:right;">${formatearPrecio(precio)}</div>
+        <input type="number" value="1" min="1" class="prod-qty" style="width:50px;padding:4px;border:1px solid var(--crm-border);border-radius:4px;text-align:center;font-size:0.82rem;" data-cod="${p.cod_interno}" data-idx="${i}" ${yaEnOrden ? 'disabled' : ''}>
       </div>
     `;
   }).join('');
 
-  container.querySelectorAll('.btn-add-prod').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (btn.disabled) return;
-      const cod = btn.dataset.cod;
-      const prod = filtrados.find(p => p.cod_interno === cod);
-      const qtyInput = container.querySelector(`input[data-cod="${cod}"]`);
-      const cantidad = parseInt(qtyInput?.value) || 1;
-      if (prod) agregarProducto(prod, cantidad);
-      btn.disabled = true;
-      btn.style.opacity = '0.5';
-      btn.textContent = 'Agregado';
+  // Enter en campo cantidad → agregar producto y volver al buscador
+  container.querySelectorAll('.prod-qty').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (input.disabled) return;
+        const cod = input.dataset.cod;
+        const prod = ultimosFiltrados.find(p => p.cod_interno === cod);
+        const cantidad = parseInt(input.value) || 1;
+        if (prod) {
+          agregarProducto(prod, cantidad);
+          // Marcar fila como agregada
+          const row = input.closest('.prod-row');
+          if (row) { row.style.opacity = '0.5'; row.classList.add('prod-row--added'); }
+          input.disabled = true;
+          // Volver foco al buscador
+          $('inputBuscarProducto').focus();
+          $('inputBuscarProducto').select();
+        }
+      }
     });
   });
+
+  // Si viene de Enter en buscador, foco en cantidad del primer resultado no agregado
+  if (focusCantidad) {
+    const primerInput = container.querySelector('.prod-qty:not([disabled])');
+    if (primerInput) setTimeout(() => primerInput.focus(), 50);
+  }
 }
 
 function agregarProducto(producto, cantidad) {
@@ -605,6 +700,124 @@ function renderizarCarrito() {
   $('totalSubtotal').textContent = formatearPrecio(subtotalSinIva);
   $('totalIva').textContent = formatearPrecio(iva);
   $('totalGeneral').textContent = formatearPrecio(totalConIva);
+}
+
+// ═══════════ EDITAR ORDEN PENDIENTE ═══════════
+window.editarOrden = function(ordenId) {
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!orden || orden.estado !== 'pendiente') {
+    showToast('Solo se pueden editar órdenes pendientes', 'error');
+    return;
+  }
+
+  ordenEditandoId = ordenId;
+
+  // Recuperar cliente
+  const clienteUid = orden.clienteUid || orden.user_id;
+  const cliente = todosLosClientes.find(c => c.uid === clienteUid);
+  clienteSeleccionado = cliente || {
+    uid: clienteUid,
+    razon_social: orden.clienteNombre || orden.cliente?.razon_social || '',
+    nit: orden.clienteNit || orden.cliente?.nit || '',
+    tipo_cliente: orden.clienteTipo || orden.cliente?.tipo_cliente || 'persona_natural'
+  };
+
+  // Cargar items al carrito
+  const items = orden.items || orden.productos || [];
+  productosOrden = items.map(it => ({
+    cod_interno: it.cod_interno || it.sku || '',
+    titulo: it.titulo || it.nombre || '',
+    marca: it.marca || '',
+    imagen: it.imagen || '',
+    precio_unitario: it.precio_unitario || 0,
+    cantidad: it.cantidad || 1
+  }));
+
+  // Poblar modal
+  $('modalProductosTitulo').textContent = `Editar Orden ${orden.numero_orden || ''}`;
+  $('selClienteNombre').textContent = clienteSeleccionado.razon_social || clienteSeleccionado.nombre || clienteSeleccionado.email || '-';
+  $('selClienteNit').textContent = clienteSeleccionado.nit || 'N/A';
+  $('selClienteTipo').textContent = clienteSeleccionado.tipo_cliente || '-';
+  $('inputBuscarProducto').value = '';
+  $('productoResultados').style.display = 'none';
+  $('inputObservaciones').value = orden.observaciones || '';
+  $('btnConfirmarOrden').innerHTML = '<i class="bi bi-check2-circle"></i> Guardar Cambios';
+
+  renderizarCarrito();
+  $('modalProductos').classList.add('open');
+  setTimeout(() => $('inputBuscarProducto').focus(), 200);
+};
+
+async function guardarEdicionOrden() {
+  if (!ordenEditandoId || !clienteSeleccionado || productosOrden.length === 0) return;
+
+  const btn = $('btnConfirmarOrden');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="crm-spinner" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:6px;border-width:2px;"></div> Guardando...';
+
+  try {
+    const totalConIva = productosOrden.reduce((s, p) => s + p.precio_unitario * p.cantidad, 0);
+    const subtotalSinIva = totalConIva / (1 + IVA_PORCENTAJE);
+    const iva = totalConIva - subtotalSinIva;
+    const cantUnidades = productosOrden.reduce((s, p) => s + p.cantidad, 0);
+
+    const itemsData = productosOrden.map(p => ({
+      cod_interno: p.cod_interno,
+      titulo: p.titulo,
+      marca: p.marca,
+      imagen: p.imagen,
+      precio_unitario: p.precio_unitario,
+      cantidad: p.cantidad,
+      subtotal: p.precio_unitario * p.cantidad
+    }));
+
+    const orden = todasLasOrdenes.find(o => o.id === ordenEditandoId);
+    const historial = orden?.historial || [];
+    historial.push({
+      estado: 'pendiente',
+      fecha: new Date().toISOString(),
+      nota: `Orden editada por ${userPerfil.nombre || currentUser.email}`
+    });
+
+    const updates = {
+      productos: itemsData,
+      items: itemsData,
+      subtotal: subtotalSinIva,
+      iva: iva,
+      total: totalConIva,
+      cantidad_productos: productosOrden.length,
+      cantidad_unidades: cantUnidades,
+      observaciones: $('inputObservaciones').value.trim(),
+      historial: historial,
+      updated_at: new Date().toISOString()
+    };
+
+    await updateDoc(doc(db, 'ordenes', ordenEditandoId), updates);
+
+    // Actualizar en memoria
+    if (orden) {
+      Object.assign(orden, updates);
+    }
+
+    cerrarModal('modalProductos');
+    showToast('Orden actualizada exitosamente', 'success');
+    actualizarKPIs();
+    aplicarFiltros();
+  } catch (error) {
+    console.error('Error guardando edición:', error);
+    showToast('Error al guardar cambios: ' + error.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check2-circle"></i> Guardar Cambios';
+  }
+}
+
+function resetModalProductos() {
+  ordenEditandoId = null;
+  clienteSeleccionado = null;
+  productosOrden = [];
+  $('modalProductosTitulo').textContent = 'Nueva Orden';
+  $('btnConfirmarOrden').innerHTML = '<i class="bi bi-check2-circle"></i> Confirmar Orden';
+  $('btnConfirmarOrden').disabled = true;
 }
 
 // ═══════════ CONFIRMAR ORDEN ═══════════
@@ -703,17 +916,18 @@ async function confirmarOrden() {
 window.cerrarModal = function(id) {
   const el = $(id);
   if (el) el.classList.remove('open');
+  if (id === 'modalProductos') resetModalProductos();
 };
 
 document.querySelectorAll('.crm-modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.classList.remove('open');
+    if (e.target === overlay) cerrarModal(overlay.id);
   });
 });
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    document.querySelectorAll('.crm-modal-overlay.open').forEach(m => m.classList.remove('open'));
+    document.querySelectorAll('.crm-modal-overlay.open').forEach(m => cerrarModal(m.id));
   }
 });
 
@@ -726,27 +940,68 @@ function initEventListeners() {
 
   $('btnNuevaOrden')?.addEventListener('click', () => abrirBuscarCliente());
 
+  $('btnConfirmarPapelera')?.addEventListener('click', async () => {
+    if (!papeleraOrdenPendiente) return;
+    const btn = $('btnConfirmarPapelera');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Eliminando...';
+    try {
+      await updateDoc(doc(db, 'ordenes', papeleraOrdenPendiente), {
+        eliminado: true,
+        eliminado_at: new Date().toISOString(),
+        eliminado_por: userPerfil.nombre || currentUser.email
+      });
+      todasLasOrdenes = todasLasOrdenes.filter(o => o.id !== papeleraOrdenPendiente);
+      cerrarModal('modalPapelera');
+      actualizarKPIs();
+      aplicarFiltros();
+      showToast('Orden enviada a papelera', 'success');
+    } catch (error) {
+      console.error('Error enviando a papelera:', error);
+      showToast('Error al enviar a papelera', 'error');
+    }
+    papeleraOrdenPendiente = null;
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-trash3"></i> Sí, enviar a papelera';
+  });
+
   $('inputBuscarCliente')?.addEventListener('input', debounce((e) => {
     buscarCliente(e.target.value.trim());
   }, 250));
 
+  $('inputBuscarCliente')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (ultimosClientesFiltrados.length > 0) {
+        seleccionarCliente(ultimosClientesFiltrados[0]);
+      }
+    }
+  });
+
   $('btnBuscarProd')?.addEventListener('click', () => {
     const t = $('inputBuscarProducto')?.value.trim();
-    if (t) buscarProducto(t);
+    if (t) buscarProducto(t, true);
   });
 
   $('inputBuscarProducto')?.addEventListener('input', debounce((e) => {
     const t = e.target.value.trim();
-    if (t.length >= 2) buscarProducto(t);
+    if (t.length >= 2) buscarProducto(t, false);
     else $('productoResultados').style.display = 'none';
-  }, 250));
+  }, 300));
 
   $('inputBuscarProducto')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       const t = e.target.value.trim();
-      if (t) buscarProducto(t);
+      if (t) buscarProducto(t, true);
     }
   });
 
-  $('btnConfirmarOrden')?.addEventListener('click', () => confirmarOrden());
+  $('btnConfirmarOrden')?.addEventListener('click', () => {
+    if (ordenEditandoId) {
+      guardarEdicionOrden();
+    } else {
+      confirmarOrden();
+    }
+  });
 }

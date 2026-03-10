@@ -65,7 +65,7 @@
         <div class="crm-kpi-value" id="kpiVentas">$0</div>
       </div>
       <div class="crm-kpi crm-kpi--green">
-        <div class="crm-kpi-label">Completadas</div>
+        <div class="crm-kpi-label">Completas</div>
         <div class="crm-kpi-value" id="kpiCompletadas">0</div>
       </div>
     </div>
@@ -84,7 +84,7 @@
           <option value="aprobada">Aprobada</option>
           <option value="en_proceso">En Proceso</option>
           <option value="en_espera">En Espera</option>
-          <option value="completada">Completada</option>
+          <option value="completada">Completa</option>
           <option value="parcial">Parcial</option>
           <option value="cancelada">Cancelada</option>
         </select>
@@ -146,7 +146,7 @@
   <div id="modalProductos" class="crm-modal-overlay">
     <div class="crm-modal crm-modal--lg">
       <div class="crm-modal-header">
-        <h3>Nueva Orden</h3>
+        <h3 id="modalProductosTitulo">Nueva Orden</h3>
         <button class="crm-modal-close" onclick="cerrarModal('modalProductos')">&times;</button>
       </div>
       <div class="crm-modal-body">
@@ -160,11 +160,11 @@
         </div>
 
         <!-- Product search -->
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <input type="text" class="crm-input" id="inputBuscarProducto" placeholder="Buscar producto por código o nombre..." style="flex:1;">
-          <button class="crm-btn crm-btn--primary" id="btnBuscarProd"><i class="bi bi-search"></i></button>
+        <div style="margin-bottom:12px;">
+          <input type="text" class="crm-input" id="inputBuscarProducto" placeholder="Buscar por código, nombre, marca... (usa , para combinar filtros)" style="width:100%;">
+          <div style="font-size:0.7rem;color:var(--crm-text-light);margin-top:4px;">Ej: "acetam, enar" busca productos que contengan ambos términos. Enter → editar cantidad → Enter → agregar.</div>
         </div>
-        <div id="productoResultados" style="max-height:200px;overflow-y:auto;display:none;margin-bottom:16px;border:1px solid var(--crm-border);border-radius:8px;"></div>
+        <div id="productoResultados" style="max-height:220px;overflow-y:auto;display:none;margin-bottom:16px;border:1px solid var(--crm-border);border-radius:8px;"></div>
 
         <!-- Cart -->
         <div id="cartEmpty" style="text-align:center;padding:20px;color:var(--crm-text-light);font-size:0.85rem;">
@@ -223,6 +223,27 @@
       </div>
       <div class="crm-modal-body" id="modalDetalleBody"></div>
       <div class="crm-modal-footer" id="modalDetalleFooter"></div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Confirmar Papelera -->
+  <div id="modalPapelera" class="crm-modal-overlay">
+    <div class="crm-modal" style="max-width:420px;">
+      <div class="crm-modal-header" style="background:var(--crm-red);color:white;">
+        <h3><i class="bi bi-exclamation-triangle"></i> Confirmar eliminación</h3>
+        <button class="crm-modal-close" style="color:white;" onclick="cerrarModal('modalPapelera')">&times;</button>
+      </div>
+      <div class="crm-modal-body" style="text-align:center;padding:24px;">
+        <i class="bi bi-trash3" style="font-size:2.5rem;color:var(--crm-red);display:block;margin-bottom:12px;"></i>
+        <p style="font-size:0.95rem;margin-bottom:16px;">¿Estás seguro de enviar esta orden a la papelera?</p>
+        <div id="papeleraOrdenInfo" style="background:#f8fafc;border-radius:8px;padding:12px;text-align:left;font-size:0.85rem;"></div>
+      </div>
+      <div class="crm-modal-footer" style="justify-content:center;gap:12px;">
+        <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalPapelera')">Cancelar</button>
+        <button class="crm-btn crm-btn--danger" id="btnConfirmarPapelera">
+          <i class="bi bi-trash3"></i> Sí, enviar a papelera
+        </button>
+      </div>
     </div>
   </div>
 

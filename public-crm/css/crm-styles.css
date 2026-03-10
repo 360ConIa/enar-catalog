@@ -44,6 +44,7 @@
   top: 0;
   z-index: 100;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  border-bottom: 4px solid var(--crm-red);
 }
 
 .crm-header-left {
@@ -240,6 +241,43 @@
 .badge-parcial { background: #ffedd5; color: #9a3412; }
 .badge-cancelada { background: #fee2e2; color: #991b1b; }
 
+/* ═══════════ DROPDOWN CAMBIO ESTADO ═══════════ */
+
+.crm-estado-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 9999;
+  background: white;
+  border: 1px solid var(--crm-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  min-width: 150px;
+  margin-top: 4px;
+}
+
+.crm-estado-menu.open {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.crm-estado-opcion {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.crm-estado-opcion:hover {
+  background: #f1f5f9;
+}
+
 /* ═══════════ BADGES DE SALUD ═══════════ */
 
 .badge-salud {
@@ -308,10 +346,12 @@
 
 .crm-tabla-wrapper {
   overflow-x: auto;
+  overflow-y: visible;
   border-radius: var(--crm-radius);
   box-shadow: var(--crm-shadow);
   background: white;
   border: 1px solid var(--crm-border);
+  position: relative;
 }
 
 .crm-tabla {
@@ -433,7 +473,7 @@
   font-weight: 600;
 }
 
-/* ═══════════ DESPACHOS CARDS ═══════════ */
+/* ═══════════ DESPACHOS CARDS — 3 ZONAS ═══════════ */
 
 .crm-despacho-card {
   background: var(--crm-card-bg);
@@ -442,71 +482,279 @@
   border: 1px solid var(--crm-border);
   overflow: hidden;
   transition: all 0.2s;
+  margin-bottom: 12px;
 }
 
 .crm-despacho-card:hover {
   box-shadow: var(--crm-shadow-hover);
 }
 
-.crm-despacho-top {
-  padding: 16px;
+/* — Zona 1: Cabecera — */
+.crm-despacho-header {
+  padding: 14px 16px 10px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  cursor: pointer;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.crm-despacho-info h4 {
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin: 0 0 4px;
-}
-
-.crm-despacho-meta {
-  font-size: 0.78rem;
-  color: var(--crm-text-light);
+.crm-despacho-header-left {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.crm-despacho-stats {
+.crm-despacho-header-row {
   display: flex;
-  gap: 12px;
-  padding: 0 16px 12px;
-  font-size: 0.78rem;
-  color: var(--crm-text-light);
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.crm-despacho-stat {
+.crm-despacho-orden-id {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--crm-text);
+}
+
+.crm-despacho-ubicacion {
+  font-size: 0.82rem;
+  color: var(--crm-text-light);
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.crm-despacho-progress {
-  height: 4px;
-  background: #e2e8f0;
-  border-radius: 2px;
-  margin: 0 16px 12px;
-  overflow: hidden;
+.crm-despacho-fecha-creacion {
+  font-size: 0.78rem;
+  color: var(--crm-text-light);
 }
 
-.crm-despacho-progress-bar {
+.crm-despacho-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: right;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.crm-despacho-razon-social {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--crm-red);
+}
+
+.crm-despacho-nombre-corto {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--crm-red);
+}
+
+.crm-despacho-wa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #25d366;
+  color: white;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.crm-despacho-wa:hover {
+  background: #1da851;
+}
+
+/* — Zona 2: Cuerpo — */
+.crm-despacho-body {
+  padding: 8px 16px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.crm-despacho-body-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.crm-despacho-novedad {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  border: 1px solid var(--crm-border);
+  background: white;
+}
+
+.crm-despacho-novedad--ok {
+  color: #065f46;
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+
+.crm-despacho-novedad--alerta {
+  color: #92400e;
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.crm-despacho-fecha-entrega {
+  font-size: 0.82rem;
+  color: var(--crm-text-light);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.crm-despacho-body-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crm-despacho-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--crm-border);
+  background: white;
+  color: var(--crm-text);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.crm-despacho-action-btn:hover {
+  background: #f0f7ff;
+  border-color: var(--crm-primary-light);
+  color: var(--crm-primary);
+}
+
+.crm-despacho-action-btn.active {
+  background: #f0f7ff;
+  border-color: var(--crm-primary-light);
+  color: var(--crm-primary);
+}
+
+/* Chat inline colapsable */
+.crm-despacho-chat-wrapper {
+  padding: 0 16px;
+}
+
+.crm-despacho-chat {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.crm-despacho-chat.open {
+  max-height: 400px;
+  margin-bottom: 8px;
+}
+
+.crm-despacho-chat .crm-chat {
+  margin-top: 0;
+}
+
+.crm-despacho-chat .crm-chat-messages {
+  max-height: 200px;
+}
+
+/* — Zona 3: Pie de página — */
+.crm-despacho-footer {
+  padding: 10px 16px;
+  background: #f1f5f9;
+  border-top: 1px solid var(--crm-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.crm-despacho-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--crm-text);
+  font-weight: 500;
+}
+
+.crm-despacho-footer-left i {
+  font-size: 0.7rem;
+  color: var(--crm-text-light);
+}
+
+.crm-despacho-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crm-despacho-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.crm-despacho-pill--total {
+  background: #991b1b;
+  color: white;
+}
+
+.crm-despacho-pill--uds {
+  background: #e2e8f0;
+  color: var(--crm-text);
+}
+
+.crm-despacho-pill--peso {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* Barra de progreso inline en footer */
+.crm-despacho-progress-mini {
+  width: 60px;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.crm-despacho-progress-mini-bar {
   height: 100%;
-  border-radius: 2px;
+  border-radius: 3px;
   background: var(--crm-green);
   transition: width 0.3s;
 }
 
+/* Legacy compat */
 .crm-despacho-detail {
-  border-top: 1px solid var(--crm-border);
-  padding: 16px;
   display: none;
-}
-
-.crm-despacho-detail.open {
-  display: block;
 }
 
 /* ═══════════ CHECKLIST PREPARACIÓN ═══════════ */
@@ -787,12 +1035,12 @@
 }
 
 .crm-btn--success {
-  background: var(--crm-green);
+  background: var(--crm-red);
   color: white;
 }
 
 .crm-btn--success:hover {
-  background: #059669;
+  background: #b91c25;
 }
 
 .crm-btn--danger {
