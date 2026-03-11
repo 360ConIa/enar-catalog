@@ -154,7 +154,7 @@ export function formatearNumero(n) {
 
 export function formatearPeso(kg) {
   if (!kg) return '0 kg';
-  return `${formatearNumero(Math.round(kg * 100) / 100)} kg`;
+  return `${formatearNumero(Math.ceil(kg))} kg`;
 }
 
 // ═══════════ STATE MACHINE ═══════════

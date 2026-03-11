@@ -61,8 +61,8 @@ const estado = {
     ofertas: ''            // '' = todas, 'oferta' = solo ofertas
   },
   ordenamiento: {
-    columna: 'cantidad',   // Por defecto: ordenar por stock
-    direccion: 'desc'      // Por defecto: descendente (mayor stock primero)
+    columna: 'orden_cargue',
+    direccion: 'asc'
   }
 };
 
@@ -171,9 +171,12 @@ async function cargarTodosLosProductos() {
     snapshot.forEach(doc => {
       const producto = { id: doc.id, ...doc.data() };
 
-      // Filtrar registros de encabezado que se importaron por error
+      // Filtrar registros de encabezado o productos inactivos
       if (producto.cod_interno === 'COD_INTERNO' || producto.titulo === 'TITULO') {
-        return; // Saltar este registro
+        return;
+      }
+      if (producto.activo === false) {
+        return;
       }
 
       estado.productos.push(producto);
@@ -307,6 +310,10 @@ function ordenarProductos() {
       case 'categoria':
         valorA = (a.categoria || '').toLowerCase();
         valorB = (b.categoria || '').toLowerCase();
+        break;
+      case 'orden_cargue':
+        valorA = (a.Orden_Cargue || 'ZZZ').toLowerCase();
+        valorB = (b.Orden_Cargue || 'ZZZ').toLowerCase();
         break;
       default:
         return 0;

@@ -18,7 +18,7 @@
   <!-- Header -->
   <header class="crm-header">
     <div class="crm-header-left">
-      <img src="img/logo-enar.png" alt="ENAR" class="crm-header-logo" onerror="this.style.display='none'">
+      <img src="img/logo-enar.png" alt="ENAR" class="crm-header-logo" style="filter:none;" onerror="this.style.display='none'">
       <div>
         <h1>ENAR B2B</h1>
         <div class="crm-header-sub">Gestión de Órdenes</div>
@@ -27,7 +27,7 @@
     <nav class="crm-header-nav">
       <span id="vendedorNombre" style="color:rgba(255,255,255,0.7);font-size:0.85rem;"></span>
       <a href="/">Catálogo</a>
-      <a href="vendedor.html" style="background:rgba(255,255,255,0.25);color:white;">Órdenes</a>
+      <a href="vendedor.html" style="background:#D9232D;color:white;">Órdenes</a>
       <button id="btnLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
     </nav>
   </header>
@@ -95,7 +95,7 @@
         <input type="date" class="crm-input" id="filtroHasta">
       </div>
       <div class="crm-filtro-group" style="align-self:flex-end;">
-        <button class="crm-btn crm-btn--primary" id="btnNuevaOrden">
+        <button class="crm-btn crm-btn--danger" id="btnNuevaOrden">
           <i class="bi bi-plus-lg"></i> Nueva Orden
         </button>
       </div>
@@ -112,7 +112,7 @@
             <th style="text-align:center;">Items</th>
             <th style="text-align:right;">Total</th>
             <th>Estado</th>
-            <th style="text-align:center;">Acciones</th>
+            <th style="text-align:left;">Acciones</th>
           </tr>
         </thead>
         <tbody id="ordenesBody"></tbody>
@@ -143,7 +143,7 @@
   <div id="modalProductos" class="crm-modal-overlay">
     <div class="crm-modal crm-modal--lg">
       <div class="crm-modal-header">
-        <h3>Nueva Orden</h3>
+        <h3 id="modalProductosTitulo">Nueva Orden</h3>
         <button class="crm-modal-close" onclick="cerrarModal('modalProductos')">&times;</button>
       </div>
       <div class="crm-modal-body">
@@ -157,11 +157,11 @@
         </div>
 
         <!-- Product search -->
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <input type="text" class="crm-input" id="inputBuscarProducto" placeholder="Buscar producto por código o nombre..." style="flex:1;">
-          <button class="crm-btn crm-btn--primary" id="btnBuscarProd"><i class="bi bi-search"></i></button>
+        <div style="margin-bottom:12px;">
+          <input type="text" class="crm-input" id="inputBuscarProducto" placeholder="Buscar por código, nombre, marca... (usa , para combinar filtros)" style="width:100%;">
+          <div style="font-size:0.7rem;color:var(--crm-text-light);margin-top:4px;">Ej: "acetam, enar" busca productos que contengan ambos términos. Enter → editar cantidad → Enter → agregar.</div>
         </div>
-        <div id="productoResultados" style="max-height:200px;overflow-y:auto;display:none;margin-bottom:16px;border:1px solid var(--crm-border);border-radius:8px;"></div>
+        <div id="productoResultados" style="max-height:220px;overflow-y:auto;display:none;margin-bottom:16px;border:1px solid var(--crm-border);border-radius:8px;"></div>
 
         <!-- Cart -->
         <div id="cartEmpty" style="text-align:center;padding:20px;color:var(--crm-text-light);font-size:0.85rem;">
@@ -220,6 +220,27 @@
       </div>
       <div class="crm-modal-body" id="modalDetalleBody"></div>
       <div class="crm-modal-footer" id="modalDetalleFooter"></div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Confirmar Papelera -->
+  <div id="modalPapelera" class="crm-modal-overlay">
+    <div class="crm-modal" style="max-width:420px;">
+      <div class="crm-modal-header" style="background:var(--crm-red);color:white;">
+        <h3><i class="bi bi-exclamation-triangle"></i> Confirmar eliminación</h3>
+        <button class="crm-modal-close" style="color:white;" onclick="cerrarModal('modalPapelera')">&times;</button>
+      </div>
+      <div class="crm-modal-body" style="text-align:center;padding:24px;">
+        <i class="bi bi-trash3" style="font-size:2.5rem;color:var(--crm-red);display:block;margin-bottom:12px;"></i>
+        <p style="font-size:0.95rem;margin-bottom:16px;">¿Estás seguro de enviar esta orden a la papelera?</p>
+        <div id="papeleraOrdenInfo" style="background:#f8fafc;border-radius:8px;padding:12px;text-align:left;font-size:0.85rem;"></div>
+      </div>
+      <div class="crm-modal-footer" style="justify-content:center;gap:12px;">
+        <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalPapelera')">Cancelar</button>
+        <button class="crm-btn crm-btn--danger" id="btnConfirmarPapelera">
+          <i class="bi bi-trash3"></i> Sí, enviar a papelera
+        </button>
+      </div>
     </div>
   </div>
 

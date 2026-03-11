@@ -121,7 +121,10 @@ async function cargarDatos() {
     metricasSnap.forEach(d => metricas.push({ id: d.id, ...d.data() }));
 
     productos = [];
-    productosSnap.forEach(d => productos.push({ id: d.id, ...d.data() }));
+    productosSnap.forEach(d => {
+      const data = d.data();
+      if (data.activo !== false) productos.push({ id: d.id, ...data });
+    });
 
     vendedoresMap = {};
     vendedoresSnap.forEach(d => {

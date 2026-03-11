@@ -50,8 +50,19 @@ let clienteSeleccionado = null;
 let productosOrden = [];
 let papeleraOrdenPendiente = null;
 let ordenEditandoId = null;
+let productosPorCodigo = new Map(); // cod_interno → producto (O(1) lookup)
 const paginador = new Paginador(25);
 const ROLES_EXCLUIDOS = ['vendedor', 'despachos', 'admin', 'gestor', 'administrador'];
+
+function sortItemsPorCargue(items) {
+  return [...items].sort((a, b) => {
+    const pa = productosPorCodigo.get(a.cod_interno || a.sku);
+    const pb = productosPorCodigo.get(b.cod_interno || b.sku);
+    const oa = (pa && pa.Orden_Cargue) || 'ZZZ';
+    const ob = (pb && pb.Orden_Cargue) || 'ZZZ';
+    return oa.localeCompare(ob);
+  });
+}
 
 function toDate(val) {
   if (!val) return null;
@@ -105,12 +116,13 @@ async function cargarOrdenes() {
   try {
     let q;
     if (esAdmin) {
-      q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'));
+      q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500));
     } else {
       q = query(
         collection(db, 'ordenes'),
         where('creadaPor', '==', currentUser.uid),
-        orderBy('created_at', 'desc')
+        orderBy('created_at', 'desc'),
+        limit(500)
       );
     }
 
@@ -268,7 +280,7 @@ function renderizarOrdenes() {
       <td style="text-align:center;">${o.cantidad_productos || (o.items || o.productos || []).length}</td>
       <td style="text-align:right;font-weight:600;">${formatearPrecio(o.total || 0)}</td>
       <td>${badgeEstado(o.estado)}</td>
-      <td style="text-align:center;white-space:nowrap;">
+      <td style="text-align:left;white-space:nowrap;">
         <button class="crm-btn crm-btn--secondary crm-btn--sm" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">
           <i class="bi bi-eye"></i>
         </button>
@@ -288,7 +300,7 @@ window.verDetalleOrden = function(ordenId) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
 
-  const items = orden.items || orden.productos || [];
+  const items = sortItemsPorCargue(orden.items || orden.productos || []);
 
   $('modalDetalleTitulo').textContent = `Orden ${orden.numero_orden || ''}`;
   $('modalDetalleBody').innerHTML = `
@@ -535,11 +547,13 @@ async function cargarProductos() {
     todosLosProductos = [];
     snap.forEach(d => {
       const data = d.data();
-      if (data.cod_interno && data.cod_interno !== 'COD_INTERNO' && data.titulo !== 'TITULO') {
+      if (data.cod_interno && data.cod_interno !== 'COD_INTERNO' && data.titulo !== 'TITULO' && data.activo !== false) {
         todosLosProductos.push({ id: d.id, ...data });
       }
     });
-    todosLosProductos.sort((a, b) => (a.titulo || '').localeCompare(b.titulo || ''));
+    todosLosProductos.sort((a, b) => (a.Orden_Cargue || 'ZZZ').localeCompare(b.Orden_Cargue || 'ZZZ') || (a.titulo || '').localeCompare(b.titulo || ''));
+    // Build Map for O(1) lookup in sortItemsPorCargue
+    productosPorCodigo = new Map(todosLosProductos.map(p => [p.cod_interno, p]));
   } catch (error) {
     console.error('Error cargando productos:', error);
   }
@@ -631,10 +645,12 @@ function agregarProducto(producto, cantidad) {
       marca: producto.marca || '',
       imagen: producto.imagen_principal || '',
       precio_unitario: precio,
-      cantidad: cantidad
+      cantidad: cantidad,
+      peso_kg: producto.peso || producto.Peso_Kg || producto.peso_kg || 0
     });
   }
 
+  productosOrden = sortItemsPorCargue(productosOrden);
   renderizarCarrito();
   showToast(`${producto.titulo} agregado`, 'success');
 }
@@ -723,7 +739,7 @@ window.editarOrden = function(ordenId) {
   };
 
   // Cargar items al carrito
-  const items = orden.items || orden.productos || [];
+  const items = sortItemsPorCargue(orden.items || orden.productos || []);
   productosOrden = items.map(it => ({
     cod_interno: it.cod_interno || it.sku || '',
     titulo: it.titulo || it.nombre || '',
@@ -768,7 +784,8 @@ async function guardarEdicionOrden() {
       imagen: p.imagen,
       precio_unitario: p.precio_unitario,
       cantidad: p.cantidad,
-      subtotal: p.precio_unitario * p.cantidad
+      subtotal: p.precio_unitario * p.cantidad,
+      peso_kg: p.peso_kg || 0
     }));
 
     const orden = todasLasOrdenes.find(o => o.id === ordenEditandoId);
@@ -841,7 +858,8 @@ async function confirmarOrden() {
       imagen: p.imagen,
       precio_unitario: p.precio_unitario,
       cantidad: p.cantidad,
-      subtotal: p.precio_unitario * p.cantidad
+      subtotal: p.precio_unitario * p.cantidad,
+      peso_kg: p.peso_kg || 0
     }));
 
     const orden = {

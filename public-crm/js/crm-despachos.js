@@ -11,7 +11,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
   getFirestore, collection, doc, getDoc, getDocs, updateDoc,
-  query, where, orderBy, onSnapshot, addDoc, limit as fbLimit
+  query, where, orderBy, onSnapshot, addDoc, limit as fbLimit, documentId
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import {
   getAuth, onAuthStateChanged, signOut
@@ -46,6 +46,16 @@ let chatUnsubscribers = {};
 let productosCache = {}; // SKU/cod_interno → { Peso_Kg, nombre, ... }
 let usuariosCache = {}; // uid → { telefono, ubicacion, ruta, direccion }
 const paginador = new Paginador(15);
+
+function sortItemsPorCargue(items) {
+  return [...items].sort((a, b) => {
+    const pa = productosCache[a.cod_interno || a.sku];
+    const pb = productosCache[b.cod_interno || b.sku];
+    const oa = (pa && pa.Orden_Cargue) || 'ZZZ';
+    const ob = (pb && pb.Orden_Cargue) || 'ZZZ';
+    return oa.localeCompare(ob);
+  });
+}
 
 function toDate(val) {
   if (!val) return null;
@@ -109,7 +119,8 @@ async function cargarOrdenes() {
   try {
     const q = query(
       collection(db, 'ordenes'),
-      orderBy('created_at', 'desc')
+      orderBy('created_at', 'desc'),
+      fbLimit(500)
     );
 
     const [snap, productosSnap] = await Promise.all([
@@ -124,7 +135,7 @@ async function cargarOrdenes() {
       productosSnap.forEach(d => {
         const data = d.data();
         const key = data.SKU || data.cod_interno;
-        if (key) productosCache[key] = data;
+        if (key && data.activo !== false) productosCache[key] = data;
       });
     }
 
@@ -138,21 +149,25 @@ async function cargarOrdenes() {
         if (!item.peso_kg) {
           const sku = item.sku || item.cod_interno;
           const prod = productosCache[sku];
-          if (prod) item.peso_kg = prod.Peso_Kg || 0;
+          if (prod) item.peso_kg = prod.peso || prod.Peso_Kg || prod.peso_kg || 0;
         }
       });
     });
 
-    // Load user info for orders that need contact/route data
+    // Load user info in batches (max 30 per Firestore 'in' query)
     const uidsToFetch = new Set();
     todasLasOrdenes.forEach(o => {
       if (o.user_id && !usuariosCache[o.user_id]) uidsToFetch.add(o.user_id);
     });
     if (uidsToFetch.size > 0) {
-      const batchPromises = [...uidsToFetch].map(uid => getDoc(doc(db, 'usuarios', uid)));
-      const userDocs = await Promise.all(batchPromises);
-      userDocs.forEach(ud => {
-        if (ud.exists()) usuariosCache[ud.id] = ud.data();
+      const uidsArr = [...uidsToFetch];
+      const batchResults = await Promise.all(
+        Array.from({ length: Math.ceil(uidsArr.length / 30) }, (_, i) =>
+          getDocs(query(collection(db, 'usuarios'), where(documentId(), 'in', uidsArr.slice(i * 30, (i + 1) * 30))))
+        )
+      );
+      batchResults.forEach(snap => {
+        snap.forEach(ud => { usuariosCache[ud.id] = ud.data(); });
       });
     }
 
@@ -252,7 +267,7 @@ function renderizarOrdenes() {
 }
 
 function renderCardOrden(orden) {
-  const items = orden.items || orden.productos || [];
+  const items = sortItemsPorCargue(orden.items || orden.productos || []);
   const totalItems = items.length;
   const preparados = items.filter(i => i.preparado).length;
   const progreso = totalItems > 0 ? Math.round((preparados / totalItems) * 100) : 0;
@@ -284,7 +299,7 @@ function renderCardOrden(orden) {
           <div class="crm-despacho-header-cliente">
             <span class="crm-despacho-cliente-nombre">
               ${clienteNombre}
-              ${nombreComercial && nombreComercial !== clienteNombre ? `<span class="crm-despacho-nombre-comercial">${nombreComercial}</span>` : ''}
+              ${nombreComercial && nombreComercial !== clienteNombre ? `<span style="margin:0 6px;color:#cbd5e1;font-weight:400;">|</span><span class="crm-despacho-nombre-comercial">${nombreComercial}</span>` : ''}
             </span>
             ${clienteNit ? `<div class="crm-despacho-cliente-nit">NIT ${clienteNit}</div>` : ''}
           </div>
@@ -351,7 +366,7 @@ window.abrirAlistamiento = function(ordenId) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
 
-  const items = orden.items || orden.productos || [];
+  const items = sortItemsPorCargue(orden.items || orden.productos || []);
 
   $('modalAlistamientoTitulo').textContent = `Alistamiento — ${orden.numero_orden || ordenId.substring(0, 8)}`;
 
@@ -406,7 +421,8 @@ window.abrirAlistamiento = function(ordenId) {
 
             const imgSrc = item.imagen_principal || item.imagen || '';
             const prod = productosCache[item.cod_interno || item.sku];
-            const imgUrl = imgSrc || (prod && prod.imagen_principal) || '';
+            let imgUrl = imgSrc || (prod && prod.imagen_principal) || '';
+            if (imgUrl && imgUrl.includes('googleusercontent.com')) imgUrl += '=w80-h80-c';
 
             return `
             <tr data-idx="${idx}" class="${estadoItem === 'comp' ? 'alist-row-comp' : estadoItem === 'sinstock' ? 'alist-row-sinstock' : ''}">
@@ -434,7 +450,7 @@ window.abrirAlistamiento = function(ordenId) {
               </td>
               <td style="text-align:center;">
                 ${imgUrl
-                  ? `<img src="${imgUrl}" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:4px;" onerror="this.style.display='none'">`
+                  ? `<div style="width:40px;height:40px;border-radius:4px;overflow:hidden;display:inline-block;"><img src="${imgUrl}" alt="" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.style.display='none'"></div>`
                   : `<i class="bi bi-image" style="font-size:1.2rem;color:var(--crm-text-light);"></i>`}
               </td>
               <td style="text-align:center;font-weight:600;">${cantPedida}</td>
@@ -634,7 +650,7 @@ window.toggleDetalle = function(ordenId) {
     const orden = todasLasOrdenes.find(o => o.id === ordenId);
     if (!orden) return;
 
-    const items = orden.items || orden.productos || [];
+    const items = sortItemsPorCargue(orden.items || orden.productos || []);
     const subtotal = items.reduce((s, i) => s + ((i.precio_unitario || 0) * (i.cantidad || 0)), 0);
     const total = orden.total || subtotal;
     const iva = total - subtotal > 0 ? total - subtotal : 0;
@@ -689,7 +705,7 @@ window.toggleChat = function(ordenId, btn) {
 };
 
 function renderBotonesEstado(orden) {
-  const transiciones = obtenerTransicionesPermitidas(orden.estado);
+  const transiciones = obtenerTransicionesPermitidas(orden.estado).filter(e => e !== 'cancelada');
   const colores = {
     completada: 'background:#d1fae5;color:#065f46;',
     parcial: 'background:#ffedd5;color:#9a3412;',

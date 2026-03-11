@@ -241,6 +241,43 @@
 .badge-parcial { background: #ffedd5; color: #9a3412; }
 .badge-cancelada { background: #fee2e2; color: #991b1b; }
 
+/* ═══════════ DROPDOWN CAMBIO ESTADO ═══════════ */
+
+.crm-estado-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 9999;
+  background: white;
+  border: 1px solid var(--crm-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  min-width: 150px;
+  margin-top: 4px;
+}
+
+.crm-estado-menu.open {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.crm-estado-opcion {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.crm-estado-opcion:hover {
+  background: #f1f5f9;
+}
+
 /* ═══════════ BADGES DE SALUD ═══════════ */
 
 .badge-salud {

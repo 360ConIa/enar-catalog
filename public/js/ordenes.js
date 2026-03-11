@@ -145,7 +145,8 @@ async function agregarAlCarrito(userId, producto, cantidad = 1) {
         precio_unitario: producto.precio_cliente,
         precio_lista: producto.precio_lista,
         cantidad: cantidad,
-        subtotal: producto.precio_cliente * cantidad
+        subtotal: producto.precio_cliente * cantidad,
+        peso_kg: producto.peso || producto.Peso_Kg || producto.peso_kg || 0
       });
     }
 
@@ -308,7 +309,8 @@ async function crearOrdenDesdeLocalStorage(userId, items, datosEntrega, observac
         imagen: item.imagen || '',
         precio_unitario: item.precio_unitario,
         cantidad: item.cantidad,
-        subtotal: item.precio_unitario * item.cantidad
+        subtotal: item.precio_unitario * item.cantidad,
+        peso_kg: item.peso_kg || 0
       })),
 
       // Totales
@@ -409,7 +411,8 @@ async function crearOrden(userId, datosEntrega, observaciones = '') {
         precio_unitario: item.precio_unitario,
         precio_lista: item.precio_lista,
         cantidad: item.cantidad,
-        subtotal: item.subtotal
+        subtotal: item.subtotal,
+        peso_kg: item.peso_kg || 0
       })),
 
       // Totales
@@ -722,7 +725,8 @@ async function actualizarItemsOrden(ordenId, items, userId, observaciones = null
         imagen: item.imagen || '',
         precio_unitario: item.precio_unitario,
         cantidad: item.cantidad,
-        subtotal: item.precio_unitario * item.cantidad
+        subtotal: item.precio_unitario * item.cantidad,
+        peso_kg: item.peso_kg || 0
       })),
       subtotal,
       iva,
@@ -765,7 +769,10 @@ async function buscarProductos(termino, limitCount = 10) {
       limit(limitCount)
     );
     const snapCodigo = await getDocs(qCodigo);
-    snapCodigo.forEach(d => resultados.push({ id: d.id, ...d.data() }));
+    snapCodigo.forEach(d => {
+      const data = d.data();
+      if (data.activo !== false) resultados.push({ id: d.id, ...data });
+    });
 
     // Si no encontró por código, buscar por prefijo en titulo
     if (resultados.length === 0) {
@@ -777,7 +784,10 @@ async function buscarProductos(termino, limitCount = 10) {
         limit(limitCount)
       );
       const snapTitulo = await getDocs(qTitulo);
-      snapTitulo.forEach(d => resultados.push({ id: d.id, ...d.data() }));
+      snapTitulo.forEach(d => {
+        const data = d.data();
+        if (data.activo !== false) resultados.push({ id: d.id, ...data });
+      });
     }
 
     return { success: true, productos: resultados.slice(0, limitCount) };
