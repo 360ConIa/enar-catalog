@@ -134,7 +134,6 @@ function transformarFilaAProducto(fila, timestamp) {
     impuesto: convertirANumero(fila[COLUMNAS.IMPUESTO], 0.19),
 
     // Campos adicionales para Firestore
-    activo: true,
     sync_at: timestamp,
     updated_at: timestamp
   };

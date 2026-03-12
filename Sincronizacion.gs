@@ -790,7 +790,6 @@ const CAMPOS_DESDE_SHEET = [
   'marca',
   'categoria',
   'ficha_tecnica',
-  'activo',
   'sync_at',
   'updated_at'
 ];
@@ -858,7 +857,6 @@ function convertirProductoAFields(producto) {
     marca: { stringValue: String(producto.marca || '') },
     categoria: { stringValue: String(producto.categoria || '') },
     ficha_tecnica: { stringValue: String(producto.ficha_tecnica || '') },
-    activo: { booleanValue: true },
     sync_at: { timestampValue: timestamp },
     updated_at: { timestampValue: timestamp }
   };
