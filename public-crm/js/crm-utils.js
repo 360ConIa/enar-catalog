@@ -15,8 +15,10 @@ export const ESTADOS_ORDEN = {
   APROBADA: 'aprobada',
   EN_PROCESO: 'en_proceso',
   EN_ESPERA: 'en_espera',
+  ALISTAMIENTO: 'alistamiento',
   COMPLETADA: 'completada',
   PARCIAL: 'parcial',
+  TERMINADA: 'terminada',
   CANCELADA: 'cancelada'
 };
 
@@ -25,8 +27,10 @@ export const ESTADOS_ORDEN_LABELS = {
   aprobada: 'Aprobada',
   en_proceso: 'En Proceso',
   en_espera: 'En Espera',
+  alistamiento: 'Alistamiento',
   completada: 'Completa',
   parcial: 'Parcial',
+  terminada: 'Terminada',
   cancelada: 'Cancelada'
 };
 
@@ -161,9 +165,11 @@ export function formatearPeso(kg) {
 
 const TRANSICIONES_ESTADO = {
   pendiente: ['en_proceso', 'cancelada'],
-  en_proceso: ['completada', 'parcial', 'en_espera', 'cancelada'],
-  parcial: ['completada', 'en_espera', 'cancelada'],
-  completada: [],
+  en_proceso: ['alistamiento', 'cancelada'],
+  alistamiento: ['terminada', 'cancelada'],
+  completada: ['terminada'],
+  parcial: ['terminada', 'alistamiento'],
+  terminada: [],
   cancelada: []
 };
 
@@ -184,8 +190,10 @@ export function badgeEstado(estado) {
     aprobada: 'badge-estado badge-aprobada',
     en_proceso: 'badge-estado badge-en-proceso',
     en_espera: 'badge-estado badge-en-espera',
+    alistamiento: 'badge-estado badge-alistamiento',
     completada: 'badge-estado badge-completada',
     parcial: 'badge-estado badge-parcial',
+    terminada: 'badge-estado badge-terminada',
     cancelada: 'badge-estado badge-cancelada'
   };
   const label = ESTADOS_ORDEN_LABELS[estado] || estado;

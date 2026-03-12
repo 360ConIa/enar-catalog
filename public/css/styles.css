@@ -267,6 +267,49 @@ body {
   color: #fff;
 }
 
+/* Dropdown usuario en header */
+.nav-user-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.nav-user-dropdown > a {
+  cursor: pointer;
+}
+.nav-user-dropdown > a i.bi-caret-down-fill {
+  font-size: 0.6rem;
+  margin-left: 2px;
+  opacity: 0.7;
+}
+.nav-user-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 150px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  padding: 6px 0;
+  z-index: 1100;
+  margin-top: 4px;
+}
+.nav-user-menu.open { display: block; }
+.nav-user-menu a {
+  display: block;
+  padding: 8px 16px;
+  color: #334155 !important;
+  font-size: 0.85rem !important;
+  font-weight: 500;
+  background: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+.nav-user-menu a:hover {
+  background: #f1f5f9 !important;
+  color: #1e3a8a !important;
+}
+.nav-user-menu a i { margin-right: 8px; color: #64748b; }
+
 /* Clases para ocultar/mostrar navegación */
 .nav-hidden {
   display: none !important;

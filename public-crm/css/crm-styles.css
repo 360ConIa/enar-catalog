@@ -239,6 +239,8 @@
 .badge-en-espera { background: #f3e8ff; color: #6b21a8; }
 .badge-completada { background: #d1fae5; color: #065f46; }
 .badge-parcial { background: #ffedd5; color: #9a3412; }
+.badge-alistamiento { background: #fef9c3; color: #854d0e; }
+.badge-terminada { background: #d1fae5; color: #065f46; }
 .badge-cancelada { background: #fee2e2; color: #991b1b; }
 
 /* ═══════════ DROPDOWN CAMBIO ESTADO ═══════════ */

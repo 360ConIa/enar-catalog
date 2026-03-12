@@ -11,7 +11,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
   getFirestore, collection, doc, getDoc, addDoc, getDocs, updateDoc,
-  query, where, orderBy, limit
+  query, where, orderBy, limit, onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import {
   getAuth, onAuthStateChanged, signOut
@@ -49,6 +49,7 @@ let todosLosProductos = [];
 let clienteSeleccionado = null;
 let productosOrden = [];
 let papeleraOrdenPendiente = null;
+let unsubOrdenes = null;
 let ordenEditandoId = null;
 let productosPorCodigo = new Map(); // cod_interno → producto (O(1) lookup)
 const paginador = new Paginador(25);
@@ -99,7 +100,8 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   userPerfil = perfil;
 
-  await Promise.all([cargarOrdenes(), cargarClientes(), cargarProductos()]);
+  await Promise.all([cargarClientes(), cargarProductos()]);
+  cargarOrdenes();
   initEventListeners();
 
   $('loadingScreen').style.display = 'none';
@@ -107,26 +109,28 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 $('btnLogout').addEventListener('click', async () => {
+  if (unsubOrdenes) unsubOrdenes();
   await signOut(auth);
   window.location.href = 'index.html';
 });
 
-// ═══════════ CARGAR ÓRDENES ═══════════
-async function cargarOrdenes() {
-  try {
-    let q;
-    if (esAdmin) {
-      q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500));
-    } else {
-      q = query(
-        collection(db, 'ordenes'),
-        where('creadaPor', '==', currentUser.uid),
-        orderBy('created_at', 'desc'),
-        limit(500)
-      );
-    }
+// ═══════════ CARGAR ÓRDENES (REAL-TIME) ═══════════
+function cargarOrdenes() {
+  if (unsubOrdenes) unsubOrdenes();
 
-    const snap = await getDocs(q);
+  let q;
+  if (esAdmin) {
+    q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500));
+  } else {
+    q = query(
+      collection(db, 'ordenes'),
+      where('creadaPor', '==', currentUser.uid),
+      orderBy('created_at', 'desc'),
+      limit(500)
+    );
+  }
+
+  unsubOrdenes = onSnapshot(q, (snap) => {
     todasLasOrdenes = [];
     snap.forEach(d => {
       const data = d.data();
@@ -135,10 +139,10 @@ async function cargarOrdenes() {
 
     actualizarKPIs();
     aplicarFiltros();
-  } catch (error) {
-    console.error('Error cargando órdenes:', error);
+  }, (error) => {
+    console.error('Error en listener órdenes:', error);
     showToast('Error al cargar órdenes', 'error');
-  }
+  });
 }
 
 function actualizarKPIs() {
@@ -198,7 +202,11 @@ function nitCliente(o) {
 // ═══════════ CAMBIO ESTADO INLINE ═══════════
 function renderBtnCambioEstado(orden) {
   const transiciones = obtenerTransicionesPermitidas(orden.estado);
-  if (transiciones.length === 0) return '';
+  if (transiciones.length === 0) {
+    return `<button class="crm-btn crm-btn--primary crm-btn--sm" disabled style="opacity:0.4;cursor:not-allowed;" title="Sin transiciones disponibles">
+        <i class="bi bi-arrow-repeat"></i>
+      </button>`;
+  }
   return `
     <div class="crm-estado-dropdown" style="display:inline-block;position:relative;">
       <button class="crm-btn crm-btn--primary crm-btn--sm" onclick="toggleEstadoDropdown(event, '${orden.id}')" title="Cambiar estado">
@@ -495,7 +503,6 @@ function seleccionarCliente(cliente) {
 
   $('selClienteNombre').textContent = cliente.razon_social || cliente.nombre || cliente.email;
   $('selClienteNit').textContent = cliente.nit || 'N/A';
-  $('selClienteTipo').textContent = cliente.tipo_cliente || '-';
 
   $('inputBuscarProducto').value = '';
   $('productoResultados').style.display = 'none';
@@ -753,7 +760,6 @@ window.editarOrden = function(ordenId) {
   $('modalProductosTitulo').textContent = `Editar Orden ${orden.numero_orden || ''}`;
   $('selClienteNombre').textContent = clienteSeleccionado.razon_social || clienteSeleccionado.nombre || clienteSeleccionado.email || '-';
   $('selClienteNit').textContent = clienteSeleccionado.nit || 'N/A';
-  $('selClienteTipo').textContent = clienteSeleccionado.tipo_cliente || '-';
   $('inputBuscarProducto').value = '';
   $('productoResultados').style.display = 'none';
   $('inputObservaciones').value = orden.observaciones || '';
@@ -920,8 +926,6 @@ async function confirmarOrden() {
 
     clienteSeleccionado = null;
     productosOrden = [];
-
-    await cargarOrdenes();
   } catch (error) {
     console.error('Error creando orden:', error);
     showToast('Error al crear orden: ' + error.message, 'error');

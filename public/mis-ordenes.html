@@ -9,7 +9,9 @@
   <link rel="shortcut icon" href="/favicon.ico">
   <title>Mis Órdenes - ENAR B2B</title>
   <link rel="stylesheet" href="css/styles.css?v=5.0">
+  <link rel="stylesheet" href="css/crm-styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <style>
     * {
@@ -55,6 +57,7 @@
       color: white;
       font-size: 20px;
       font-weight: 600;
+      margin: 0;
     }
     /* Nav hereda de styles.css (.header-nav, .header-nav__link) */
     .page-container {
@@ -630,20 +633,30 @@
 </head>
 <body>
   <!-- Header -->
-  <header class="page-header">
-    <div class="header-content">
-      <div class="header-left">
-        <img src="img/logo-enar.png" alt="ENAR" onerror="this.style.display='none'">
-        <h1>ENAR B2B</h1>
+  <header class="crm-header">
+    <div class="d-flex align-items-center gap-3">
+      <div class="header-logo">
+        <img src="img/logo-enar.png" alt="ENAR" class="logo-img" style="filter:none;" onerror="this.style.display='none'">
       </div>
-      <nav class="header-nav">
-        <a href="/" class="header-nav__link">Catálogo</a>
-        <a href="perfil.html" class="header-nav__link">Perfil</a>
-        <a href="mis-ordenes.html" class="header-nav__link nav-active">Ventas</a>
-        <a href="admin.html" class="header-nav__link header-nav__link--admin" id="navAdminLink" style="display: none;">Admin</a>
-        <a href="#" id="logoutLink" class="header-nav__link header-nav__link--logout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></a>
-      </nav>
+      <div class="header-titulo">
+        <h1 class="mb-0">ENAR B2B</h1>
+        <p class="header-tagline mb-0 d-none d-sm-block">Con IA integrada</p>
+      </div>
     </div>
+    <nav class="crm-header-nav">
+      <a href="vendedor.html">Órdenes</a>
+      <a href="/">Catálogo</a>
+      <div class="nav-user-dropdown">
+        <a onclick="document.getElementById('navUserMenu').classList.toggle('open');event.stopPropagation();" id="navUserName" style="background:#D9232D;color:white;"><i class="bi bi-person-circle"></i> <i class="bi bi-caret-down-fill"></i></a>
+        <div class="nav-user-menu" id="navUserMenu">
+          <a href="perfil.html"><i class="bi bi-person"></i> Mi Perfil</a>
+          <a href="mis-ordenes.html"><i class="bi bi-bag-check"></i> Mis Compras</a>
+        </div>
+      </div>
+      <a href="admin.html">Admin</a>
+      <button id="logoutLink" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
+    </nav>
+    <script>(function(){var n=localStorage.getItem('enar_user_name');if(n){var el=document.getElementById('navUserName');if(el)el.innerHTML='<i class="bi bi-person-circle"></i> '+n+' <i class="bi bi-caret-down-fill"></i>';}})();</script>
   </header>
 
   <!-- Main Content -->
@@ -686,7 +699,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <script type="module">
-    import { onAuthChange, cerrarSesion, ADMIN_EMAILS, USER_MANAGER_EMAILS } from './js/auth.js';
+    import { onAuthChange, cerrarSesion, obtenerDatosUsuario, ADMIN_EMAILS, USER_MANAGER_EMAILS } from './js/auth.js';
     import {
       obtenerOrdenesUsuario,
       obtenerOrden,
@@ -707,7 +720,6 @@
     const modalTitle = document.getElementById('modalTitle');
     const modalBody = document.getElementById('modalBody');
     const logoutLink = document.getElementById('logoutLink');
-    const navAdminLink = document.getElementById('navAdminLink');
 
     let currentUser = null;
     let ordenes = [];
@@ -1192,6 +1204,7 @@
     // Cerrar sesión
     logoutLink.addEventListener('click', async (e) => {
       e.preventDefault();
+      localStorage.removeItem('enar_user_name');
       await cerrarSesion();
       window.location.href = '/login.html';
     });
@@ -1218,14 +1231,21 @@
 
       currentUser = user;
 
-      // Mostrar link Admin para usuarios privilegiados
-      if (ADMIN_EMAILS.includes(user.email) || USER_MANAGER_EMAILS.includes(user.email)) {
-        navAdminLink.style.display = 'inline-block';
+      // Mostrar nombre del usuario en link Perfil
+      const datosUsuario = await obtenerDatosUsuario(user.uid);
+      if (datosUsuario.success) {
+        const navUserName = document.getElementById('navUserName');
+        if (navUserName) {
+          const displayName = (datosUsuario.data.nombre || user.email).split(' ')[0];
+          navUserName.innerHTML = '<i class="bi bi-person-circle"></i> ' + displayName + ' <i class="bi bi-caret-down-fill"></i>';
+          localStorage.setItem('enar_user_name', displayName);
+        }
       }
 
       await inicializarUsuario();
       cargarOrdenes(user.uid);
     });
   </script>
+  <script>document.addEventListener('click',function(e){if(!e.target.closest('.nav-user-dropdown')){var m=document.getElementById('navUserMenu');if(m)m.classList.remove('open')}});</script>
 </body>
 </html>

@@ -43,6 +43,7 @@ let todasLasOrdenes = [];
 let ordenesFiltradas = [];
 let tabActual = 'proceso';
 let chatUnsubscribers = {};
+let unsubOrdenes = null;
 let productosCache = {}; // SKU/cod_interno → { Peso_Kg, nombre, ... }
 let usuariosCache = {}; // uid → { telefono, ubicacion, ruta, direccion }
 const paginador = new Paginador(15);
@@ -67,10 +68,8 @@ function toDate(val) {
 
 const TAB_ESTADOS = {
   proceso: ['en_proceso'],
-  completadas: ['completada'],
-  parcial: ['parcial'],
-  espera: ['en_espera'],
-  canceladas: ['cancelada']
+  alistamiento: ['alistamiento'],
+  terminadas: ['terminada', 'completada', 'parcial']
 };
 
 // ═══════════ AUTH ═══════════
@@ -108,39 +107,45 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 $('btnLogout').addEventListener('click', async () => {
+  if (unsubOrdenes) unsubOrdenes();
+  Object.values(chatUnsubscribers).forEach(unsub => unsub());
   await signOut(auth);
   window.location.href = 'index.html';
 });
 
-// ═══════════ CARGAR ÓRDENES ═══════════
+// ═══════════ CARGAR ÓRDENES (REAL-TIME) ═══════════
 async function cargarOrdenes() {
   mostrarLoader('ordenesContainer', 'Cargando órdenes...');
 
-  try {
-    const q = query(
-      collection(db, 'ordenes'),
-      orderBy('created_at', 'desc'),
-      fbLimit(500)
-    );
-
-    const [snap, productosSnap] = await Promise.all([
-      getDocs(q),
-      Object.keys(productosCache).length === 0
-        ? getDocs(collection(db, 'productos'))
-        : Promise.resolve(null)
-    ]);
-
-    // Build products cache for weight lookup
-    if (productosSnap) {
+  // Cargar productos cache una sola vez
+  if (Object.keys(productosCache).length === 0) {
+    try {
+      const productosSnap = await getDocs(collection(db, 'productos'));
       productosSnap.forEach(d => {
         const data = d.data();
         const key = data.SKU || data.cod_interno;
         if (key && data.activo !== false) productosCache[key] = data;
       });
+    } catch (error) {
+      console.error('Error cargando productos:', error);
     }
+  }
 
+  // Listener real-time para órdenes
+  if (unsubOrdenes) unsubOrdenes();
+
+  const q = query(
+    collection(db, 'ordenes'),
+    orderBy('created_at', 'desc'),
+    fbLimit(500)
+  );
+
+  unsubOrdenes = onSnapshot(q, async (snap) => {
     todasLasOrdenes = [];
-    snap.forEach(d => todasLasOrdenes.push({ id: d.id, ...d.data() }));
+    snap.forEach(d => {
+      const data = d.data();
+      if (!data.eliminado) todasLasOrdenes.push({ id: d.id, ...data });
+    });
 
     // Enrich items with product weight
     todasLasOrdenes.forEach(o => {
@@ -166,8 +171,8 @@ async function cargarOrdenes() {
           getDocs(query(collection(db, 'usuarios'), where(documentId(), 'in', uidsArr.slice(i * 30, (i + 1) * 30))))
         )
       );
-      batchResults.forEach(snap => {
-        snap.forEach(ud => { usuariosCache[ud.id] = ud.data(); });
+      batchResults.forEach(s => {
+        s.forEach(ud => { usuariosCache[ud.id] = ud.data(); });
       });
     }
 
@@ -185,10 +190,10 @@ async function cargarOrdenes() {
     cargarFiltroRutas();
     actualizarTabCounts();
     aplicarFiltrosYRender();
-  } catch (error) {
-    console.error('Error cargando órdenes:', error);
+  }, (error) => {
+    console.error('Error en listener órdenes:', error);
     showToast('Error al cargar órdenes', 'error');
-  }
+  });
 }
 
 function cargarFiltroRutas() {
@@ -206,9 +211,14 @@ function cargarFiltroRutas() {
 }
 
 function actualizarTabCounts() {
+  const countMap = {
+    proceso: 'tabCountProceso',
+    alistamiento: 'tabCountAlistamiento',
+    terminadas: 'tabCountTerminadas'
+  };
   Object.entries(TAB_ESTADOS).forEach(([tab, estados]) => {
     const count = todasLasOrdenes.filter(o => estados.includes(o.estado)).length;
-    const el = $(`tabCount${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+    const el = $(countMap[tab]);
     if (el) el.textContent = count;
   });
 }
@@ -269,8 +279,8 @@ function renderizarOrdenes() {
 function renderCardOrden(orden) {
   const items = sortItemsPorCargue(orden.items || orden.productos || []);
   const totalItems = items.length;
-  const preparados = items.filter(i => i.preparado).length;
-  const progreso = totalItems > 0 ? Math.round((preparados / totalItems) * 100) : 0;
+  const marcados = items.filter(i => ['comp', 'parcial', 'sinstock'].includes(i.estado_alistamiento)).length;
+  const progreso = totalItems > 0 ? Math.round((marcados / totalItems) * 100) : 0;
 
   const pesoTotal = items.reduce((sum, i) => sum + ((i.peso_kg || 0) * (i.cantidad || 0)), 0);
   const totalUnidades = items.reduce((sum, i) => sum + (i.cantidad || 0), 0);
@@ -294,6 +304,7 @@ function renderCardOrden(orden) {
           </div>
           <span class="crm-despacho-sep"></span>
           ${badgeEstado(orden.estado)}
+          ${renderBadgeResultado(orden)}
           <span class="crm-despacho-sep"></span>
           ${ubicacion ? `<span class="crm-despacho-ubicacion"><i class="bi bi-pin-map-fill"></i> ${ubicacion}</span><span class="crm-despacho-sep"></span>` : ''}
           <div class="crm-despacho-header-cliente">
@@ -315,9 +326,7 @@ function renderCardOrden(orden) {
           ${fechaEntrega ? `<span style="color:var(--crm-text-light);">—</span><span class="crm-despacho-fecha-entrega"><i class="bi bi-calendar3"></i> ${fechaEntrega}</span>` : ''}
         </div>
         <div class="crm-despacho-body-right">
-          <button class="crm-despacho-action-btn crm-despacho-action-btn--red" onclick="abrirAlistamiento('${orden.id}')">
-            <i class="bi bi-eye"></i> Alistamiento
-          </button>
+          ${renderAccionesTab(orden)}
           <button class="crm-despacho-action-btn crm-despacho-action-btn--green" onclick="toggleChat('${orden.id}', this)">
             <i class="bi bi-chat-dots"></i> Chat
           </button>
@@ -348,7 +357,7 @@ function renderCardOrden(orden) {
         <div class="crm-despacho-footer-right">
           <span class="crm-despacho-pill crm-despacho-pill--uds">${formatearNumero(totalUnidades)}</span>
           <span class="crm-despacho-pill crm-despacho-pill--peso">${formatearPeso(pesoTotal)}</span>
-          <span title="${preparados}/${totalItems} preparados" style="display:flex;align-items:center;gap:4px;font-size:0.73rem;color:var(--crm-text-light);">
+          <span title="${marcados}/${totalItems} alistados" style="display:flex;align-items:center;gap:4px;font-size:0.73rem;color:var(--crm-text-light);">
             <div class="crm-despacho-progress-mini"><div class="crm-despacho-progress-mini-bar" style="width:${progreso}%"></div></div>
             ${progreso}%
           </span>
@@ -360,6 +369,113 @@ function renderCardOrden(orden) {
     </div>
   `;
 }
+
+function renderBadgeResultado(orden) {
+  const resultado = orden.resultado_alistamiento
+    || (orden.estado === 'completada' ? 'completada' : orden.estado === 'parcial' ? 'parcial' : '');
+  if (!resultado) return '';
+  const label = resultado === 'completada' ? 'Completa' : 'Parcial';
+  const clase = resultado === 'completada' ? 'badge-completada' : 'badge-parcial';
+  return `<span class="badge-estado ${clase}" style="font-size:0.68rem;">${label}</span>`;
+}
+
+// ═══════════ ACCIONES POR TAB ═══════════
+function renderAccionesTab(orden) {
+  if (orden.estado === 'en_proceso') {
+    return `<button class="crm-despacho-action-btn crm-despacho-action-btn--red" onclick="iniciarAlistamiento('${orden.id}')">
+      <i class="bi bi-clipboard-check"></i> Iniciar Alistamiento
+    </button>`;
+  }
+  if (orden.estado === 'alistamiento') {
+    return `<button class="crm-despacho-action-btn crm-despacho-action-btn--red" onclick="abrirAlistamiento('${orden.id}')">
+      <i class="bi bi-eye"></i> Alistamiento
+    </button>`;
+  }
+  if (orden.estado === 'terminada' || orden.estado === 'completada' || orden.estado === 'parcial') {
+    return `<button class="crm-despacho-action-btn" onclick="generarCSVOrden('${orden.id}')">
+      <i class="bi bi-download"></i> Descargar CSV
+    </button>`;
+  }
+  return '';
+}
+
+// ═══════════ INICIAR ALISTAMIENTO ═══════════
+window.iniciarAlistamiento = async function(ordenId) {
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!orden) return;
+
+  try {
+    const historial = orden.historial || [];
+    historial.push({
+      estado: 'alistamiento',
+      fecha: new Date().toISOString(),
+      nota: `Alistamiento iniciado por ${userPerfil.nombre || currentUser.email}`
+    });
+
+    await updateDoc(doc(db, 'ordenes', ordenId), {
+      estado: 'alistamiento',
+      historial: historial,
+      updated_at: new Date().toISOString()
+    });
+
+    orden.estado = 'alistamiento';
+    orden.historial = historial;
+
+    actualizarTabCounts();
+    aplicarFiltrosYRender();
+    showToast('Alistamiento iniciado', 'success');
+
+    // Abrir modal de alistamiento directamente
+    window.abrirAlistamiento(ordenId);
+  } catch (error) {
+    console.error('Error iniciando alistamiento:', error);
+    showToast('Error al iniciar alistamiento', 'error');
+  }
+};
+
+// ═══════════ FINALIZAR ALISTAMIENTO ═══════════
+window.finalizarAlistamiento = async function(ordenId) {
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!orden) return;
+
+  const items = orden.items || orden.productos || [];
+  const todosComp = items.every(i => i.estado_alistamiento === 'comp');
+  const resultado = todosComp ? 'completada' : 'parcial';
+  const label = todosComp ? 'Completa' : 'Parcial';
+
+  try {
+    // Generar CSV primero
+    await window.generarCSVOrden(ordenId);
+
+    const historial = orden.historial || [];
+    historial.push({
+      estado: 'terminada',
+      fecha: new Date().toISOString(),
+      nota: `Alistamiento ${label} finalizado por ${userPerfil.nombre || currentUser.email}`
+    });
+
+    await updateDoc(doc(db, 'ordenes', ordenId), {
+      estado: 'terminada',
+      resultado_alistamiento: resultado,
+      historial: historial,
+      terminada_por: currentUser.email,
+      fecha_terminada: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    orden.estado = 'terminada';
+    orden.resultado_alistamiento = resultado;
+    orden.historial = historial;
+
+    $('modalAlistamiento')?.classList.remove('open');
+    actualizarTabCounts();
+    aplicarFiltrosYRender();
+    showToast(`Orden terminada (${label}) — CSV descargado`, 'success');
+  } catch (error) {
+    console.error('Error finalizando alistamiento:', error);
+    showToast('Error al finalizar alistamiento', 'error');
+  }
+};
 
 // ═══════════ MODAL ALISTAMIENTO ═══════════
 window.abrirAlistamiento = function(ordenId) {
@@ -469,19 +585,38 @@ window.abrirAlistamiento = function(ordenId) {
 
   actualizarProgresoAlistamiento(ordenId);
 
+  renderModalFooter(orden);
+
+  // Observer to update footer when progress changes
+  orden._updateFooter = () => renderModalFooter(orden);
+
+  $('modalAlistamiento').classList.add('open');
+};
+
+function renderModalFooter(orden) {
+  const items = orden.items || orden.productos || [];
+  const total = items.length;
+  const marcados = items.filter(i => ['comp', 'parcial', 'sinstock'].includes(i.estado_alistamiento)).length;
+  const todosMarcados = total > 0 && marcados === total;
+
   $('modalAlistamientoFooter').innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:8px;width:100%;justify-content:space-between;">
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        ${renderBotonesEstado(orden)}
+        ${orden.estado === 'alistamiento' && todosMarcados
+          ? `<button class="crm-btn crm-btn--success crm-btn--sm" onclick="finalizarAlistamiento('${orden.id}')">
+              <i class="bi bi-check2-all"></i> Finalizar y Generar CSV
+            </button>`
+          : orden.estado === 'alistamiento'
+            ? `<span style="font-size:0.82rem;color:var(--crm-text-light);align-self:center;">Marca todos los items para finalizar (${marcados}/${total})</span>`
+            : renderBotonesEstado(orden)
+        }
       </div>
-      <button class="crm-btn crm-btn--secondary crm-btn--sm" onclick="generarCSVOrden('${ordenId}')">
+      <button class="crm-btn crm-btn--secondary crm-btn--sm" onclick="generarCSVOrden('${orden.id}')">
         <i class="bi bi-file-earmark-spreadsheet"></i> CSV
       </button>
     </div>
   `;
-
-  $('modalAlistamiento').classList.add('open');
-};
+}
 
 // ═══════════ ESTADO ITEM (Comp/Parcial/Sin Stock) ═══════════
 window.cambiarEstadoItem = async function(ordenId, idx, tipo, btn) {
@@ -617,8 +752,9 @@ function actualizarProgresoAlistamiento(ordenId) {
   const comp = items.filter(i => i.estado_alistamiento === 'comp').length;
   const parcial = items.filter(i => i.estado_alistamiento === 'parcial').length;
   const sinstock = items.filter(i => i.estado_alistamiento === 'sinstock').length;
+  const marcados = comp + parcial + sinstock;
   const total = items.length;
-  const pct = total > 0 ? Math.round((comp / total) * 100) : 0;
+  const pct = total > 0 ? Math.round((marcados / total) * 100) : 0;
 
   let texto = `${comp} completos`;
   if (parcial > 0) texto += `, ${parcial} parciales`;
@@ -634,6 +770,9 @@ function actualizarProgresoAlistamiento(ordenId) {
     barEl.style.width = `${pct}%`;
     barEl.style.background = pct === 100 ? 'var(--crm-green)' : 'var(--crm-primary-light)';
   }
+
+  // Update modal footer (Finalizar Alistamiento button visibility)
+  if (orden._updateFooter) orden._updateFooter();
 }
 
 // ═══════════ DROPDOWN DETALLE INLINE ═══════════
@@ -651,32 +790,43 @@ window.toggleDetalle = function(ordenId) {
     if (!orden) return;
 
     const items = sortItemsPorCargue(orden.items || orden.productos || []);
-    const subtotal = items.reduce((s, i) => s + ((i.precio_unitario || 0) * (i.cantidad || 0)), 0);
-    const total = orden.total || subtotal;
-    const iva = total - subtotal > 0 ? total - subtotal : 0;
+    const esTerminada = ['terminada', 'completada', 'parcial'].includes(orden.estado);
+
+    const estadoIconos = {
+      comp: '<i class="bi bi-check-circle-fill" style="color:#28a745;"></i>',
+      parcial: '<i class="bi bi-dash-circle-fill" style="color:#ffd800;"></i>',
+      sinstock: '<i class="bi bi-x-circle-fill" style="color:#cc0000;"></i>'
+    };
 
     dropdown.innerHTML = `
       <div class="crm-tabla-wrapper" style="border:none;box-shadow:none;">
         <table class="crm-tabla">
           <thead>
             <tr>
+              ${esTerminada ? '<th style="width:40px;text-align:center;">Estado</th>' : ''}
               <th>Código</th>
               <th>Producto</th>
               <th style="text-align:right;">Precio</th>
-              <th style="text-align:center;">Cant.</th>
+              <th style="text-align:center;">Pedida</th>
+              ${esTerminada ? '<th style="text-align:center;">Real</th>' : ''}
               <th style="text-align:right;">Subtotal</th>
             </tr>
           </thead>
           <tbody>
-            ${items.map(item => `
-              <tr>
+            ${items.map(item => {
+              const ea = item.estado_alistamiento || '';
+              const cantReal = item.cantidad_real ?? item.cantidad ?? 0;
+              return `
+              <tr class="${ea === 'comp' ? 'alist-row-comp' : ea === 'sinstock' ? 'alist-row-sinstock' : ''}">
+                ${esTerminada ? `<td style="text-align:center;">${estadoIconos[ea] || '-'}</td>` : ''}
                 <td>${item.cod_interno || item.sku || '-'}</td>
                 <td>${item.titulo || item.nombre || '-'}</td>
                 <td style="text-align:right;">${formatearPrecio(item.precio_unitario)}</td>
                 <td style="text-align:center;">${item.cantidad || 0}</td>
+                ${esTerminada ? `<td style="text-align:center;font-weight:600;">${cantReal}</td>` : ''}
                 <td style="text-align:right;">${formatearPrecio((item.precio_unitario || 0) * (item.cantidad || 0))}</td>
-              </tr>
-            `).join('')}
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>
       </div>
@@ -707,8 +857,10 @@ window.toggleChat = function(ordenId, btn) {
 function renderBotonesEstado(orden) {
   const transiciones = obtenerTransicionesPermitidas(orden.estado).filter(e => e !== 'cancelada');
   const colores = {
+    alistamiento: 'background:#fef9c3;color:#854d0e;',
     completada: 'background:#d1fae5;color:#065f46;',
     parcial: 'background:#ffedd5;color:#9a3412;',
+    terminada: 'background:#d1fae5;color:#065f46;',
     en_espera: 'background:#f3e8ff;color:#6b21a8;',
     en_proceso: 'background:#e0e7ff;color:#3730a3;',
     cancelada: 'background:#fee2e2;color:#991b1b;',
@@ -982,5 +1134,6 @@ function initEventListeners() {
 
 // Cleanup on page leave
 window.addEventListener('beforeunload', () => {
+  if (unsubOrdenes) unsubOrdenes();
   Object.values(chatUnsubscribers).forEach(unsub => unsub());
 });

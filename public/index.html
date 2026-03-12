@@ -17,8 +17,11 @@
   <!-- Select2 para dropdowns con búsqueda -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Estilos personalizados ENAR -->
   <link rel="stylesheet" href="css/styles.css?v=8.0">
+  <link rel="stylesheet" href="css/crm-styles.css">
 
   <!-- jQuery (requerido por Select2) -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -29,38 +32,38 @@
 </head>
 <body>
   <!-- Header -->
-  <header class="header-principal">
-    <div class="container-fluid">
-      <div class="header-contenido d-flex align-items-center justify-content-between flex-wrap">
-        <div class="d-flex align-items-center gap-3">
-          <div class="header-logo">
-            <img src="img/logo-enar.png" alt="ENAR" class="logo-img" onerror="this.style.display='none'">
-          </div>
-          <div class="header-titulo">
-            <h1 class="mb-0">ENAR B2B</h1>
-            <p class="header-tagline mb-0 d-none d-sm-block">Con IA integrada</p>
-          </div>
-        </div>
-
-        <!-- Navegación de usuario -->
-        <nav class="header-nav d-flex align-items-center gap-2 flex-wrap" id="headerNav">
-          <!-- Estado no autenticado -->
-          <div id="navNoAuth" class="align-items-center gap-2 nav-visible">
-            <a href="login.html" class="header-nav__link">Iniciar Sesión</a>
-            <a href="registro.html" class="header-nav__link header-nav__link--registro">Registrarse</a>
-          </div>
-          <!-- Estado autenticado -->
-          <div id="navAuth" class="align-items-center gap-2 flex-wrap nav-hidden">
-            <span class="header-nav__user" id="navUserName">Usuario</span>
-            <a href="perfil.html" class="header-nav__link">Perfil</a>
-            <a href="mis-ordenes.html" class="header-nav__link">Ventas</a>
-            <a href="admin.html" class="header-nav__link header-nav__link--admin" id="navAdminLink" style="display: none;">Admin</a>
-            <a href="vendedor.html" class="header-nav__link header-nav__link--admin" id="navVendedorLink" style="display: none;">Órdenes</a>
-            <a href="#" class="header-nav__link header-nav__link--logout" id="navLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></a>
-          </div>
-        </nav>
+  <header class="crm-header">
+    <div class="d-flex align-items-center gap-3">
+      <div class="header-logo">
+        <img src="img/logo-enar.png" alt="ENAR" class="logo-img" style="filter:none;" onerror="this.style.display='none'">
+      </div>
+      <div class="header-titulo">
+        <h1 class="mb-0">ENAR B2B</h1>
+        <p class="header-tagline mb-0 d-none d-sm-block">Con IA integrada</p>
       </div>
     </div>
+    <nav class="crm-header-nav" id="headerNav">
+      <!-- Estado no autenticado -->
+      <div id="navNoAuth" class="d-flex align-items-center gap-2 nav-hidden">
+        <a href="login.html">Iniciar Sesión</a>
+        <a href="registro.html">Registrarse</a>
+      </div>
+      <!-- Estado autenticado -->
+      <div id="navAuth" class="d-flex align-items-center gap-2 nav-hidden">
+        <a href="vendedor.html">Órdenes</a>
+        <a href="/" style="background:#D9232D;color:white;">Catálogo</a>
+        <div class="nav-user-dropdown">
+          <a onclick="document.getElementById('navUserMenu').classList.toggle('open');event.stopPropagation();" id="navUserName"><i class="bi bi-person-circle"></i> <i class="bi bi-caret-down-fill"></i></a>
+          <div class="nav-user-menu" id="navUserMenu">
+            <a href="perfil.html"><i class="bi bi-person"></i> Mi Perfil</a>
+            <a href="mis-ordenes.html"><i class="bi bi-bag-check"></i> Mis Compras</a>
+          </div>
+        </div>
+        <a href="admin.html">Admin</a>
+        <button id="navLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
+      </div>
+    </nav>
+    <script>(function(){var n=localStorage.getItem('enar_user_name');if(n){var el=document.getElementById('navUserName');if(el)el.innerHTML='<i class="bi bi-person-circle"></i> '+n+' <i class="bi bi-caret-down-fill"></i>';var na=document.getElementById('navAuth');var nn=document.getElementById('navNoAuth');if(na){na.classList.remove('nav-hidden');na.classList.add('nav-visible');}if(nn){nn.classList.remove('nav-visible');nn.classList.add('nav-hidden');}}})();</script>
   </header>
 
   <!-- Gate: requiere autenticación + aprobación -->
@@ -497,6 +500,7 @@
   </div>
 
   <!-- Scripts como módulos ES6 -->
+  <script>document.addEventListener('click',function(e){if(!e.target.closest('.nav-user-dropdown')){var m=document.getElementById('navUserMenu');if(m)m.classList.remove('open')}});</script>
   <script type="module" src="js/firebase-config.js"></script>
   <script type="module" src="js/utils.js"></script>
   <script type="module" src="js/carrito.js"></script>
@@ -514,7 +518,6 @@
     const navNoAuth = document.getElementById('navNoAuth');
     const navAuth = document.getElementById('navAuth');
     const navUserName = document.getElementById('navUserName');
-    const navAdminLink = document.getElementById('navAdminLink');
     const navLogout = document.getElementById('navLogout');
 
     const btnSolicitarCotizacion = document.getElementById('btnSolicitarCotizacion');
@@ -547,6 +550,7 @@
     // Logout desde gate pendiente
     document.getElementById('gatePendienteLogout')?.addEventListener('click', async (e) => {
       e.preventDefault();
+      localStorage.removeItem('enar_user_name');
       await cerrarSesion();
       window.location.href = '/login.html';
     });
@@ -563,19 +567,9 @@
         navAuth.classList.remove('nav-hidden');
         navAuth.classList.add('nav-visible');
         const nombreCompleto = data?.nombre || user.email;
-        navUserName.textContent = nombreCompleto.split(' ')[0];
-
-        if (esPrivilegiado) {
-          navAdminLink.style.display = 'inline-block';
-        } else {
-          navAdminLink.style.display = 'none';
-        }
-
-        // Mostrar link Panel Ventas si es vendedor o admin
-        const navVendedorLink = document.getElementById('navVendedorLink');
-        if (navVendedorLink) {
-          navVendedorLink.style.display = (data?.rol === 'vendedor' || data?.rol === 'admin') ? 'inline-block' : 'none';
-        }
+        const displayName = nombreCompleto.split(' ')[0];
+        navUserName.innerHTML = '<i class="bi bi-person-circle"></i> ' + displayName + ' <i class="bi bi-caret-down-fill"></i>';
+        localStorage.setItem('enar_user_name', displayName);
 
         btnSolicitarCotizacion.style.display = 'none';
         btnCrearOrden.style.display = 'inline-block';
@@ -590,8 +584,9 @@
         navNoAuth.classList.add('nav-hidden');
         navAuth.classList.remove('nav-hidden');
         navAuth.classList.add('nav-visible');
-        navUserName.textContent = (data?.nombre || user.email).split(' ')[0] + ' (Pendiente)';
-        navAdminLink.style.display = 'none';
+        const pendingName = (data?.nombre || user.email).split(' ')[0];
+        navUserName.innerHTML = '<i class="bi bi-person-circle"></i> ' + pendingName + ' (Pendiente) <i class="bi bi-caret-down-fill"></i>';
+        localStorage.setItem('enar_user_name', pendingName);
 
         btnSolicitarCotizacion.style.display = 'none';
         btnCrearOrden.style.display = 'none';
@@ -615,6 +610,7 @@
 
     navLogout?.addEventListener('click', async (e) => {
       e.preventDefault();
+      localStorage.removeItem('enar_user_name');
       await cerrarSesion();
       window.location.href = '/login.html';
     });

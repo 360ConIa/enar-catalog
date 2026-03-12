@@ -42,8 +42,17 @@
   gap: 12px;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1200;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.crm-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #D9232D;
 }
 
 .crm-header-left {
@@ -93,6 +102,49 @@
   background: rgba(255,255,255,0.2);
   color: white;
 }
+
+/* Dropdown usuario en header */
+.nav-user-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.nav-user-dropdown > a {
+  cursor: pointer;
+}
+.nav-user-dropdown > a i.bi-caret-down-fill {
+  font-size: 0.6rem;
+  margin-left: 2px;
+  opacity: 0.7;
+}
+.nav-user-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 150px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  padding: 6px 0;
+  z-index: 1100;
+  margin-top: 4px;
+}
+.nav-user-menu.open { display: block; }
+.nav-user-menu a {
+  display: block;
+  padding: 8px 16px;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+.nav-user-menu a:hover {
+  background: #f1f5f9 !important;
+  color: #1e3a8a !important;
+}
+.nav-user-menu a i { margin-right: 8px; color: #64748b; }
 
 .crm-container {
   max-width: 1400px;
@@ -239,6 +291,8 @@
 .badge-en-espera { background: #f3e8ff; color: #6b21a8; }
 .badge-completada { background: #d1fae5; color: #065f46; }
 .badge-parcial { background: #ffedd5; color: #9a3412; }
+.badge-alistamiento { background: #fef9c3; color: #854d0e; }
+.badge-terminada { background: #d1fae5; color: #065f46; }
 .badge-cancelada { background: #fee2e2; color: #991b1b; }
 
 /* ═══════════ DROPDOWN CAMBIO ESTADO ═══════════ */
