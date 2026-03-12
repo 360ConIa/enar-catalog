@@ -62,7 +62,6 @@ exports.syncProductos = onRequest(
             laboratorio: String(producto.laboratorio || ''),
             indicacion: String(producto.indicacion || ''),
             principio_activo: String(producto.principio_activo || ''),
-            activo: true,
             sync_at: admin.firestore.FieldValue.serverTimestamp(),
             updated_at: admin.firestore.FieldValue.serverTimestamp()
           };
