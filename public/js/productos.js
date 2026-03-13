@@ -61,7 +61,7 @@ const estado = {
     ofertas: ''            // '' = todas, 'oferta' = solo ofertas
   },
   ordenamiento: {
-    columna: 'orden_cargue',
+    columna: 'orden_pareto',
     direccion: 'asc'
   }
 };
@@ -231,7 +231,7 @@ function calcularDescuento(producto) {
  * Campos buscables: titulo, cod_interno, ean, marca
  *
  * Separadores aceptados:
- * - Punto y coma (;) → para términos con espacios: "Soldadura PVC; 1/4 galón"
+ * - Coma (,) → para términos con espacios: "Soldadura PVC, 1/4 galón"
  * - Espacios → para términos simples: "soldadura pvc rojo"
  *
  * @param {Array} productos - Lista de productos
@@ -245,14 +245,14 @@ function filtrarProductosPorBusqueda(productos, textoBusqueda) {
 
   let terminos = [];
 
-  // Si contiene punto y coma, usar ese como separador principal
-  if (textoBusqueda.includes(';')) {
+  // Si contiene coma, usar como separador principal
+  if (textoBusqueda.includes(',')) {
     terminos = textoBusqueda
-      .split(';')
+      .split(',')
       .map(t => t.trim().toLowerCase())
       .filter(t => t.length > 0);
   } else {
-    // Si no hay punto y coma, separar por espacios
+    // Si no hay coma, separar por espacios
     terminos = textoBusqueda.toLowerCase()
       .trim()
       .split(/\s+/)
@@ -314,6 +314,10 @@ function ordenarProductos() {
       case 'orden_cargue':
         valorA = (a.Orden_Cargue || 'ZZZ').toLowerCase();
         valorB = (b.Orden_Cargue || 'ZZZ').toLowerCase();
+        break;
+      case 'orden_pareto':
+        valorA = a.orden_pareto || 9999;
+        valorB = b.orden_pareto || 9999;
         break;
       default:
         return 0;
@@ -664,7 +668,7 @@ function renderizarFila(producto) {
       </td>
       <td class="td-imagen">${imagenHtml}</td>
       <td title="${tituloTexto}">${tituloTexto}</td>
-      <td>${producto.presentacion || '-'}</td>
+      <td>${producto.presentacion ? producto.presentacion.charAt(0).toUpperCase() + producto.presentacion.slice(1).toLowerCase() : '-'}</td>
       <td class="td-precio-cliente">${formatearPrecio(precioCliente)}</td>
       <td class="td-precio-lista ${tieneDescuento ? 'precio-tachado' : ''}">${formatearPrecio(precioLista)}</td>
       <td>${producto.categoria || '-'}</td>

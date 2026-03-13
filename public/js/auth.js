@@ -44,7 +44,8 @@ const googleProvider = new GoogleAuthProvider();
 
 // Emails de administradores (pueden acceder sin documento en Firestore)
 const ADMIN_EMAILS = [
-  'sebastianbumq@enarapp.com'
+  'sebastianbumq@enarapp.com',
+  'arnulfobuitragoenar@gmail.com'
 ];
 
 // Emails de gestores de usuarios

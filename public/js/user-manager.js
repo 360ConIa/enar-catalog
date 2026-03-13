@@ -43,7 +43,8 @@ const auth = getAuth(app);
 
 // Emails de administradores
 const ADMIN_EMAILS = [
-  'sebastianbumq@enarapp.com'
+  'sebastianbumq@enarapp.com',
+  'arnulfobuitragoenar@gmail.com'
 ];
 
 // Emails de gestores de usuarios (pueden gestionar usuarios pero no órdenes)
