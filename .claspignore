@@ -1,11 +1,16 @@
 public/**
+public-crm/**
+public-portal/**
 node_modules/**
 .git/**
 functions-sync/**
+migration/**
 firebase.json
 .firebaserc
 .gitignore
 ENAR_MIGRACION/**
 *.md
-*.json
+firebase.json
+package.json
+package-lock.json
 .claude/**

@@ -203,6 +203,9 @@ function nitCliente(o) {
 function renderBtnCambioEstado(orden) {
   const transiciones = obtenerTransicionesPermitidas(orden.estado);
   if (transiciones.length === 0) {
+    if (orden.estado === 'terminada') {
+      return `<button class="crm-btn crm-btn--sm" style="background:#217346;color:white;font-size:0.65rem;font-weight:300;min-width:auto;aspect-ratio:1;padding:5px;display:inline-flex;align-items:center;justify-content:center;" onclick="event.stopPropagation();window.generarCSVOrden('${orden.id}')" title="Descargar CSV">CSV</button>`;
+    }
     return `<button class="crm-btn crm-btn--primary crm-btn--sm" disabled style="opacity:0.4;cursor:not-allowed;" title="Sin transiciones disponibles">
         <i class="bi bi-arrow-repeat"></i>
       </button>`;
@@ -357,6 +360,9 @@ window.verDetalleOrden = function(ordenId) {
     .filter(e => !['completada', 'parcial', 'en_espera', 'en_proceso'].includes(e));
   $('modalDetalleFooter').innerHTML = `
     <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalDetalle')">Cerrar</button>
+    <button class="crm-btn crm-btn--sm" style="background:#217346;color:white;" onclick="window.generarCSVOrden('${orden.id}')">
+      CSV
+    </button>
     ${orden.estado === 'pendiente' ? `<button class="crm-btn crm-btn--primary" onclick="cerrarModal('modalDetalle');editarOrden('${orden.id}')"><i class="bi bi-pencil"></i> Editar</button>` : ''}
     ${transiciones.map(estado => {
       const esCancelada = estado === 'cancelada';
@@ -933,6 +939,44 @@ async function confirmarOrden() {
     btn.innerHTML = '<i class="bi bi-check2-circle"></i> Confirmar Orden';
   }
 }
+
+// ═══════════ CSV ORDEN ═══════════
+window.generarCSVOrden = function(ordenId) {
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!orden) return;
+
+  const items = orden.items || orden.productos || [];
+  const headers = ['ID_Orden', 'Cliente', 'NIT', 'Producto', 'Codigo',
+    'Cantidad', 'Precio_Unitario', 'Subtotal'];
+
+  const rows = items.map(item => [
+    orden.numero_orden || ordenId,
+    nombreCliente(orden),
+    nitCliente(orden),
+    item.titulo || item.nombre || '',
+    item.cod_interno || item.sku || '',
+    item.cantidad || 0,
+    item.precio_unitario || 0,
+    item.subtotal || (item.precio_unitario || 0) * (item.cantidad || 0)
+  ]);
+
+  rows.push(['', '', '', 'TOTAL', '', '',  '', orden.total || 0]);
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `orden_${orden.numero_orden || ordenId}_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+
+  showToast('CSV descargado', 'success');
+};
 
 // ═══════════ MODALES ═══════════
 window.cerrarModal = function(id) {

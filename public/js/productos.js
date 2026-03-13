@@ -664,6 +664,7 @@ function renderizarFila(producto) {
       </td>
       <td class="td-imagen">${imagenHtml}</td>
       <td title="${tituloTexto}">${tituloTexto}</td>
+      <td>${producto.presentacion || '-'}</td>
       <td class="td-precio-cliente">${formatearPrecio(precioCliente)}</td>
       <td class="td-precio-lista ${tieneDescuento ? 'precio-tachado' : ''}">${formatearPrecio(precioLista)}</td>
       <td>${producto.categoria || '-'}</td>

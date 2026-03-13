@@ -392,9 +392,7 @@ function renderAccionesTab(orden) {
     </button>`;
   }
   if (orden.estado === 'terminada' || orden.estado === 'completada' || orden.estado === 'parcial') {
-    return `<button class="crm-despacho-action-btn" onclick="generarCSVOrden('${orden.id}')">
-      <i class="bi bi-download"></i> Descargar CSV
-    </button>`;
+    return '';
   }
   return '';
 }
@@ -433,6 +431,39 @@ window.iniciarAlistamiento = async function(ordenId) {
   }
 };
 
+// ═══════════ GUARDAR PARCIAL (sigue en alistamiento) ═══════════
+window.guardarParcial = async function(ordenId) {
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!orden) return;
+
+  try {
+    const historial = orden.historial || [];
+    const items = orden.items || orden.productos || [];
+    const marcados = items.filter(i => ['comp', 'parcial', 'sinstock'].includes(i.estado_alistamiento)).length;
+
+    historial.push({
+      estado: 'alistamiento',
+      fecha: new Date().toISOString(),
+      nota: `Alistamiento parcial (${marcados}/${items.length} items) por ${userPerfil.nombre || currentUser.email}`
+    });
+
+    await updateDoc(doc(db, 'ordenes', ordenId), {
+      historial: historial,
+      resultado_alistamiento: 'parcial',
+      updated_at: new Date().toISOString()
+    });
+
+    orden.historial = historial;
+    orden.resultado_alistamiento = 'parcial';
+
+    $('modalAlistamiento')?.classList.remove('open');
+    showToast(`Alistamiento parcial guardado (${marcados}/${items.length})`, 'info');
+  } catch (error) {
+    console.error('Error guardando parcial:', error);
+    showToast('Error al guardar', 'error');
+  }
+};
+
 // ═══════════ FINALIZAR ALISTAMIENTO ═══════════
 window.finalizarAlistamiento = async function(ordenId) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
@@ -444,9 +475,6 @@ window.finalizarAlistamiento = async function(ordenId) {
   const label = todosComp ? 'Completa' : 'Parcial';
 
   try {
-    // Generar CSV primero
-    await window.generarCSVOrden(ordenId);
-
     const historial = orden.historial || [];
     historial.push({
       estado: 'terminada',
@@ -597,23 +625,29 @@ function renderModalFooter(orden) {
   const items = orden.items || orden.productos || [];
   const total = items.length;
   const marcados = items.filter(i => ['comp', 'parcial', 'sinstock'].includes(i.estado_alistamiento)).length;
-  const todosMarcados = total > 0 && marcados === total;
+  const hayMarcados = marcados > 0;
+
+  let botonesHTML = '';
+
+  if (orden.estado === 'alistamiento') {
+    if (hayMarcados) {
+      botonesHTML = `
+        <button class="crm-btn crm-btn--sm" style="background:#ffedd5;color:#9a3412;" onclick="guardarParcial('${orden.id}')">
+          <i class="bi bi-pause-circle"></i> Parcial (${marcados}/${total})
+        </button>
+        <button class="crm-btn crm-btn--success crm-btn--sm" onclick="finalizarAlistamiento('${orden.id}')">
+          <i class="bi bi-check2-all"></i> Terminada
+        </button>`;
+    } else {
+      botonesHTML = `<span style="font-size:0.82rem;color:var(--crm-text-light);align-self:center;">Marca items para habilitar acciones</span>`;
+    }
+  } else {
+    botonesHTML = renderBotonesEstado(orden);
+  }
 
   $('modalAlistamientoFooter').innerHTML = `
-    <div style="display:flex;flex-wrap:wrap;gap:8px;width:100%;justify-content:space-between;">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        ${orden.estado === 'alistamiento' && todosMarcados
-          ? `<button class="crm-btn crm-btn--success crm-btn--sm" onclick="finalizarAlistamiento('${orden.id}')">
-              <i class="bi bi-check2-all"></i> Finalizar y Generar CSV
-            </button>`
-          : orden.estado === 'alistamiento'
-            ? `<span style="font-size:0.82rem;color:var(--crm-text-light);align-self:center;">Marca todos los items para finalizar (${marcados}/${total})</span>`
-            : renderBotonesEstado(orden)
-        }
-      </div>
-      <button class="crm-btn crm-btn--secondary crm-btn--sm" onclick="generarCSVOrden('${orden.id}')">
-        <i class="bi bi-file-earmark-spreadsheet"></i> CSV
-      </button>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;width:100%;justify-content:flex-start;">
+      ${botonesHTML}
     </div>
   `;
 }
