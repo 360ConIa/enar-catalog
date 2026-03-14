@@ -2361,6 +2361,7 @@ body {
   max-height: 60px;
   overflow: hidden;
   cursor: pointer;
+  background: transparent;
 }
 
 .imagen-container img {
@@ -2368,7 +2369,7 @@ body {
   height: 100%;
   max-width: 60px;
   max-height: 60px;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
