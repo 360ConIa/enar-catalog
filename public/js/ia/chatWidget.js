@@ -143,7 +143,16 @@ class EnarIAWidget {
         }
 
         /* Modal ENAR IA */
+        #enar-ia-container {
+          pointer-events: none;
+        }
+
+        #enar-ia-container.active {
+          pointer-events: auto;
+        }
+
         #enar-ia-modal {
+          display: none;
           position: fixed;
           bottom: 220px;
           right: 24px;
@@ -155,8 +164,9 @@ class EnarIAWidget {
           z-index: 9999;
           opacity: 0;
           visibility: hidden;
+          pointer-events: none;
           transform: translateY(20px) scale(0.95);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           overflow: hidden;
         }
 
@@ -176,8 +186,10 @@ class EnarIAWidget {
         }
 
         #enar-ia-modal.open {
+          display: block;
           opacity: 1;
           visibility: visible;
+          pointer-events: auto;
           transform: translateY(0) scale(1);
         }
 
@@ -598,18 +610,22 @@ class EnarIAWidget {
 
         /* Backdrop */
         #enar-ia-backdrop {
+          display: none;
           position: fixed;
           inset: 0;
           background: rgba(0, 0, 0, 0.2);
           z-index: 9998;
           opacity: 0;
           visibility: hidden;
-          transition: all 0.3s ease;
+          pointer-events: none;
+          transition: opacity 0.3s ease, visibility 0.3s ease;
         }
 
         #enar-ia-backdrop.visible {
+          display: block;
           opacity: 1;
           visibility: visible;
+          pointer-events: auto;
         }
       </style>
 
@@ -701,9 +717,9 @@ class EnarIAWidget {
   }
 
   insertarBotonEnFiltros() {
-    const btnLimpiar = document.getElementById('btnLimpiarFiltros');
-    if (btnLimpiar) {
-      const container = btnLimpiar.parentElement;
+    const btnEncargo = document.getElementById('btnProductosEncargo');
+    if (btnEncargo) {
+      const container = btnEncargo.parentElement;
 
       // Crear contenedor para el botón ENAR IA (mismo tamaño que Limpiar)
       const btnContainer = document.createElement('div');
@@ -823,7 +839,9 @@ class EnarIAWidget {
     const modal = document.getElementById('enar-ia-modal');
     const backdrop = document.getElementById('enar-ia-backdrop');
     const btn = document.getElementById('btn-enar-ia');
+    const container = document.getElementById('enar-ia-container');
 
+    container?.classList.add('active');
     modal?.classList.add('open');
     backdrop?.classList.add('visible');
     btn?.classList.add('active');
@@ -840,6 +858,8 @@ class EnarIAWidget {
     const btn = document.getElementById('btn-enar-ia');
     const inputWrapper = document.getElementById('enar-input-wrapper');
 
+    const container = document.getElementById('enar-ia-container');
+    container?.classList.remove('active');
     modal?.classList.remove('open', 'expanded');
     backdrop?.classList.remove('visible');
     btn?.classList.remove('active');

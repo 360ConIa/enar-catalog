@@ -465,6 +465,7 @@ function aplicarFiltros() {
  * Actualiza el select de categorías con opciones únicas
  */
 function actualizarSelectCategorias() {
+  if (!elementos.selectCategoria) return;
   const categoriasOrdenadas = Array.from(estado.categorias).sort();
 
   elementos.selectCategoria.innerHTML = '<option value="">Todas</option>';
@@ -481,6 +482,7 @@ function actualizarSelectCategorias() {
  * Actualiza el select de marcas con opciones únicas
  */
 function actualizarSelectMarcas() {
+  if (!elementos.selectMarca) return;
   const marcasOrdenadas = Array.from(estado.marcas).sort();
 
   elementos.selectMarca.innerHTML = '<option value="">Todas</option>';
@@ -498,6 +500,7 @@ function actualizarSelectMarcas() {
  * @param {string} categoria - Categoría seleccionada (vacío = todas)
  */
 function actualizarFiltroMarca(categoria) {
+  if (!elementos.selectMarca) return;
   const marcas = new Set();
 
   // Recorrer productos y obtener marcas de la categoría
@@ -646,7 +649,7 @@ function renderizarFila(producto) {
       : `<div class="imagen-hover-overlay"><span>Ampliar</span></div>`;
 
     imagenHtml = `
-      <div class="imagen-container" data-producto='${productoDataStr}'>
+      <div class="imagen-container" data-id="${producto.id || ''}" data-producto='${productoDataStr}'>
         <img src="${imagenUrl}" alt="${tituloTexto}"
              class="tabla-thumbnail tabla-thumbnail-clickeable"
              referrerpolicy="no-referrer"
@@ -679,12 +682,10 @@ function renderizarFila(producto) {
         >
       </td>
       <td class="td-imagen">${imagenHtml}</td>
-      <td title="${tituloTexto}">${tituloTexto}</td>
+      <td class="td-producto-nombre">${tituloTexto}</td>
       <td>${producto.presentacion ? producto.presentacion.charAt(0).toUpperCase() + producto.presentacion.slice(1).toLowerCase() : '-'}</td>
       <td class="td-precio-cliente">${formatearPrecio(precioCliente)}</td>
-      <td class="td-precio-lista ${tieneDescuento ? 'precio-tachado' : ''}">${formatearPrecio(precioLista)}</td>
-      <td>${producto.categoria || '-'}</td>
-      <td>${producto.embalaje || '-'}</td>
+      <td class="d-none d-md-table-cell" style="text-align:center;">${producto.embalaje || '-'}</td>
       <td class="td-acciones">
         <button class="btn-ver-detalles" data-producto='${productoDataStr}' title="Ver detalles">
           <span class="icono-tres-puntos">⋮</span>
@@ -781,10 +782,10 @@ function limpiarFiltros() {
 
   elementos.inputBusqueda.value = '';
 
-  // Limpiar todos los Select2
-  $('#selectCategoria').val('').trigger('change.select2');
-  $('#selectMarca').val('').trigger('change.select2');
-  $('#filtroOfertas').val('').trigger('change.select2');
+  // Limpiar todos los Select2 (si existen)
+  if ($('#selectCategoria').length) $('#selectCategoria').val('').trigger('change.select2');
+  if ($('#selectMarca').length) $('#selectMarca').val('').trigger('change.select2');
+  if ($('#filtroOfertas').length) $('#filtroOfertas').val('').trigger('change.select2');
 
   // Ocultar todos los botones X de limpiar
   if (elementos.btnLimpiarBusqueda) elementos.btnLimpiarBusqueda.style.display = 'none';
@@ -1121,7 +1122,7 @@ elementos.btnLimpiarBusqueda?.addEventListener('click', () => {
 // Nota: Los filtros de laboratorio, marca y ofertas se manejan en Select2 (inicializarSelect2)
 
 // Limpiar filtros
-elementos.btnLimpiarFiltros.addEventListener('click', limpiarFiltros);
+elementos.btnLimpiarFiltros?.addEventListener('click', limpiarFiltros);
 
 // Paginación - Primera página
 elementos.btnPrimera.addEventListener('click', () => irAPagina(1));
@@ -1230,48 +1231,48 @@ elementos.modalFichaTecnica?.querySelector('.modal__overlay')?.addEventListener(
  * Inicializa Select2 en los dropdowns de filtros
  */
 function inicializarSelect2() {
-  // Select2 para Categoría
-  $('#selectCategoria').select2({
-    placeholder: 'Todas',
-    allowClear: false,
-    width: '100%',
-    language: {
-      noResults: () => 'No se encontraron resultados'
-    }
-  }).on('change', function() {
-    const catSeleccionada = $(this).val() || '';
-    estado.filtros.categoria = catSeleccionada;
+  // Select2 para Categoría (si existe)
+  if ($('#selectCategoria').length) {
+    $('#selectCategoria').select2({
+      placeholder: 'Todas',
+      allowClear: false,
+      width: '100%',
+      language: {
+        noResults: () => 'No se encontraron resultados'
+      }
+    }).on('change', function() {
+      const catSeleccionada = $(this).val() || '';
+      estado.filtros.categoria = catSeleccionada;
 
-    // Mostrar/ocultar botón limpiar
-    if (elementos.btnLimpiarCategoria) {
-      elementos.btnLimpiarCategoria.style.display = catSeleccionada ? 'flex' : 'none';
-    }
+      if (elementos.btnLimpiarCategoria) {
+        elementos.btnLimpiarCategoria.style.display = catSeleccionada ? 'flex' : 'none';
+      }
 
-    // Actualizar opciones de marca según categoría
-    actualizarFiltroMarca(catSeleccionada);
+      actualizarFiltroMarca(catSeleccionada);
+      aplicarFiltros();
+    });
+  }
 
-    aplicarFiltros();
-  });
+  // Select2 para Marca (si existe)
+  if ($('#selectMarca').length) {
+    $('#selectMarca').select2({
+      placeholder: 'Todas',
+      allowClear: false,
+      width: '100%',
+      language: {
+        noResults: () => 'No se encontraron resultados'
+      }
+    }).on('change', function() {
+      const marcaSeleccionada = $(this).val() || '';
+      estado.filtros.marca = marcaSeleccionada;
 
-  // Select2 para Marca
-  $('#selectMarca').select2({
-    placeholder: 'Todas',
-    allowClear: false,
-    width: '100%',
-    language: {
-      noResults: () => 'No se encontraron resultados'
-    }
-  }).on('change', function() {
-    const marcaSeleccionada = $(this).val() || '';
-    estado.filtros.marca = marcaSeleccionada;
+      if (elementos.btnLimpiarMarca) {
+        elementos.btnLimpiarMarca.style.display = marcaSeleccionada ? 'flex' : 'none';
+      }
 
-    // Mostrar/ocultar botón limpiar
-    if (elementos.btnLimpiarMarca) {
-      elementos.btnLimpiarMarca.style.display = marcaSeleccionada ? 'flex' : 'none';
-    }
-
-    aplicarFiltros();
-  });
+      aplicarFiltros();
+    });
+  }
 
   // Select2 para Ofertas
   $('#filtroOfertas').select2({

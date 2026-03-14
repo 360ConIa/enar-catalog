@@ -20,8 +20,8 @@
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Estilos personalizados ENAR -->
-  <link rel="stylesheet" href="css/styles.css?v=8.0">
-  <link rel="stylesheet" href="css/crm-styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=9.6">
+  <link rel="stylesheet" href="css/crm-styles.css?v=9.0">
 
   <!-- jQuery (requerido por Select2) -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -103,7 +103,7 @@
       <div class="row g-2 align-items-end">
         <!-- Búsqueda -->
         <div class="col-12 col-md-6 col-lg-3">
-          <label for="inputBusqueda" class="filtro-label">Búsqueda:</label>
+          <label for="inputBusqueda" class="filtro-label d-none"></label>
           <div class="busqueda-container">
             <button type="button" id="btnLimpiarBusqueda" class="btn-limpiar-campo" title="Limpiar búsqueda" style="display: none;">
               &times;
@@ -121,35 +121,9 @@
           </div>
         </div>
 
-        <!-- Filtro categoría -->
-        <div class="col-6 col-md-3 col-lg-2">
-          <label for="selectCategoria" class="filtro-label">Categoría:</label>
-          <div class="filtro-container">
-            <button type="button" id="btnLimpiarCategoria" class="btn-limpiar-campo" title="Limpiar" style="display: none;">
-              &times;
-            </button>
-            <select id="selectCategoria" class="form-select select2-filtro">
-              <option value="">Todas</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Filtro marca -->
-        <div class="col-6 col-md-3 col-lg-2">
-          <label for="selectMarca" class="filtro-label">Marca:</label>
-          <div class="filtro-container">
-            <button type="button" id="btnLimpiarMarca" class="btn-limpiar-campo" title="Limpiar" style="display: none;">
-              &times;
-            </button>
-            <select id="selectMarca" class="form-select select2-filtro">
-              <option value="">Todas</option>
-            </select>
-          </div>
-        </div>
-
         <!-- Filtro ofertas -->
         <div class="col-6 col-md-3 col-lg-2">
-          <label for="filtroOfertas" class="filtro-label">Ofertas:</label>
+          <label for="filtroOfertas" class="filtro-label d-none"></label>
           <div class="filtro-container">
             <button type="button" id="btnLimpiarOfertas" class="btn-limpiar-campo" title="Limpiar" style="display: none;">
               &times;
@@ -164,9 +138,12 @@
           </div>
         </div>
 
-        <!-- Botón limpiar -->
+        <!-- Botón productos por encargo -->
         <div class="col-6 col-md-3 col-lg-1">
-          <button id="btnLimpiarFiltros" class="btn btn-danger btn-sm w-100">Limpiar</button>
+          <label class="filtro-label">&nbsp;</label>
+          <button id="btnProductosEncargo" class="btn btn-outline-danger btn-sm w-100" data-bs-toggle="modal" data-bs-target="#modalEncargo">
+            <i class="bi bi-box-seam"></i> Por encargo
+          </button>
         </div>
 
         <!-- ENAR IA se inserta aquí dinámicamente -->
@@ -198,10 +175,8 @@
               <th style="text-align: center;">Img</th>
               <th class="th-ordenable" data-columna="titulo">Producto <span class="sort-icon"></span></th>
               <th>Presentación</th>
-              <th class="th-ordenable" data-columna="precio_cliente" id="thPrecioCliente">Precio <span class="sort-icon"></span></th>
-              <th class="th-ordenable d-none d-md-table-cell" data-columna="precio_lista">P.Lista <span class="sort-icon"></span></th>
-              <th class="th-ordenable d-none d-lg-table-cell" data-columna="categoria">Categoría <span class="sort-icon"></span></th>
-              <th class="d-none d-lg-table-cell text-normal-case">UxT</th>
+              <th class="th-ordenable" data-columna="precio_cliente" id="thPrecioCliente">Preci.Final <span class="sort-icon"></span></th>
+              <th class="d-none d-md-table-cell" style="text-align:center;">UxT</th>
               <th style="text-align: center;"><i class="bi bi-three-dots-vertical"></i></th>
             </tr>
           </thead>
@@ -506,7 +481,7 @@
   <script type="module" src="js/utils.js"></script>
   <script type="module" src="js/carrito.js"></script>
   <script type="module" src="js/cotizacion.js"></script>
-  <script type="module" src="js/productos.js?v=11"></script>
+  <script type="module" src="js/productos.js?v=12"></script>
 
   <!-- Auth Navigation Handler -->
   <script type="module">
@@ -661,6 +636,27 @@
   </script>
 
   <!-- Widget de Chat IA -->
-  <script src="/js/ia/chatWidget.js"></script>
+  <script src="/js/ia/chatWidget.js?v=4"></script>
+
+  <!-- Modal Productos por Encargo -->
+  <div class="modal fade" id="modalEncargo" tabindex="-1" aria-labelledby="modalEncargoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header" style="background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:white;">
+          <h5 class="modal-title" id="modalEncargoLabel"><i class="bi bi-box-seam"></i> Productos por Encargo</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-3">Estos productos se fabrican bajo pedido. Consulte disponibilidad y tiempos de entrega con su asesor comercial.</p>
+          <div id="listaEncargo" class="list-group">
+            <p class="text-center text-muted py-4"><i class="bi bi-info-circle"></i> Próximamente se habilitará el listado de productos por encargo.</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
