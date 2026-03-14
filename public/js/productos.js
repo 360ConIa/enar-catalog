@@ -316,8 +316,20 @@ function ordenarProductos() {
         valorB = (b.Orden_Cargue || 'ZZZ').toLowerCase();
         break;
       case 'orden_pareto':
-        valorA = a.orden_pareto || 9999;
-        valorB = b.orden_pareto || 9999;
+        // Si hay búsqueda activa: Presentación DESC → Precio ASC
+        if (estado.filtros.busqueda && estado.filtros.busqueda.trim()) {
+          const presA2 = (a.presentacion || '').toLowerCase();
+          const presB2 = (b.presentacion || '').toLowerCase();
+          if (presA2 !== presB2) return presA2.localeCompare(presB2);
+          return (obtenerPrecioCliente(a) || 0) - (obtenerPrecioCliente(b) || 0);
+        }
+        // Sin búsqueda: Pareto ASC
+        const paretoA = a.orden_pareto || 9999;
+        const paretoB = b.orden_pareto || 9999;
+        return paretoA - paretoB;
+      case 'presentacion':
+        valorA = (a.presentacion || '').toLowerCase();
+        valorB = (b.presentacion || '').toLowerCase();
         break;
       default:
         return 0;

@@ -21,19 +21,25 @@ const chalk = require('chalk');
 // CONFIGURACIÓN DE FACTORES
 // ============================================
 
-const FACTOR_MAYORISTA = 0.4956;
-const FACTOR_NEGOCIO = 0.4956;
-const FACTOR_NEGOCIO_PLUS = 0.5156; // +2% para IDs específicos
-const FACTOR_PERSONA_NATURAL = 0.60;
+// Fórmulas:
+// Mayorista:        (P.Lista × 0.52 × 0.97) × 1.19
+// Negocio caso 1:   (P.Lista × 0.52 × 0.97) × 1.19  (igual a mayorista)
+// Negocio caso 2:   (P.Lista × 0.52) × 1.19          (sin descuento 3%, para IDs específicos)
+// Persona Natural:  (P.Lista × 0.60) × 1.19
+const DESCUENTO_BASE = 0.52;       // 100% - 48%
+const DESCUENTO_EXTRA = 0.97;      // 100% - 3%
+const FACTOR_PERSONA_NATURAL = 0.54;
 const IVA = 1.19;
 
-// IDs que llevan el +2% en precio negocio
-// TODO: Actualizar con lista definitiva
-const IDS_NEGOCIO_PLUS = new Set([
-  '-Z-G',
-  '-Z-G5',
-  '-Z-E-',
-  '-Z-I'
+// IDs que NO llevan el descuento extra del 3% en precio negocio (caso 2)
+const IDS_NEGOCIO_SIN_3 = new Set([
+  'RR','RS','RÑ','RD','RZ','RX',
+  'IG201','IG300','IG500','IG100','IG600','IG917','IG400',
+  'EQ','EX','EG','EC',
+  'R-AR','R-AS','R-AÑ','R-AD','R-AZ','R-AX',
+  'TG500','TG01','TG100','TG600','TG300','TG200','TG400','TG201',
+  '-B-G','-Q-X','-Q-G','-Q-C',
+  '-O-G500','-O-G01','-O-G400','-O-G300','-O-G600','-O-G200','-O-G100','-O-G06'
 ]);
 
 const BATCH_SIZE = 500;
@@ -47,9 +53,10 @@ if (!MODE_TEST && !MODE_EJECUTAR) {
 }
 
 console.log(chalk.blue.bold('\n💰 ENAR - Sync Precios por Tipo de Cliente\n'));
-console.log(chalk.gray('   Mayorista:       precio_lista × ' + (FACTOR_MAYORISTA * 100).toFixed(2) + '%'));
-console.log(chalk.gray('   Negocio:         precio_lista × ' + (FACTOR_NEGOCIO * 100).toFixed(2) + '% (o ' + (FACTOR_NEGOCIO_PLUS * 100).toFixed(2) + '% para ' + IDS_NEGOCIO_PLUS.size + ' IDs específicos)'));
-console.log(chalk.gray('   Persona Natural: precio_lista × ' + (FACTOR_PERSONA_NATURAL * 100).toFixed(2) + '%\n'));
+console.log(chalk.gray('   Mayorista:       (P.Lista × 52% × 97%) × 1.19'));
+console.log(chalk.gray('   Negocio caso 1:  (P.Lista × 52% × 97%) × 1.19 (igual mayorista)'));
+console.log(chalk.gray('   Negocio caso 2:  (P.Lista × 52%) × 1.19 (sin 3%, ' + IDS_NEGOCIO_SIN_3.size + ' IDs)'));
+console.log(chalk.gray('   Persona Natural: (P.Lista × 54%) × 1.19\n'));
 
 if (MODE_TEST) {
   console.log(chalk.yellow('⚠️  MODO TEST (dry-run)\n'));
@@ -99,11 +106,14 @@ async function main() {
       return;
     }
 
-    const esPlus = IDS_NEGOCIO_PLUS.has(docSnap.id);
-    const factorNeg = esPlus ? FACTOR_NEGOCIO_PLUS : FACTOR_NEGOCIO;
+    const esSin3 = IDS_NEGOCIO_SIN_3.has(docSnap.id);
 
-    const nuevoMay = Math.round(pl * FACTOR_MAYORISTA * IVA);
-    const nuevoNeg = Math.round(pl * factorNeg * IVA);
+    // Mayorista: siempre con descuento base + extra 3%
+    const nuevoMay = Math.round(pl * DESCUENTO_BASE * DESCUENTO_EXTRA * IVA);
+    // Negocio: caso 2 (sin 3%) o caso 1 (con 3%, igual a mayorista)
+    const nuevoNeg = esSin3
+      ? Math.round(pl * DESCUENTO_BASE * IVA)
+      : Math.round(pl * DESCUENTO_BASE * DESCUENTO_EXTRA * IVA);
     const nuevoNat = Math.round(pl * FACTOR_PERSONA_NATURAL * IVA);
 
     const actualMay = Math.round(data.precio_mayorista || 0);
@@ -119,7 +129,7 @@ async function main() {
       id: docSnap.id,
       titulo: data.titulo || docSnap.id,
       precio_lista: pl,
-      esPlus,
+      esSin3,
       updates: {
         precio_mayorista: nuevoMay,
         precio_negocio: nuevoNeg,
@@ -141,13 +151,13 @@ async function main() {
   console.log('');
 
   // Mostrar muestra
-  const plusProducts = cambios.filter(c => c.esPlus);
-  const normalProducts = cambios.filter(c => !c.esPlus);
+  const sin3Products = cambios.filter(c => c.esSin3);
+  const normalProducts = cambios.filter(c => !c.esSin3);
 
-  if (plusProducts.length > 0) {
-    console.log(chalk.cyan.bold('IDs con +2% negocio (' + plusProducts.length + '):'));
-    plusProducts.forEach(c => {
-      console.log(chalk.cyan('   ' + c.id + ' | lista: ' + c.precio_lista + ' → may: ' + c.updates.precio_mayorista + ' | neg: ' + c.updates.precio_negocio + ' (+2%) | nat: ' + c.updates.precio_persona_natural));
+  if (sin3Products.length > 0) {
+    console.log(chalk.cyan.bold('IDs negocio sin 3% (' + sin3Products.length + '):'));
+    sin3Products.forEach(c => {
+      console.log(chalk.cyan('   ' + c.id + ' | lista: ' + c.precio_lista + ' → may: ' + c.updates.precio_mayorista + ' | neg: ' + c.updates.precio_negocio + ' (sin 3%) | nat: ' + c.updates.precio_persona_natural));
     });
     console.log('');
   }
