@@ -609,30 +609,10 @@ class EnarIAWidget {
         }
 
         /* Backdrop */
-        #enar-ia-backdrop {
-          display: none;
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.2);
-          z-index: 9998;
-          opacity: 0;
-          visibility: hidden;
-          pointer-events: none;
-          transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-
-        #enar-ia-backdrop.visible {
-          display: block;
-          opacity: 1;
-          visibility: visible;
-          pointer-events: auto;
-        }
+        /* Backdrop eliminado — causaba bloqueo de interacción en iOS WebKit */
       </style>
 
       <div id="enar-ia-container">
-        <!-- Backdrop -->
-        <div id="enar-ia-backdrop"></div>
-
         <!-- Modal ENAR IA -->
         <div id="enar-ia-modal">
           <!-- Header -->
@@ -750,9 +730,11 @@ class EnarIAWidget {
       this.closeModal();
     });
 
-    // Backdrop
-    document.getElementById('enar-ia-backdrop')?.addEventListener('click', () => {
-      this.closeModal();
+    // Cerrar al hacer click fuera del modal
+    document.addEventListener('click', (e) => {
+      if (this.isOpen && !e.target.closest('#enar-ia-modal') && !e.target.closest('#btn-enar-ia')) {
+        this.closeModal();
+      }
     });
 
     // Input
@@ -837,13 +819,11 @@ class EnarIAWidget {
 
   openModal() {
     const modal = document.getElementById('enar-ia-modal');
-    const backdrop = document.getElementById('enar-ia-backdrop');
     const btn = document.getElementById('btn-enar-ia');
     const container = document.getElementById('enar-ia-container');
 
     container?.classList.add('active');
     modal?.classList.add('open');
-    backdrop?.classList.add('visible');
     btn?.classList.add('active');
     this.isOpen = true;
 
@@ -854,14 +834,12 @@ class EnarIAWidget {
 
   closeModal() {
     const modal = document.getElementById('enar-ia-modal');
-    const backdrop = document.getElementById('enar-ia-backdrop');
     const btn = document.getElementById('btn-enar-ia');
     const inputWrapper = document.getElementById('enar-input-wrapper');
 
     const container = document.getElementById('enar-ia-container');
     container?.classList.remove('active');
     modal?.classList.remove('open', 'expanded');
-    backdrop?.classList.remove('visible');
     btn?.classList.remove('active');
     inputWrapper?.classList.remove('expanded');
     this.isOpen = false;

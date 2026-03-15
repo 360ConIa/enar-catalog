@@ -1116,7 +1116,7 @@ body {
 /* ============================================
    MODALES
    ============================================ */
-.modal {
+.modal:not(.fade) {
   position: fixed;
   top: 0;
   left: 0;
@@ -1703,6 +1703,8 @@ body {
   width: 100%;
   min-width: 780px;
   border-collapse: collapse;
+  table-layout: fixed;
+  margin-bottom: 0;
 }
 
 .tabla-productos thead {
@@ -1727,21 +1729,8 @@ body {
   white-space: nowrap;
 }
 
-/* Anchos mínimos de columnas para forzar scroll horizontal en móvil */
-.tabla-productos th:nth-child(1),
-.tabla-productos td:nth-child(1) { min-width: 65px; }  /* Cant */
-.tabla-productos th:nth-child(2),
-.tabla-productos td:nth-child(2) { min-width: 75px; }  /* Img */
-.tabla-productos th:nth-child(3),
-.tabla-productos td:nth-child(3) { min-width: 200px; } /* Producto */
-.tabla-productos th:nth-child(4),
-.tabla-productos td:nth-child(4) { min-width: 120px; } /* Presentación */
-.tabla-productos th:nth-child(5),
-.tabla-productos td:nth-child(5) { min-width: 100px; } /* Preci.Final */
-.tabla-productos th:nth-child(6),
-.tabla-productos td:nth-child(6) { min-width: 60px; }  /* UxT */
-.tabla-productos th:nth-child(7),
-.tabla-productos td:nth-child(7) { min-width: 50px; }  /* Detalle */
+/* Anchos de columnas — table-layout:fixed respeta width en th */
+/* Los anchos se definen en los <th> del HTML para que resize-columns.js los modifique */
 
 /* Cabeceras ordenables */
 .th-ordenable {
@@ -2188,19 +2177,8 @@ body {
   }
 }
 
-/* ============================================
-   ANCHOS DE COLUMNAS - TABLA PRODUCTOS
-   ============================================ */
-#tablaProductos th:nth-child(1) { width: 80px; }   /* Cantidad */
-#tablaProductos th:nth-child(2) { width: 250px; }  /* Producto */
-#tablaProductos th:nth-child(3) { width: 70px; }   /* Stock */
-#tablaProductos th:nth-child(4) { width: 90px; }   /* Precio */
-#tablaProductos th:nth-child(5) { width: 90px; }   /* P. Regular */
-#tablaProductos th:nth-child(6) { width: 80px; }   /* Impuesto */
-#tablaProductos th:nth-child(7) { width: 120px; }  /* Laboratorio */
-#tablaProductos th:nth-child(8) { width: 150px; }  /* P. Activo */
-#tablaProductos th:nth-child(9) { width: 70px; }   /* Imagen */
-#tablaProductos th:nth-child(10) { width: 80px; }  /* Acciones */
+/* Anchos de columnas legacy eliminados — la tabla actual tiene 7 columnas,
+   los anchos se controlan con .tabla-productos th/td:nth-child en la sección TABLA DE PRODUCTOS */
 
 /* Columna acciones */
 .td-acciones {
@@ -2264,30 +2242,8 @@ body {
   cursor: not-allowed;
 }
 
-/* ============================================
-   TRUNCADO DE TEXTO EN CELDAS
-   ============================================ */
-#tablaProductos td {
-  max-width: 250px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Columna Producto - más ancha */
-#tablaProductos td:nth-child(2) {
-  max-width: 300px;
-}
-
-/* Columna Principio Activo */
-#tablaProductos td:nth-child(8) {
-  max-width: 200px;
-}
-
-/* Tooltip al hover para ver texto completo */
-#tablaProductos td[title] {
-  cursor: help;
-}
+/* Truncado legacy eliminado — las celdas ya no usan overflow:hidden
+   para permitir que la tabla alcance su min-width y active scroll horizontal */
 
 /* ============================================
    STOCK - ESTILO DISCRETO
@@ -2857,11 +2813,7 @@ body {
   box-sizing: border-box;
 }
 
-/* Tabla responsive — min-width fijo para forzar scroll horizontal en pantallas angostas */
-.tabla-productos {
-  min-width: 780px;
-  margin-bottom: 0;
-}
+/* margin-bottom controlado desde la definición principal de .tabla-productos */
 
 /* Header de tabla con gradiente azul ENAR */
 .tabla-productos thead,
@@ -3161,15 +3113,7 @@ table.tabla-productos > thead > tr > th,
 
 /* Ocultar columnas según tamaño de pantalla (ya usando clases Bootstrap d-*-table-cell) */
 
-/* Estilos para hacer la tabla más legible en tablets */
-@media (min-width: 768px) and (max-width: 1199.98px) {
-  .tabla-productos tbody td {
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
+/* Truncado en tablets eliminado — overflow:hidden impedía scroll horizontal */
 
 /* Mejoras visuales para touch devices */
 @media (hover: none) and (pointer: coarse) {

@@ -20,7 +20,7 @@
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <!-- Estilos personalizados ENAR -->
-  <link rel="stylesheet" href="css/styles.css?v=9.6">
+  <link rel="stylesheet" href="css/styles.css?v=10.4">
   <link rel="stylesheet" href="css/crm-styles.css?v=9.0">
 
   <!-- jQuery (requerido por Select2) -->
@@ -171,13 +171,13 @@
         <table id="tablaProductos" class="table table-hover tabla-productos mb-0">
           <thead>
             <tr>
-              <th>Cant.</th>
-              <th style="text-align: center;">Img</th>
-              <th class="th-ordenable" data-columna="titulo">Producto <span class="sort-icon"></span></th>
-              <th>Presentación</th>
-              <th class="th-ordenable" data-columna="precio_cliente" id="thPrecioCliente">Preci.Final <span class="sort-icon"></span></th>
-              <th class="d-none d-md-table-cell" style="text-align:center;">UxT</th>
-              <th style="text-align: center;"><i class="bi bi-three-dots-vertical"></i></th>
+              <th style="width:65px;">Cant.</th>
+              <th style="width:75px; text-align:center;">Img</th>
+              <th class="th-ordenable" data-columna="titulo" style="width:40%;">Producto <span class="sort-icon"></span></th>
+              <th style="width:15%;">Presentación</th>
+              <th class="th-ordenable" data-columna="precio_cliente" id="thPrecioCliente" style="width:110px;">Preci.Final <span class="sort-icon"></span></th>
+              <th class="d-none d-md-table-cell" style="width:60px; text-align:center;">UxT</th>
+              <th style="width:50px; text-align:center;"><i class="bi bi-three-dots-vertical"></i></th>
             </tr>
           </thead>
           <tbody id="productosBody">
@@ -482,6 +482,7 @@
   <script type="module" src="js/carrito.js"></script>
   <script type="module" src="js/cotizacion.js"></script>
   <script type="module" src="js/productos.js?v=12"></script>
+  <script src="js/resize-columns.js?v=3"></script>
 
   <!-- Auth Navigation Handler -->
   <script type="module">
@@ -636,7 +637,7 @@
   </script>
 
   <!-- Widget de Chat IA -->
-  <script src="/js/ia/chatWidget.js?v=4"></script>
+  <script src="/js/ia/chatWidget.js?v=5"></script>
 
   <!-- Modal Productos por Encargo -->
   <div class="modal fade" id="modalEncargo" tabindex="-1" aria-labelledby="modalEncargoLabel" aria-hidden="true">
