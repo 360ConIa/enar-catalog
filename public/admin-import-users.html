@@ -406,8 +406,11 @@
             <div class="column-item"><span class="col-name">razon_social</span></div>
             <div class="column-item"><span class="col-name">nit</span></div>
             <div class="column-item"><span class="col-name">direccion</span></div>
+            <div class="column-item"><span class="col-name">ubicacion</span></div>
             <div class="column-item"><span class="col-name">ciudad</span></div>
             <div class="column-item"><span class="col-name">departamento</span></div>
+            <div class="column-item"><span class="col-name">lista_precios</span></div>
+            <div class="column-item"><span class="col-name">creado_por</span></div>
           </div>
           <p style="margin-top: 10px; font-size: 12px; color: #92400e;">
             * Campos obligatorios. <strong>tipo_cliente</strong> puede ser: mayorista, negocio, persona_natural
@@ -521,6 +524,7 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
     // Store admin credentials for re-auth
     let adminEmail = null;
     let adminPassword = null;
+    let importing = false;
 
     // Parsed data
     let parsedData = [];
@@ -538,7 +542,7 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
 
     // Required fields
     const REQUIRED_FIELDS = ['email', 'nombre', 'password'];
-    const VALID_TIPOS = ['mayorista', 'negocio', 'persona_natural'];
+    const VALID_TIPOS = ['mayorista', 'negocio', 'persona_natural', 'persona natural', 'regimen común', 'regimen simplificado', 'regimen comun'];
 
     // Parse CSV/TSV data (Google Sheets copies as TSV)
     function parseData(text) {
@@ -679,6 +683,7 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
         return;
       }
 
+      importing = true;
       showStep(3);
 
       const progressFill = document.getElementById('progressFill');
@@ -710,13 +715,17 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
             email: user.email,
             nombre: user.nombre,
             telefono: user.telefono || '',
-            tipo_cliente: (user.tipo_cliente || 'persona_natural').toLowerCase(),
+            tipo_cliente: user.tipo_cliente || 'Persona Natural',
             estado: 'aprobado',
+            rol: 'cliente',
             razon_social: user.razon_social || '',
             nit: user.nit || '',
             direccion: user.direccion || '',
+            ubicacion: user.ubicacion || user.ciudad || '',
             ciudad: user.ciudad || '',
             departamento: user.departamento || '',
+            lista_precios: user.lista_precios || '',
+            creado_por: user.creado_por || 'import-masivo',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             aprobado_en: new Date().toISOString(),
@@ -778,6 +787,7 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
       }
 
       // Show summary
+      importing = false;
       progressText.textContent = 'Importación completada';
       document.getElementById('successCount').textContent = successCount;
       document.getElementById('errorCount').textContent = errorCount;
@@ -816,6 +826,8 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
 
     // Auth check
     onAuthStateChanged(auth, async (user) => {
+      if (importing) return; // Ignorar cambios de auth durante importación
+
       loading.style.display = 'none';
 
       if (!user) {
