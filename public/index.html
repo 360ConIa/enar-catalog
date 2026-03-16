@@ -676,8 +676,17 @@
 
           <!-- Color -->
           <div class="mb-3">
-            <label for="encargoColor" class="form-label fw-semibold" style="font-size:0.85rem;">Color <span class="text-danger">*</span></label>
-            <input type="text" id="encargoColor" class="form-control form-control-sm" placeholder="Ej: Amarillo, Rojo Óxido, Blanco Hueso..." autocomplete="off">
+            <label class="form-label fw-semibold" style="font-size:0.85rem;">Color <span class="text-danger">*</span></label>
+            <div class="input-group input-group-sm">
+              <input type="text" id="encargoColor" class="form-control form-control-sm" placeholder="Seleccione o escriba un color..." autocomplete="off">
+              <button type="button" id="btnCartaColores" class="btn btn-outline-secondary" title="Abrir carta de colores" disabled>
+                <i class="bi bi-palette"></i>
+              </button>
+            </div>
+            <div id="encargoColorPreview" style="display:none;margin-top:6px;">
+              <span id="encargoColorSwatch" style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #ccc;vertical-align:middle;"></span>
+              <span id="encargoColorNombre" style="font-size:0.8rem;margin-left:4px;vertical-align:middle;color:#555;"></span>
+            </div>
           </div>
 
           <!-- Presentación -->
@@ -723,6 +732,32 @@
           <button type="button" id="btnAgregarEncargo" class="btn btn-sm text-white" style="background:#D9232D;font-weight:500;">
             <i class="bi bi-cart-plus"></i> Agregar al Carrito
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Carta de Colores -->
+  <div class="modal fade" id="modalCartaColores" tabindex="-1" aria-labelledby="modalCartaColoresLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content" style="border-radius:12px;overflow:hidden;">
+        <div class="modal-header" style="background:#D9232D;color:white;border-bottom:none;padding:0.75rem 1.25rem;">
+          <h6 class="modal-title" id="modalCartaColoresLabel" style="font-weight:600;"><i class="bi bi-palette"></i> Carta de Colores — <span id="cartaTipoPintura"></span></h6>
+          <button type="button" class="btn-close btn-close-white" id="btnCerrarCarta" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body" style="padding:1rem 1.25rem;">
+          <!-- Buscador -->
+          <div class="mb-3">
+            <input type="text" id="cartaBuscarColor" class="form-control form-control-sm" placeholder="Buscar color...">
+          </div>
+          <!-- Grid de colores -->
+          <div id="cartaColoresGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;max-height:360px;overflow-y:auto;padding-right:4px;"></div>
+          <!-- Sin resultados -->
+          <p id="cartaSinResultados" class="text-center text-muted py-3" style="display:none;font-size:0.85rem;">No se encontraron colores.</p>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #e9ecef;padding:0.5rem 1.25rem;">
+          <span class="text-muted me-auto" style="font-size:0.75rem;">Seleccione un color o escriba uno personalizado</span>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnCerrarCartaFooter">Cerrar</button>
         </div>
       </div>
     </div>

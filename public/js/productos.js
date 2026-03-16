@@ -1228,6 +1228,222 @@ elementos.modalFichaTecnica?.querySelector('.modal__overlay')?.addEventListener(
 // MODAL POR ENCARGO
 // ============================================
 
+// Carta de colores por tipo de pintura
+const CARTA_COLORES = {
+  Esmalte: [
+    { nombre: 'Blanco', hex: '#FFFFFF' },
+    { nombre: 'Blanco Hueso', hex: '#F5F0E1' },
+    { nombre: 'Marfil', hex: '#FFFFF0' },
+    { nombre: 'Crema', hex: '#FFFDD0' },
+    { nombre: 'Amarillo', hex: '#FFD700' },
+    { nombre: 'Amarillo Caterpillar', hex: '#FFCB05' },
+    { nombre: 'Amarillo Tráfico', hex: '#FFC000' },
+    { nombre: 'Naranja', hex: '#FF8C00' },
+    { nombre: 'Rojo', hex: '#CC0000' },
+    { nombre: 'Rojo Óxido', hex: '#8B2500' },
+    { nombre: 'Rojo Colonial', hex: '#A52A2A' },
+    { nombre: 'Bermellón', hex: '#E34234' },
+    { nombre: 'Verde', hex: '#228B22' },
+    { nombre: 'Verde Esmeralda', hex: '#50C878' },
+    { nombre: 'Verde Selva', hex: '#2E8B57' },
+    { nombre: 'Verde Prado', hex: '#7CFC00' },
+    { nombre: 'Azul', hex: '#0047AB' },
+    { nombre: 'Azul Rey', hex: '#002FA7' },
+    { nombre: 'Azul Cielo', hex: '#87CEEB' },
+    { nombre: 'Azul Naval', hex: '#000080' },
+    { nombre: 'Gris', hex: '#808080' },
+    { nombre: 'Gris Plata', hex: '#C0C0C0' },
+    { nombre: 'Gris Oscuro', hex: '#404040' },
+    { nombre: 'Negro', hex: '#1A1A1A' },
+    { nombre: 'Café', hex: '#6F4E37' },
+    { nombre: 'Café Tabaco', hex: '#71462A' },
+    { nombre: 'Caoba', hex: '#4D2600' },
+    { nombre: 'Aluminio', hex: '#A8A9AD' },
+    { nombre: 'Bronce', hex: '#CD7F32' },
+    { nombre: 'Dorado', hex: '#DAA520' },
+  ],
+  Vinilo: [
+    { nombre: 'Blanco', hex: '#FFFFFF' },
+    { nombre: 'Blanco Hueso', hex: '#F5F0E1' },
+    { nombre: 'Marfil', hex: '#FFFFF0' },
+    { nombre: 'Crema', hex: '#FFFDD0' },
+    { nombre: 'Pergamino', hex: '#F1E9D2' },
+    { nombre: 'Arena', hex: '#C2B280' },
+    { nombre: 'Durazno', hex: '#FFDAB9' },
+    { nombre: 'Salmón', hex: '#FA8072' },
+    { nombre: 'Rosa Pastel', hex: '#FFD1DC' },
+    { nombre: 'Lila', hex: '#C8A2C8' },
+    { nombre: 'Lavanda', hex: '#E6E6FA' },
+    { nombre: 'Azul Cielo', hex: '#87CEEB' },
+    { nombre: 'Azul Pastel', hex: '#AEC6CF' },
+    { nombre: 'Verde Menta', hex: '#98FB98' },
+    { nombre: 'Verde Pastel', hex: '#77DD77' },
+    { nombre: 'Amarillo Pastel', hex: '#FDFD96' },
+    { nombre: 'Amarillo', hex: '#FFD700' },
+    { nombre: 'Naranja', hex: '#FF8C00' },
+    { nombre: 'Rojo', hex: '#CC0000' },
+    { nombre: 'Verde', hex: '#228B22' },
+    { nombre: 'Azul', hex: '#0047AB' },
+    { nombre: 'Gris Perla', hex: '#C0C0C0' },
+    { nombre: 'Gris', hex: '#808080' },
+    { nombre: 'Café', hex: '#6F4E37' },
+    { nombre: 'Ocre', hex: '#CC7722' },
+    { nombre: 'Terracota', hex: '#E2725B' },
+  ],
+  Anticorrosivo: [
+    { nombre: 'Rojo Óxido', hex: '#8B2500' },
+    { nombre: 'Gris', hex: '#808080' },
+    { nombre: 'Negro', hex: '#1A1A1A' },
+    { nombre: 'Blanco', hex: '#FFFFFF' },
+    { nombre: 'Verde', hex: '#228B22' },
+    { nombre: 'Amarillo', hex: '#FFD700' },
+    { nombre: 'Rojo', hex: '#CC0000' },
+    { nombre: 'Azul', hex: '#0047AB' },
+    { nombre: 'Naranja', hex: '#FF8C00' },
+    { nombre: 'Aluminio', hex: '#A8A9AD' },
+  ],
+  Impermeabilizante: [
+    { nombre: 'Blanco', hex: '#FFFFFF' },
+    { nombre: 'Gris', hex: '#808080' },
+    { nombre: 'Rojo', hex: '#CC0000' },
+    { nombre: 'Verde', hex: '#228B22' },
+    { nombre: 'Negro', hex: '#1A1A1A' },
+    { nombre: 'Terracota', hex: '#E2725B' },
+  ],
+  Barniz: [
+    { nombre: 'Transparente Brillante', hex: '#FFF8DC' },
+    { nombre: 'Transparente Mate', hex: '#F5F0E1' },
+    { nombre: 'Transparente Satinado', hex: '#FAF0E6' },
+    { nombre: 'Caoba', hex: '#4D2600' },
+    { nombre: 'Nogal', hex: '#5C4033' },
+    { nombre: 'Roble', hex: '#806517' },
+    { nombre: 'Cedro', hex: '#A0522D' },
+    { nombre: 'Miel', hex: '#EB9605' },
+    { nombre: 'Pino', hex: '#DEB887' },
+    { nombre: 'Wengué', hex: '#3C1414' },
+    { nombre: 'Incoloro', hex: '#FAFAFA' },
+  ],
+  Laca: [
+    { nombre: 'Transparente Brillante', hex: '#FFF8DC' },
+    { nombre: 'Transparente Mate', hex: '#F5F0E1' },
+    { nombre: 'Blanco', hex: '#FFFFFF' },
+    { nombre: 'Negro', hex: '#1A1A1A' },
+    { nombre: 'Caoba', hex: '#4D2600' },
+    { nombre: 'Nogal', hex: '#5C4033' },
+    { nombre: 'Cedro', hex: '#A0522D' },
+    { nombre: 'Wengué', hex: '#3C1414' },
+  ],
+  Tintilla: [
+    { nombre: 'Caoba', hex: '#4D2600' },
+    { nombre: 'Nogal', hex: '#5C4033' },
+    { nombre: 'Roble', hex: '#806517' },
+    { nombre: 'Cedro', hex: '#A0522D' },
+    { nombre: 'Miel', hex: '#EB9605' },
+    { nombre: 'Pino', hex: '#DEB887' },
+    { nombre: 'Wengué', hex: '#3C1414' },
+    { nombre: 'Café', hex: '#6F4E37' },
+    { nombre: 'Cerezo', hex: '#5B0A0A' },
+    { nombre: 'Ébano', hex: '#2B1B0E' },
+  ],
+  Disolvente: [],
+  Otro: []
+};
+
+/**
+ * Determina si un color hex es oscuro (para texto contrastante)
+ */
+function esColorOscuro(hex) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substr(0, 2), 16);
+  const g = parseInt(c.substr(2, 2), 16);
+  const b = parseInt(c.substr(4, 2), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 < 140;
+}
+
+/**
+ * Abre el modal de carta de colores
+ */
+function abrirCartaColores() {
+  const tipo = document.getElementById('encargoTipo')?.value;
+  if (!tipo) { alert('Seleccione primero el tipo de pintura'); return; }
+
+  const colores = CARTA_COLORES[tipo] || [];
+  if (colores.length === 0) {
+    alert(`No hay carta de colores disponible para "${tipo}". Escriba el color manualmente.`);
+    return;
+  }
+
+  document.getElementById('cartaTipoPintura').textContent = tipo;
+  document.getElementById('cartaBuscarColor').value = '';
+  renderizarCartaColores(colores);
+
+  const modalCarta = new bootstrap.Modal(document.getElementById('modalCartaColores'));
+  modalCarta.show();
+}
+
+/**
+ * Renderiza los swatches de colores en el grid
+ */
+function renderizarCartaColores(colores) {
+  const grid = document.getElementById('cartaColoresGrid');
+  const sinResultados = document.getElementById('cartaSinResultados');
+
+  if (colores.length === 0) {
+    grid.innerHTML = '';
+    sinResultados.style.display = 'block';
+    return;
+  }
+
+  sinResultados.style.display = 'none';
+  grid.innerHTML = colores.map(c => {
+    const textoColor = esColorOscuro(c.hex) ? '#fff' : '#333';
+    const borde = c.hex.toUpperCase() === '#FFFFFF' || c.hex.toUpperCase() === '#FAFAFA' || c.hex.toUpperCase() === '#FFFFF0' ? '2px solid #ddd' : '2px solid transparent';
+    return `
+      <div class="carta-color-swatch" data-nombre="${c.nombre}" data-hex="${c.hex}"
+           style="cursor:pointer;border-radius:8px;overflow:hidden;transition:transform 0.15s, box-shadow 0.15s;border:${borde};"
+           onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.2)'"
+           onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="background:${c.hex};height:60px;display:flex;align-items:center;justify-content:center;">
+          <i class="bi bi-check-lg" style="font-size:1.4rem;color:${textoColor};opacity:0;"></i>
+        </div>
+        <div style="padding:4px 6px;background:#fff;text-align:center;">
+          <span style="font-size:0.7rem;color:#555;line-height:1.1;display:block;">${c.nombre}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Click en cada swatch
+  grid.querySelectorAll('.carta-color-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      const nombre = swatch.dataset.nombre;
+      const hex = swatch.dataset.hex;
+      seleccionarColorCarta(nombre, hex);
+    });
+  });
+}
+
+/**
+ * Selecciona un color de la carta y cierra el modal
+ */
+function seleccionarColorCarta(nombre, hex) {
+  document.getElementById('encargoColor').value = nombre;
+
+  // Mostrar preview del color
+  const preview = document.getElementById('encargoColorPreview');
+  const swatch = document.getElementById('encargoColorSwatch');
+  const nombreEl = document.getElementById('encargoColorNombre');
+  preview.style.display = 'block';
+  swatch.style.background = hex;
+  nombreEl.textContent = nombre;
+
+  // Cerrar modal carta de colores
+  const modalCarta = bootstrap.Modal.getInstance(document.getElementById('modalCartaColores'));
+  if (modalCarta) modalCarta.hide();
+
+  actualizarResumenEncargo();
+}
+
 /**
  * Actualiza el resumen visual del encargo en tiempo real
  */
@@ -1304,6 +1520,8 @@ function agregarEncargo() {
   document.getElementById('encargoCantidad').value = '1';
   document.getElementById('encargoPrecio').value = '';
   document.getElementById('encargoResumen').style.display = 'none';
+  document.getElementById('encargoColorPreview').style.display = 'none';
+  document.getElementById('btnCartaColores').disabled = true;
 }
 
 // Event listeners para el modal de encargo
@@ -1311,6 +1529,48 @@ document.getElementById('btnAgregarEncargo')?.addEventListener('click', agregarE
 ['encargoTipo', 'encargoColor', 'encargoPresentacion', 'encargoCantidad', 'encargoPrecio'].forEach(id => {
   document.getElementById(id)?.addEventListener('input', actualizarResumenEncargo);
   document.getElementById(id)?.addEventListener('change', actualizarResumenEncargo);
+});
+
+// Habilitar/deshabilitar botón carta de colores según tipo seleccionado
+document.getElementById('encargoTipo')?.addEventListener('change', (e) => {
+  const tipo = e.target.value;
+  const btn = document.getElementById('btnCartaColores');
+  const colores = CARTA_COLORES[tipo] || [];
+  btn.disabled = !tipo || colores.length === 0;
+  // Limpiar color al cambiar tipo
+  document.getElementById('encargoColor').value = '';
+  document.getElementById('encargoColorPreview').style.display = 'none';
+});
+
+// Abrir carta de colores
+document.getElementById('btnCartaColores')?.addEventListener('click', abrirCartaColores);
+
+// Cerrar carta de colores
+document.getElementById('btnCerrarCarta')?.addEventListener('click', () => {
+  const m = bootstrap.Modal.getInstance(document.getElementById('modalCartaColores'));
+  if (m) m.hide();
+});
+document.getElementById('btnCerrarCartaFooter')?.addEventListener('click', () => {
+  const m = bootstrap.Modal.getInstance(document.getElementById('modalCartaColores'));
+  if (m) m.hide();
+});
+
+// Buscador dentro de la carta de colores
+document.getElementById('cartaBuscarColor')?.addEventListener('input', (e) => {
+  const tipo = document.getElementById('encargoTipo')?.value;
+  const termino = normalizarTexto(e.target.value);
+  const colores = (CARTA_COLORES[tipo] || []).filter(c =>
+    normalizarTexto(c.nombre).includes(termino)
+  );
+  renderizarCartaColores(colores);
+});
+
+// Limpiar preview si el usuario borra el campo color manualmente
+document.getElementById('encargoColor')?.addEventListener('input', () => {
+  const val = document.getElementById('encargoColor').value.trim();
+  if (!val) {
+    document.getElementById('encargoColorPreview').style.display = 'none';
+  }
 });
 
 // ============================================
