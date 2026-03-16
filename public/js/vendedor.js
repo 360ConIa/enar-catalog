@@ -114,6 +114,12 @@ onAuthStateChanged(auth, async (user) => {
 
   $('loadingScreen').style.display = 'none';
   $('mainContent').style.display = 'block';
+
+  // Si viene de admin con ?nuevaOrden=1, abrir flujo automáticamente
+  if (new URLSearchParams(window.location.search).get('nuevaOrden') === '1') {
+    history.replaceState(null, '', window.location.pathname);
+    abrirBuscarCliente();
+  }
 });
 
 $('btnLogout').addEventListener('click', async () => {
@@ -165,7 +171,8 @@ function actualizarKPIs() {
     .filter(o => { const f = toDate(o.created_at); return f && f >= inicioMes && o.estado !== 'cancelada'; })
     .reduce((s, o) => s + (o.total || 0), 0);
   $('kpiVentas').textContent = formatearPrecio(ventasMes);
-  $('kpiCompletadas').textContent = todasLasOrdenes.filter(o => o.estado === 'completada').length;
+  $('kpiAlistamiento').textContent = todasLasOrdenes.filter(o => o.estado === 'alistamiento').length;
+  $('kpiTerminadas').textContent = todasLasOrdenes.filter(o => o.estado === 'terminada').length;
 }
 
 // ═══════════ FILTROS ═══════════

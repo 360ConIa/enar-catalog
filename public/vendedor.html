@@ -13,6 +13,155 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/crm-styles.css">
+  <style>
+    .crm-kpi {
+      padding: 14px 16px;
+      text-align: center;
+      border-left: none;
+    }
+    .crm-kpi-value {
+      font-size: 1.2rem;
+      color: #1e3a8a;
+    }
+    .crm-kpi-label {
+      margin-bottom: 0;
+      margin-top: 3px;
+      text-transform: none;
+    }
+
+    /* Barra filtros estilo card-header admin */
+    .filtros-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      padding: 12px 20px;
+      border-radius: 10px 10px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 0;
+      box-sizing: border-box;
+      max-width: 100%;
+    }
+    .filtros-header > * {
+      box-sizing: border-box;
+    }
+    .filtro-input {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: 'Poppins', sans-serif;
+      outline: none;
+    }
+    .filtro-input--search {
+      flex: 1;
+      min-width: 0;
+    }
+    .filtro-btn-nueva {
+      background: #D9232D;
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Poppins', sans-serif;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .filtro-btn-nueva:hover {
+      background: #b91c25;
+    }
+
+    .filtro-date-wrap {
+      position: relative;
+    }
+    .filtro-date-wrap .filtro-date {
+      color: transparent;
+    }
+    .filtro-date-wrap .filtro-date:focus,
+    .filtro-date-wrap .filtro-date:valid:not([value=""]) {
+      color: #333;
+    }
+    .filtro-date-label {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      color: #999;
+      pointer-events: none;
+    }
+    .filtro-date-wrap .filtro-date:focus + .filtro-date-label,
+    .filtro-date-wrap .filtro-date.has-value + .filtro-date-label {
+      display: none;
+    }
+
+    /* Tabla: scroll horizontal en móvil */
+    .crm-tabla-wrapper {
+      -webkit-overflow-scrolling: touch;
+      border-radius: 0 0 10px 10px;
+      margin-top: 0;
+    }
+    .crm-tabla {
+      min-width: 700px;
+    }
+
+    /* ====== RESPONSIVE ====== */
+    @media (max-width: 900px) {
+      .crm-kpis {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 8px;
+      }
+      .crm-kpi { padding: 10px 12px; }
+      .crm-kpi-value { font-size: 1rem; }
+      .crm-kpi-label { font-size: 0.7rem; }
+      .filtros-header { flex-wrap: wrap; padding: 12px 14px; }
+      .filtro-input { font-size: 12px; padding: 7px 10px; }
+      .filtro-input--search { width: 100%; flex: none; }
+    }
+
+    @media (max-width: 600px) {
+      .crm-container { padding: 10px 8px; }
+      .crm-kpis {
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding-bottom: 4px;
+      }
+      .crm-kpi {
+        min-width: 120px;
+        flex-shrink: 0;
+        padding: 8px 12px;
+      }
+      .crm-kpi-value { font-size: 0.95rem; }
+      .filtros-header {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 14px 16px;
+        border-radius: 10px 10px 0 0;
+        overflow: hidden;
+      }
+      .filtros-header > * { box-sizing: border-box; min-width: 0; }
+      .filtro-input { width: 100%; min-width: 0; box-sizing: border-box; }
+      .filtro-date-wrap { overflow: hidden; border-radius: 6px; }
+      .filtro-date-wrap .filtro-input { width: 100%; min-width: 0; }
+      #filtroTexto { grid-column: 1 / -1; order: -3; }
+      .filtro-btn-nueva { width: 100%; justify-content: center; order: -2; }
+      #filtroEstado { order: -2; }
+      #grupoDesde { order: -1; }
+      #grupoHasta { order: -1; }
+      .crm-tabla th, .crm-tabla td { padding: 8px 10px; font-size: 0.78rem; }
+      .crm-modal { margin: 8px; max-height: 95vh; }
+      .crm-paginacion { flex-direction: column; gap: 6px; }
+    }
+  </style>
 </head>
 <body class="crm-page">
 
@@ -60,58 +209,54 @@
   <main id="mainContent" class="crm-container" style="display:none;">
     <!-- KPIs -->
     <div class="crm-kpis">
+      <div class="crm-kpi crm-kpi--green">
+        <div class="crm-kpi-value" id="kpiVentas">$0</div>
+        <div class="crm-kpi-label">Ventas del Mes</div>
+      </div>
       <div class="crm-kpi">
-        <div class="crm-kpi-label">Total Órdenes</div>
         <div class="crm-kpi-value" id="kpiTotal">0</div>
+        <div class="crm-kpi-label">Total Órdenes</div>
       </div>
       <div class="crm-kpi crm-kpi--yellow">
-        <div class="crm-kpi-label">Pendientes</div>
         <div class="crm-kpi-value" id="kpiPendientes">0</div>
+        <div class="crm-kpi-label">Pendientes</div>
+      </div>
+      <div class="crm-kpi crm-kpi--orange">
+        <div class="crm-kpi-value" id="kpiAlistamiento">0</div>
+        <div class="crm-kpi-label">Alistamiento</div>
       </div>
       <div class="crm-kpi crm-kpi--green">
-        <div class="crm-kpi-label">Ventas del Mes</div>
-        <div class="crm-kpi-value" id="kpiVentas">$0</div>
-      </div>
-      <div class="crm-kpi crm-kpi--green">
-        <div class="crm-kpi-label">Completadas</div>
-        <div class="crm-kpi-value" id="kpiCompletadas">0</div>
+        <div class="crm-kpi-value" id="kpiTerminadas">0</div>
+        <div class="crm-kpi-label">Terminadas</div>
       </div>
     </div>
 
     <!-- Filtros -->
-    <div class="crm-filtros">
-      <div class="crm-filtro-group" style="flex:1;">
-        <label>Buscar</label>
-        <input type="text" class="crm-input crm-input--search" id="filtroTexto" placeholder="Orden, cliente, NIT..." style="width:100%;">
+    <div class="filtros-header">
+      <input type="text" class="filtro-input filtro-input--search" id="filtroTexto" placeholder="Buscar orden, cliente, NIT...">
+      <select class="filtro-input" id="filtroEstado">
+        <option value="">Todos los estados</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="aprobada">Aprobada</option>
+        <option value="en_proceso">En Proceso</option>
+        <option value="alistamiento">Alistamiento</option>
+        <option value="en_espera">En Espera</option>
+        <option value="completada">Completada</option>
+        <option value="parcial">Parcial</option>
+        <option value="terminada">Terminada</option>
+        <option value="cancelada">Cancelada</option>
+      </select>
+      <div class="filtro-date-wrap" id="grupoDesde">
+        <input type="date" class="filtro-input filtro-date" id="filtroDesde">
+        <span class="filtro-date-label">Fecha Inicial</span>
       </div>
-      <div class="crm-filtro-group">
-        <label>Estado</label>
-        <select class="crm-select" id="filtroEstado">
-          <option value="">Todos</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="aprobada">Aprobada</option>
-          <option value="en_proceso">En Proceso</option>
-          <option value="alistamiento">Alistamiento</option>
-          <option value="en_espera">En Espera</option>
-          <option value="completada">Completada</option>
-          <option value="parcial">Parcial</option>
-          <option value="terminada">Terminada</option>
-          <option value="cancelada">Cancelada</option>
-        </select>
+      <div class="filtro-date-wrap" id="grupoHasta">
+        <input type="date" class="filtro-input filtro-date" id="filtroHasta">
+        <span class="filtro-date-label">Fecha Final</span>
       </div>
-      <div class="crm-filtro-group">
-        <label>Desde</label>
-        <input type="date" class="crm-input" id="filtroDesde">
-      </div>
-      <div class="crm-filtro-group">
-        <label>Hasta</label>
-        <input type="date" class="crm-input" id="filtroHasta">
-      </div>
-      <div class="crm-filtro-group" style="align-self:flex-end;">
-        <button class="crm-btn crm-btn--danger" id="btnNuevaOrden">
-          <i class="bi bi-plus-lg"></i> Nueva Orden
-        </button>
-      </div>
+      <button class="filtro-btn-nueva" id="btnNuevaOrden">
+        <i class="bi bi-plus-lg"></i> Nueva Orden
+      </button>
     </div>
 
     <!-- Tabla Órdenes -->
@@ -139,7 +284,7 @@
   <!-- Modal 1: Buscar Cliente -->
   <div id="modalBuscarCliente" class="crm-modal-overlay">
     <div class="crm-modal">
-      <div class="crm-modal-header">
+      <div class="crm-modal-header" style="background:#D9232D;color:white;">
         <h3>Seleccionar Cliente</h3>
         <button class="crm-modal-close" onclick="cerrarModal('modalBuscarCliente')">&times;</button>
       </div>
@@ -258,6 +403,13 @@
   </div>
 
   <script>document.addEventListener('click',function(e){if(!e.target.closest('.nav-user-dropdown')){var m=document.getElementById('navUserMenu');if(m)m.classList.remove('open')}});</script>
+  <script>
+    document.querySelectorAll('.filtro-date').forEach(function(input) {
+      input.addEventListener('change', function() {
+        this.classList.toggle('has-value', !!this.value);
+      });
+    });
+  </script>
   <script type="module" src="js/vendedor.js"></script>
 </body>
 </html>

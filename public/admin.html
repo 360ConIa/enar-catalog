@@ -75,33 +75,30 @@
     }
     .admin-tabs {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       margin-bottom: 25px;
-      border-bottom: 2px solid #e0e0e0;
       padding-bottom: 0;
     }
     .admin-tab {
-      padding: 12px 24px;
-      background: none;
+      padding: 10px 24px;
+      background: #f0f2f5;
       border: none;
+      border-radius: 8px;
       font-size: 14px;
       font-weight: 600;
       color: #666;
       cursor: pointer;
       position: relative;
       font-family: 'Poppins', sans-serif;
+      transition: all 0.2s ease;
     }
-    .admin-tab.active {
+    .admin-tab:hover {
+      background: #e8edf4;
       color: #1e3a8a;
     }
-    .admin-tab.active::after {
-      content: '';
-      position: absolute;
-      bottom: -2px;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: #D9232D;
+    .admin-tab.active {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
     }
     .admin-tab .badge {
       background: #D9232D;
@@ -110,6 +107,10 @@
       border-radius: 10px;
       font-size: 11px;
       margin-left: 8px;
+    }
+    .admin-tab.active .badge {
+      background: white;
+      color: #D9232D;
     }
     .tab-content {
       display: none;
@@ -125,29 +126,29 @@
     }
     .stat-card {
       background: white;
-      padding: 20px;
+      padding: 14px 16px;
       border-radius: 10px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
       text-align: center;
     }
     .stat-number {
-      font-size: 32px;
+      font-size: 22px;
       font-weight: 700;
       color: #1e3a8a;
     }
     .stat-number.warning {
-      color: #d97706;
+      color: #1e3a8a;
     }
     .stat-number.success {
-      color: #10b981;
+      color: #1e3a8a;
     }
     .stat-number.danger {
-      color: #D9232D;
+      color: #1e3a8a;
     }
     .stat-label {
-      font-size: 13px;
+      font-size: 12px;
       color: #666;
-      margin-top: 5px;
+      margin-top: 3px;
     }
     .admin-card {
       background: white;
@@ -164,9 +165,26 @@
       justify-content: space-between;
       align-items: center;
     }
-    .card-header h2 {
-      font-size: 16px;
-      font-weight: 600;
+    .card-header--rows {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .card-header-row {
+      display: contents;
+    }
+    .header-input {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: 'Poppins', sans-serif;
+      outline: none;
+    }
+    .header-input--search {
+      flex: 1;
+      min-width: 0;
     }
     .search-box {
       display: flex;
@@ -187,6 +205,8 @@
     }
     .card-body {
       padding: 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .data-table {
       width: 100%;
@@ -601,7 +621,7 @@
       color: #888;
     }
     .btn-crear-usuario {
-      background: #10b981;
+      background: #D9232D;
       color: white;
       border: none;
       padding: 8px 16px;
@@ -612,34 +632,94 @@
       margin-right: 10px;
     }
     .btn-crear-usuario:hover {
-      background: #059669;
+      background: #b91c25;
+    }
+    .btn-importar-masivo {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-importar-masivo:hover {
+      background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+      color: white;
     }
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 15px;
     }
+    /* ====== RESPONSIVE ====== */
+
+    /* Tablas: scroll horizontal en pantallas pequeñas */
+    .data-table {
+      min-width: 700px;
+    }
+
     @media (max-width: 900px) {
-      .data-table {
-        font-size: 12px;
-      }
+      .admin-container { padding: 20px 12px; }
+      .stats-grid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+      .stat-card { padding: 10px 12px; }
+      .stat-number { font-size: 18px; }
+      .stat-label { font-size: 11px; }
       .data-table th,
-      .data-table td {
-        padding: 8px 10px;
+      .data-table td { padding: 10px 12px; font-size: 13px; }
+      .card-header--rows {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 12px 14px;
+      }
+      .card-header-row { display: contents; }
+      .header-input,
+      .card-header-row .dropdown,
+      .btn-crear-usuario,
+      .btn-importar-masivo {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        font-size: 12px;
+        padding: 7px 10px;
+      }
+      .card-header-row .dropdown .btn {
+        width: 100%;
+        min-width: 0;
+        font-size: 12px;
+        padding: 7px 10px;
+      }
+      .btn-crear-usuario, .btn-importar-masivo {
+        margin-right: 0;
+        text-align: center;
+        white-space: nowrap;
       }
     }
-    @media (max-width: 768px) {
-      .header-content {
-        flex-direction: column;
-        gap: 10px;
-        text-align: center;
+
+    @media (max-width: 600px) {
+      .admin-container { padding: 14px 8px; }
+      .stats-grid {
+        display: flex;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 8px;
+        margin-bottom: 16px;
+        padding-bottom: 4px;
       }
-      .header-left { justify-content: center; flex-wrap: wrap; }
-      .header-left h1 { font-size: 18px; }
-      .admin-tabs { flex-wrap: wrap; justify-content: center; }
-      .admin-tab { padding: 10px 14px; font-size: 12px; }
-      .search-box { flex-wrap: wrap; }
-      .search-box input { width: 100%; }
+      .stat-card { min-width: 120px; flex-shrink: 0; padding: 8px 12px; }
+      .stat-number { font-size: 16px; }
+      .admin-tabs { gap: 4px; }
+      .admin-tab { padding: 8px 12px; font-size: 12px; }
+      .admin-tab .badge { font-size: 10px; padding: 1px 6px; margin-left: 4px; }
+      .modal-content { margin: 10px; max-height: 95vh; }
+      .form-row { grid-template-columns: 1fr; }
+      .modal-body { padding: 16px; }
+      .modal-actions { flex-direction: column; }
     }
   </style>
 </head>
@@ -731,15 +811,12 @@
 
         <!-- Usuarios Table -->
         <div class="admin-card">
-          <div class="card-header">
-            <h2>Gestión de Usuarios</h2>
-            <div class="search-box">
-              <button class="btn-crear-usuario" onclick="abrirCrearUsuario()">+ Crear Usuario</button>
-              <a href="admin-import-users.html" class="btn-crear-usuario" style="background:#8b5cf6;text-decoration:none;">📥 Importar Masivo</a>
-              <input type="search" id="buscarUsuario" name="buscarUsuario_admin" placeholder="Buscar por email o nombre..." autocomplete="nope" readonly onfocus="this.removeAttribute('readonly')">
+          <div class="card-header card-header--rows">
+            <div class="card-header-row">
+              <input type="search" id="buscarUsuario" name="buscarUsuario_admin" class="header-input header-input--search" placeholder="Buscar por email o nombre..." autocomplete="nope" readonly onfocus="this.removeAttribute('readonly')">
               <input type="hidden" id="filtroEstado" value="">
               <div class="dropdown">
-                <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" style="min-width: 160px; text-align: left;">
+                <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" style="text-align: left;">
                   <span id="filtroEstadoUsuarioTexto">Todos los estados</span>
                 </button>
                 <ul class="dropdown-menu">
@@ -761,6 +838,10 @@
                   </a></li>
                 </ul>
               </div>
+            </div>
+            <div class="card-header-row">
+              <button class="btn-crear-usuario" onclick="abrirCrearUsuario()">+ Crear Usuario</button>
+              <a href="admin-import-users.html" class="btn-importar-masivo">📥 Importar Masivo</a>
             </div>
           </div>
           <div class="card-body">
@@ -808,8 +889,8 @@
             <div class="stat-label">En Proceso</div>
           </div>
           <div class="stat-card">
-            <div class="stat-number success" id="ordenesEntregadas">0</div>
-            <div class="stat-label">Entregadas</div>
+            <div class="stat-number success" id="ordenesTerminadas">0</div>
+            <div class="stat-label">Terminadas</div>
           </div>
           <div class="stat-card">
             <div class="stat-number danger" id="montoTotal">$0</div>
@@ -819,13 +900,15 @@
 
         <!-- Órdenes Table -->
         <div class="admin-card">
-          <div class="card-header">
-            <h2>Gestión de Órdenes</h2>
-            <div class="search-box">
-              <input type="text" id="buscarOrden" placeholder="Buscar por número o cliente...">
+          <div class="card-header card-header--rows">
+            <div class="card-header-row">
+              <input type="text" id="buscarOrden" class="header-input header-input--search" placeholder="Buscar por número o cliente...">
               <input type="hidden" id="filtroEstadoOrden" value="">
+            </div>
+            <div class="card-header-row">
+              <a href="vendedor.html?nuevaOrden=1" class="btn-crear-usuario" style="text-decoration:none;">+ Nueva Orden</a>
               <div class="dropdown">
-                <button class="btn btn-light dropdown-toggle" type="button" id="filtroEstadoBtn" data-bs-toggle="dropdown" style="min-width: 160px; text-align: left;">
+                <button class="btn btn-light dropdown-toggle" type="button" id="filtroEstadoBtn" data-bs-toggle="dropdown" style="text-align: left;">
                   <span id="filtroEstadoTexto">Todos los estados</span>
                 </button>
                 <ul class="dropdown-menu">
@@ -1893,14 +1976,14 @@
         total: ordenes.length,
         pendientes: ordenes.filter(o => o.estado === 'pendiente').length,
         enProceso: ordenes.filter(o => o.estado === 'en_proceso' || o.estado === 'confirmada').length,
-        entregadas: ordenes.filter(o => o.estado === 'entregada').length,
+        terminadas: ordenes.filter(o => o.estado === 'terminada').length,
         monto: ordenes.reduce((sum, o) => sum + (o.total || 0), 0)
       };
 
       document.getElementById('totalOrdenes').textContent = stats.total;
       document.getElementById('ordenesPendientes').textContent = stats.pendientes;
       document.getElementById('ordenesEnProceso').textContent = stats.enProceso;
-      document.getElementById('ordenesEntregadas').textContent = stats.entregadas;
+      document.getElementById('ordenesTerminadas').textContent = stats.terminadas;
       document.getElementById('montoTotal').textContent = formatearPrecio(stats.monto);
       document.getElementById('ordenesBadge').textContent = stats.pendientes;
     }

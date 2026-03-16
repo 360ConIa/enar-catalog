@@ -50,7 +50,7 @@
       </div>
       <!-- Estado autenticado -->
       <div id="navAuth" class="d-flex align-items-center gap-2 nav-hidden">
-        <a href="vendedor.html">Órdenes</a>
+        <a href="vendedor.html" id="navOrdenes">Órdenes</a>
         <a href="/" style="background:#D9232D;color:white;">Catálogo</a>
         <div class="nav-user-dropdown">
           <a onclick="document.getElementById('navUserMenu').classList.toggle('open');event.stopPropagation();" id="navUserName"><i class="bi bi-person-circle"></i> <i class="bi bi-caret-down-fill"></i></a>
@@ -59,7 +59,7 @@
             <a href="mis-ordenes.html"><i class="bi bi-bag-check"></i> Mis Compras</a>
           </div>
         </div>
-        <a href="admin.html">Admin</a>
+        <a href="admin.html" id="navAdmin">Admin</a>
         <button id="navLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
       </div>
     </nav>
@@ -544,9 +544,17 @@
         navAuth.classList.remove('nav-hidden');
         navAuth.classList.add('nav-visible');
         const nombreCompleto = data?.nombre || user.email;
-        const displayName = nombreCompleto.split(' ')[0];
+        const palabras = nombreCompleto.split(' ');
+        const displayName = (palabras[0].length <= 2 && palabras.length > 1) ? palabras[0] + ' ' + palabras[1] : palabras[0];
         navUserName.innerHTML = '<i class="bi bi-person-circle"></i> ' + displayName + ' <i class="bi bi-caret-down-fill"></i>';
         localStorage.setItem('enar_user_name', displayName);
+
+        // Ocultar Órdenes y Admin para clientes
+        const rol = data?.rol || 'cliente';
+        const navOrdenes = document.getElementById('navOrdenes');
+        const navAdmin = document.getElementById('navAdmin');
+        if (navOrdenes) navOrdenes.style.display = (rol === 'cliente') ? 'none' : '';
+        if (navAdmin) navAdmin.style.display = esPrivilegiado ? '' : 'none';
 
         btnSolicitarCotizacion.style.display = 'none';
         btnCrearOrden.style.display = 'inline-block';

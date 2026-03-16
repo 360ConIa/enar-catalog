@@ -23,7 +23,8 @@ import {
   formatearPrecio,
   debounce,
   normalizarTexto,
-  esUrlImagenValida
+  esUrlImagenValida,
+  imgOptimizada
 } from './utils.js';
 
 // Importar carrito
@@ -650,7 +651,7 @@ function renderizarFila(producto) {
 
     imagenHtml = `
       <div class="imagen-container" data-id="${producto.id || ''}" data-producto='${productoDataStr}'>
-        <img src="${imagenUrl}" alt="${tituloTexto}"
+        <img src="${imgOptimizada(imagenUrl, 150)}" alt="${tituloTexto}"
              class="tabla-thumbnail tabla-thumbnail-clickeable"
              referrerpolicy="no-referrer"
              onerror="this.style.display='none';this.parentElement.querySelector('.tabla-placeholder').style.display='flex';var ov=this.parentElement.querySelector('.imagen-hover-overlay');if(ov)ov.style.display='none';var bg=this.parentElement.querySelector('.imagen-badge');if(bg)bg.style.display='none';this.parentElement.style.cursor='default';this.parentElement.onclick=null;">
@@ -856,7 +857,7 @@ function abrirModalProducto(producto) {
 
   if (tieneMultiplesImagenes) {
     // Múltiples imágenes: mostrar imagen clickeable que abre galería
-    elementos.modalProductoImagen.src = producto.imagen_principal || producto.imagenes[0];
+    elementos.modalProductoImagen.src = imgOptimizada(producto.imagen_principal || producto.imagenes[0], 600);
     elementos.modalProductoImagen.style.display = 'block';
     elementos.modalProductoImagen.style.cursor = 'pointer';
     elementos.modalProductoImagen.classList.add('modal-imagen-galeria');
@@ -881,7 +882,7 @@ function abrirModalProducto(producto) {
     };
   } else if (esUrlImagenValida(producto.imagen_principal)) {
     // Una sola imagen: clickeable para ampliar en modal
-    elementos.modalProductoImagen.src = producto.imagen_principal;
+    elementos.modalProductoImagen.src = imgOptimizada(producto.imagen_principal, 600);
     elementos.modalProductoImagen.style.display = 'block';
     elementos.modalProductoImagen.style.cursor = 'zoom-in';
     elementos.modalProductoImagen.classList.add('modal-imagen-ampliable');
@@ -1015,7 +1016,7 @@ function actualizarImagenGaleria() {
   const { imagenes, indiceActual } = galeriaEstado;
 
   // Actualizar imagen
-  elementos.galeriaImagenPrincipal.src = imagenes[indiceActual];
+  elementos.galeriaImagenPrincipal.src = imgOptimizada(imagenes[indiceActual], 800);
 
   // Actualizar contador
   elementos.galeriaContador.textContent = `${indiceActual + 1} de ${imagenes.length}`;
@@ -1036,7 +1037,7 @@ function renderizarThumbnails() {
 
   elementos.galeriaThumbnails.innerHTML = imagenes.map((url, idx) => `
     <div class="galeria__thumb ${idx === 0 ? 'galeria__thumb--activa' : ''}" data-indice="${idx}">
-      <img src="${url}" alt="Imagen ${idx + 1}">
+      <img src="${imgOptimizada(url, 100)}" alt="Imagen ${idx + 1}">
     </div>
   `).join('');
 

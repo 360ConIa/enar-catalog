@@ -106,6 +106,21 @@ function esUrlImagenValida(url) {
   return url.startsWith('http://') || url.startsWith('https://');
 }
 
+/**
+ * Optimiza URL de imagen de Google Drive para el tamaño requerido.
+ * lh3.googleusercontent.com soporta =s{size} para redimensionar server-side.
+ * @param {string} url - URL original
+ * @param {number} size - Tamaño máximo en px (ancho o alto)
+ * @returns {string} URL optimizada
+ */
+function imgOptimizada(url, size) {
+  if (!url || typeof url !== 'string') return url;
+  if (url.includes('lh3.googleusercontent.com')) {
+    return url.split('=')[0] + '=s' + size;
+  }
+  return url;
+}
+
 // Exportar funciones
 export {
   formatearPrecio,
@@ -113,5 +128,6 @@ export {
   truncarTexto,
   debounce,
   normalizarTexto,
-  esUrlImagenValida
+  esUrlImagenValida,
+  imgOptimizada
 };
