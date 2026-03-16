@@ -288,7 +288,7 @@ class Carrito {
           }
         </div>
         <div class="carrito-item__info">
-          <span class="carrito-item__marca">${item.marca || ''}</span>
+          <span class="carrito-item__marca">${item.marca || ''}${item.tipo === 'encargo' ? ' <span style="background:#D9232D;color:white;font-size:0.6rem;padding:1px 6px;border-radius:4px;margin-left:4px;">Por Encargo</span>' : ''}</span>
           <h4 class="carrito-item__titulo">${item.titulo}</h4>
           <span class="carrito-item__codigo">${item.cod_interno} ${item.embalaje > 1 ? `· Embalaje: ${item.embalaje} u.` : ''}</span>
           <span class="carrito-item__precio">${formatearPrecio(item.precio_unitario)} c/u</span>

@@ -1225,6 +1225,95 @@ document.querySelectorAll('[data-cerrar-modal="modalFichaTecnica"]').forEach(btn
 elementos.modalFichaTecnica?.querySelector('.modal__overlay')?.addEventListener('click', cerrarFichaTecnica);
 
 // ============================================
+// MODAL POR ENCARGO
+// ============================================
+
+/**
+ * Actualiza el resumen visual del encargo en tiempo real
+ */
+function actualizarResumenEncargo() {
+  const tipo = document.getElementById('encargoTipo')?.value;
+  const color = document.getElementById('encargoColor')?.value?.trim();
+  const presentacion = document.getElementById('encargoPresentacion')?.value;
+  const cantidad = parseInt(document.getElementById('encargoCantidad')?.value) || 0;
+  const precio = parseFloat(document.getElementById('encargoPrecio')?.value) || 0;
+  const resumen = document.getElementById('encargoResumen');
+
+  if (tipo && color && presentacion && cantidad > 0) {
+    resumen.style.display = 'block';
+    document.getElementById('encargoResumenTitulo').textContent = `${tipo} ${presentacion} ${color}`;
+    document.getElementById('encargoResumenCantidad').textContent = cantidad;
+    const precioWrap = document.getElementById('encargoResumenPrecioWrap');
+    if (precio > 0) {
+      precioWrap.style.display = 'inline';
+      document.getElementById('encargoResumenPrecio').textContent = formatearPrecio(precio);
+    } else {
+      precioWrap.style.display = 'none';
+    }
+  } else {
+    resumen.style.display = 'none';
+  }
+}
+
+/**
+ * Agrega un item por encargo al carrito
+ */
+function agregarEncargo() {
+  const tipo = document.getElementById('encargoTipo')?.value;
+  const color = document.getElementById('encargoColor')?.value?.trim();
+  const presentacion = document.getElementById('encargoPresentacion')?.value;
+  const cantidad = parseInt(document.getElementById('encargoCantidad')?.value) || 0;
+  const precio = parseFloat(document.getElementById('encargoPrecio')?.value) || 0;
+
+  // Validar campos requeridos
+  if (!tipo) { alert('Seleccione el tipo de pintura'); return; }
+  if (!color) { alert('Ingrese el color'); return; }
+  if (!presentacion) { alert('Seleccione la presentación'); return; }
+  if (cantidad < 1) { alert('La cantidad debe ser al menos 1'); return; }
+
+  const titulo = `${tipo} ${presentacion} ${color} (Por Encargo)`;
+
+  const itemEncargo = {
+    cod_interno: 'ENCARGO-' + Date.now(),
+    titulo: titulo,
+    tipo: 'encargo',
+    tipo_pintura: tipo,
+    color: color,
+    presentacion: presentacion,
+    precio_unitario: precio > 0 ? precio : 0,
+    cantidad: cantidad,
+    imagen: '',
+    marca: 'ENAR',
+    embalaje: 1
+  };
+
+  // Agregar directamente al carrito (bypass obtenerPrecioCliente)
+  carrito.items.push(itemEncargo);
+  carrito.guardarEnStorage();
+  carrito.actualizarUI();
+  carrito.mostrarNotificacion(`"${titulo}" agregado al carrito`);
+
+  // Cerrar modal Bootstrap
+  const modal = bootstrap.Modal.getInstance(document.getElementById('modalEncargo'));
+  if (modal) modal.hide();
+
+  // Limpiar formulario
+  document.getElementById('encargoTipo').value = '';
+  document.getElementById('encargoColor').value = '';
+  document.getElementById('encargoPresentacion').value = '';
+  document.getElementById('encargoCantidad').value = '1';
+  document.getElementById('encargoPrecio').value = '';
+  document.getElementById('encargoResumen').style.display = 'none';
+}
+
+// Event listeners para el modal de encargo
+document.getElementById('btnAgregarEncargo')?.addEventListener('click', agregarEncargo);
+['encargoTipo', 'encargoColor', 'encargoPresentacion', 'encargoCantidad', 'encargoPrecio'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', actualizarResumenEncargo);
+  document.getElementById(id)?.addEventListener('change', actualizarResumenEncargo);
+});
+
+// ============================================
 // INICIALIZACIÓN
 // ============================================
 

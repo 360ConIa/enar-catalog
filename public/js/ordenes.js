@@ -302,16 +302,25 @@ async function crearOrdenDesdeLocalStorage(userId, items, datosEntrega, observac
       },
 
       // Items de la orden
-      items: items.map(item => ({
-        cod_interno: item.cod_interno,
-        titulo: item.titulo,
-        marca: item.marca || '',
-        imagen: item.imagen || '',
-        precio_unitario: item.precio_unitario,
-        cantidad: item.cantidad,
-        subtotal: item.precio_unitario * item.cantidad,
-        peso_kg: item.peso_kg || 0
-      })),
+      items: items.map(item => {
+        const mapped = {
+          cod_interno: item.cod_interno,
+          titulo: item.titulo,
+          marca: item.marca || '',
+          imagen: item.imagen || '',
+          precio_unitario: item.precio_unitario,
+          cantidad: item.cantidad,
+          subtotal: item.precio_unitario * item.cantidad,
+          peso_kg: item.peso_kg || 0
+        };
+        if (item.tipo === 'encargo') {
+          mapped.tipo = 'encargo';
+          mapped.tipo_pintura = item.tipo_pintura || '';
+          mapped.color = item.color || '';
+          mapped.presentacion = item.presentacion || '';
+        }
+        return mapped;
+      }),
 
       // Totales
       subtotal: subtotal,
@@ -718,16 +727,25 @@ async function actualizarItemsOrden(ordenId, items, userId, observaciones = null
     });
 
     const updateData = {
-      items: items.map(item => ({
-        cod_interno: item.cod_interno,
-        titulo: item.titulo,
-        marca: item.marca || '',
-        imagen: item.imagen || '',
-        precio_unitario: item.precio_unitario,
-        cantidad: item.cantidad,
-        subtotal: item.precio_unitario * item.cantidad,
-        peso_kg: item.peso_kg || 0
-      })),
+      items: items.map(item => {
+        const mapped = {
+          cod_interno: item.cod_interno,
+          titulo: item.titulo,
+          marca: item.marca || '',
+          imagen: item.imagen || '',
+          precio_unitario: item.precio_unitario,
+          cantidad: item.cantidad,
+          subtotal: item.precio_unitario * item.cantidad,
+          peso_kg: item.peso_kg || 0
+        };
+        if (item.tipo === 'encargo') {
+          mapped.tipo = 'encargo';
+          mapped.tipo_pintura = item.tipo_pintura || '';
+          mapped.color = item.color || '';
+          mapped.presentacion = item.presentacion || '';
+        }
+        return mapped;
+      }),
       subtotal,
       iva,
       total,
