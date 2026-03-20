@@ -1,10 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper: Admin check
+    // Helper: Admin check (email hardcoded o rol admin en Firestore)
     function isAdmin() {
-      return request.auth != null &&
-        request.auth.token.email == 'sebastianbumq@enarapp.com';
+      return request.auth != null && (
+        request.auth.token.email == 'sebastianbumq@enarapp.com' ||
+        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin')
+      );
     }
 
     // Helper: Gestor de usuarios (asistente de admin)
@@ -76,15 +79,19 @@ service cloud.firestore {
         isUserManager()
       );
 
-      // Usuario puede leer su propio doc, admin y gestor leen todos,
-      // vendedores y despachos pueden leer usuarios aprobados
-      allow read: if isAuthenticated() && (
+      // GET (doc individual): usuario su propio doc, admin/gestor todos,
+      // vendedores/despachos solo usuarios aprobados
+      allow get: if isAuthenticated() && (
         request.auth.uid == userId ||
         isAdmin() ||
         isUserManager() ||
         (isVendedor() && resource.data.estado == 'aprobado') ||
         (isDespachos() && resource.data.estado == 'aprobado')
       );
+
+      // LIST (queries): cualquier autenticado puede hacer queries
+      // (necesario para verificar duplicados de email/NIT en registro)
+      allow list: if isAuthenticated();
 
       // Usuario puede actualizar su propio doc (datos limitados)
       // Admin y gestor pueden actualizar cualquier usuario

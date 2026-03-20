@@ -312,7 +312,7 @@ function renderizarOrdenes() {
       <td style="text-align:right;font-weight:600;">${formatearPrecio(o.total || 0)}</td>
       <td>${badgeEstado(o.estado)}</td>
       <td style="text-align:left;white-space:nowrap;">
-        <button class="crm-btn crm-btn--secondary crm-btn--sm" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">
+        <button class="crm-btn crm-btn--sm" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">
           <i class="bi bi-eye"></i>
         </button>
         ${renderBtnCambioEstado(o)}
@@ -450,6 +450,11 @@ async function cargarClientes() {
     todosLosClientes.sort((a, b) =>
       (a.razon_social || a.nombre || '').localeCompare(b.razon_social || b.nombre || '')
     );
+
+    // Vendedores solo ven clientes asignados a ellos
+    if (!esAdmin && currentUser) {
+      todosLosClientes = todosLosClientes.filter(c => c.vendedor_asignado === currentUser.uid);
+    }
   } catch (error) {
     console.error('Error cargando clientes:', error);
   }

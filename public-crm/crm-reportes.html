@@ -65,6 +65,9 @@
       <button class="crm-tab" data-tab="inteligencia">
         <i class="bi bi-lightbulb"></i> Inteligencia Clientes
       </button>
+      <button class="crm-tab" data-tab="comisiones">
+        <i class="bi bi-cash-coin"></i> Comisiones
+      </button>
     </div>
 
     <!-- Tab 1: Visión General -->
@@ -161,6 +164,58 @@
           </div>
         </div>
         <div id="tablaInteligencia"></div>
+      </div>
+    </div>
+
+    <!-- Tab 5: Comisiones -->
+    <div class="crm-tab-panel" id="panelComisiones">
+      <!-- Config (admin only) -->
+      <div id="comisionesConfig" class="crm-card" style="display:none;margin-bottom:16px;">
+        <div class="crm-card-header">
+          <h4 style="font-size:0.95rem;font-weight:600;margin:0;"><i class="bi bi-gear"></i> Configuración de Comisiones</h4>
+          <button class="crm-btn crm-btn--primary crm-btn--sm" id="btnGuardarComisiones">Guardar</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:12px;">
+          <div>
+            <label style="font-size:0.82rem;font-weight:500;color:var(--crm-text-light);display:block;margin-bottom:4px;">Mayorista (%)</label>
+            <input type="number" class="crm-input" id="comisionMayorista" min="0" max="100" step="0.5" placeholder="3">
+          </div>
+          <div>
+            <label style="font-size:0.82rem;font-weight:500;color:var(--crm-text-light);display:block;margin-bottom:4px;">Negocio (%)</label>
+            <input type="number" class="crm-input" id="comisionNegocio" min="0" max="100" step="0.5" placeholder="5">
+          </div>
+          <div>
+            <label style="font-size:0.82rem;font-weight:500;color:var(--crm-text-light);display:block;margin-bottom:4px;">Persona Natural (%)</label>
+            <input type="number" class="crm-input" id="comisionPersonaNatural" min="0" max="100" step="0.5" placeholder="7">
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtro período -->
+      <div class="crm-card" style="margin-bottom:16px;">
+        <div class="crm-card-header">
+          <h4 style="font-size:0.95rem;font-weight:600;margin:0;">Comisiones por Ventas</h4>
+          <select class="crm-select" id="filtroPeriodoComisiones" style="font-size:0.82rem;">
+            <option value="mes">Este mes</option>
+            <option value="trimestre">Último trimestre</option>
+            <option value="anio">Este año</option>
+            <option value="todo">Todo</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="crm-kpis" id="kpisComisiones"></div>
+
+      <!-- Chart -->
+      <div class="crm-chart-container" style="margin-bottom:16px;">
+        <div class="crm-chart-title">Comisiones por Vendedor</div>
+        <div style="position:relative;height:280px;"><canvas id="chartComisiones"></canvas></div>
+      </div>
+
+      <!-- Tabla -->
+      <div class="crm-card">
+        <div id="tablaComisiones"></div>
       </div>
     </div>
   </main>

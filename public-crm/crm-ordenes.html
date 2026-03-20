@@ -147,9 +147,9 @@
   <!-- Modal 2: Agregar Productos -->
   <div id="modalProductos" class="crm-modal-overlay">
     <div class="crm-modal crm-modal--lg">
-      <div class="crm-modal-header" style="background:#D9232D;color:white;">
+      <div class="crm-modal-header">
         <h3 id="modalProductosTitulo">Nueva Orden</h3>
-        <button class="crm-modal-close" style="color:white;" onclick="cerrarModal('modalProductos')">&times;</button>
+        <button class="crm-modal-close" onclick="cerrarModal('modalProductos')">&times;</button>
       </div>
       <div class="crm-modal-body">
         <!-- Selected client info -->
@@ -229,9 +229,9 @@
   <!-- Modal 3: Detalle Orden -->
   <div id="modalDetalle" class="crm-modal-overlay">
     <div class="crm-modal crm-modal--lg">
-      <div class="crm-modal-header" style="background:var(--crm-red);border-bottom:none;">
-        <h3 id="modalDetalleTitulo" style="color:white;">Detalle de Orden</h3>
-        <button class="crm-modal-close" style="color:rgba(255,255,255,0.8);" onclick="cerrarModal('modalDetalle')">&times;</button>
+      <div class="crm-modal-header">
+        <h3 id="modalDetalleTitulo">Detalle de Orden</h3>
+        <button class="crm-modal-close" onclick="cerrarModal('modalDetalle')">&times;</button>
       </div>
       <div class="crm-modal-body" id="modalDetalleBody"></div>
       <div class="crm-modal-footer" id="modalDetalleFooter"></div>
@@ -241,9 +241,9 @@
   <!-- Modal 4: Confirmar Papelera -->
   <div id="modalPapelera" class="crm-modal-overlay">
     <div class="crm-modal" style="max-width:420px;">
-      <div class="crm-modal-header" style="background:var(--crm-red);color:white;">
+      <div class="crm-modal-header">
         <h3><i class="bi bi-exclamation-triangle"></i> Confirmar eliminación</h3>
-        <button class="crm-modal-close" style="color:white;" onclick="cerrarModal('modalPapelera')">&times;</button>
+        <button class="crm-modal-close" onclick="cerrarModal('modalPapelera')">&times;</button>
       </div>
       <div class="crm-modal-body" style="text-align:center;padding:24px;">
         <i class="bi bi-trash3" style="font-size:2.5rem;color:var(--crm-red);display:block;margin-bottom:12px;"></i>

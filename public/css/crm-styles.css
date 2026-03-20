@@ -869,13 +869,13 @@
 }
 
 .crm-btn--secondary {
-  background: #f1f5f9;
-  color: var(--crm-text);
-  border: 1px solid var(--crm-border);
+  background: #000;
+  color: #fff;
+  border: none;
 }
 
 .crm-btn--secondary:hover {
-  background: #e2e8f0;
+  background: #222;
 }
 
 .crm-btn--success {
@@ -943,7 +943,9 @@
 
 .crm-modal-header {
   padding: 16px 20px;
-  border-bottom: 1px solid var(--crm-border);
+  background: var(--crm-red);
+  color: white;
+  border-bottom: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -953,6 +955,7 @@
   font-size: 1.1rem;
   font-weight: 600;
   margin: 0;
+  color: white;
 }
 
 .crm-modal-close {
@@ -960,13 +963,13 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: var(--crm-text-light);
+  color: rgba(255,255,255,0.8);
   line-height: 1;
   padding: 0 4px;
 }
 
 .crm-modal-close:hover {
-  color: var(--crm-text);
+  color: white;
 }
 
 .crm-modal-body {

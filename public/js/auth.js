@@ -16,6 +16,7 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged,
   updateProfile,
+  deleteUser,
   GoogleAuthProvider,
   signInWithPopup
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -24,6 +25,10 @@ import {
   doc,
   setDoc,
   getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
@@ -228,6 +233,29 @@ async function iniciarSesionConGoogle() {
 }
 
 /**
+ * Verifica si ya existe un usuario con el mismo email o NIT en Firestore
+ */
+async function verificarDuplicados(email, nit) {
+  // Verificar email duplicado
+  const emailQuery = query(collection(db, 'usuarios'), where('email', '==', email));
+  const emailSnap = await getDocs(emailQuery);
+  if (!emailSnap.empty) {
+    return { duplicado: true, campo: 'email', mensaje: 'Ya existe una cuenta con este email' };
+  }
+
+  // Verificar NIT duplicado (solo si se proporcionó)
+  if (nit && nit.trim() !== '') {
+    const nitQuery = query(collection(db, 'usuarios'), where('nit', '==', nit.trim()));
+    const nitSnap = await getDocs(nitQuery);
+    if (!nitSnap.empty) {
+      return { duplicado: true, campo: 'nit', mensaje: 'Ya existe una cuenta con este NIT' };
+    }
+  }
+
+  return { duplicado: false };
+}
+
+/**
  * Registra un nuevo usuario
  */
 async function registrarUsuario(datosUsuario) {
@@ -244,24 +272,38 @@ async function registrarUsuario(datosUsuario) {
     departamento
   } = datosUsuario;
 
-  try {
-    // Crear usuario en Firebase Auth
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+  let user = null;
 
-    // Actualizar perfil con nombre
+  try {
+    // 1. Crear usuario en Firebase Auth (queda autenticado)
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    user = userCredential.user;
+
+    // 2. Verificar duplicados en Firestore (requiere estar autenticado)
+    const check = await verificarDuplicados(email, nit);
+    if (check.duplicado) {
+      // Rollback: eliminar usuario Auth recién creado
+      await deleteUser(user);
+      return {
+        success: false,
+        error: check.mensaje,
+        code: `duplicate-${check.campo}`
+      };
+    }
+
+    // 3. Actualizar perfil con nombre
     await updateProfile(user, {
       displayName: nombre
     });
 
-    // Crear documento de usuario en Firestore
+    // 4. Crear documento de usuario en Firestore
     const userDocData = {
       uid: user.uid,
       email: email,
       nombre: nombre,
       telefono: telefono || '',
       tipo_cliente: tipoCliente || TIPOS_CLIENTE.PERSONA_NATURAL,
-      estado: ESTADOS_USUARIO.PENDIENTE, // Siempre inicia pendiente
+      estado: ESTADOS_USUARIO.PENDIENTE,
 
       // Datos de empresa (si aplica)
       razon_social: razonSocial || '',
@@ -284,7 +326,7 @@ async function registrarUsuario(datosUsuario) {
 
     await setDoc(doc(db, 'usuarios', user.uid), userDocData);
 
-    // Cerrar sesión inmediatamente (usuario debe esperar aprobación)
+    // 5. Cerrar sesión inmediatamente (usuario debe esperar aprobación)
     await signOut(auth);
 
     return {
@@ -295,6 +337,11 @@ async function registrarUsuario(datosUsuario) {
 
   } catch (error) {
     console.error('Error en registro:', error);
+
+    // Si ya se creó el usuario Auth pero falló después, hacer rollback
+    if (user) {
+      try { await deleteUser(user); } catch (e) { /* ignore rollback error */ }
+    }
 
     let mensaje = 'Error al registrar usuario';
 

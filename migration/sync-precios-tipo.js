@@ -1,12 +1,15 @@
 /**
  * ENAR - Sync precios por tipo de cliente
  * Calcula precio_mayorista, precio_negocio y precio_persona_natural
- * a partir de precio_lista usando factores multiplicadores.
+ * a partir de precio_lista.
  *
- * Factores:
- *   Mayorista:       precio_lista × 49.56%
- *   Negocio:         precio_lista × 49.56% (o 51.56% para IDs específicos)
- *   Persona Natural: precio_lista × 60%
+ * Fórmulas:
+ *   Mayorista:       precio_lista × (1 - 48%) × (1 - 3%) × 1.19 IVA
+ *                    = precio_lista × 0.52 × 0.97 × 1.19
+ *   Negocio:         = Mayorista (con 3%), excepto IDs específicos que van sin 3%
+ *                    General: precio_lista × 0.52 × 0.97 × 1.19
+ *                    Excepción: precio_lista × 0.52 × 1.19
+ *   Persona Natural: precio_lista × 60% × 1.19 IVA
  *
  * Uso:
  *   node sync-precios-tipo.js --test       (dry-run)
@@ -164,7 +167,7 @@ async function main() {
 
   if (normalProducts.length > 0) {
     const mostrar = MODE_TEST ? normalProducts.slice(0, 15) : normalProducts.slice(0, 5);
-    console.log(chalk.cyan.bold('Muestra productos normales:'));
+    console.log(chalk.cyan.bold('Productos con neg=may (' + normalProducts.length + '):'));
     mostrar.forEach(c => {
       console.log(chalk.cyan('   ' + c.id + ' | lista: ' + c.precio_lista + ' → may: ' + c.updates.precio_mayorista + ' | neg: ' + c.updates.precio_negocio + ' | nat: ' + c.updates.precio_persona_natural));
     });

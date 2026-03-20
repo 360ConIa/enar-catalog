@@ -450,8 +450,14 @@ function aplicarFiltros() {
     return true;
   });
 
-  // Aplicar ordenamiento si existe
-  ordenarProductos();
+  // Aplicar ordenamiento: si hay búsqueda activa, ordenar por presentación
+  if (busqueda) {
+    estado.productosFiltrados.sort((a, b) =>
+      (a.presentacion || '').toLowerCase().localeCompare((b.presentacion || '').toLowerCase())
+    );
+  } else {
+    ordenarProductos();
+  }
 
   // Reiniciar a primera página al filtrar
   estado.paginaActual = 1;

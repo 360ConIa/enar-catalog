@@ -332,34 +332,26 @@
       font-size: 11px;
       font-weight: 600;
     }
-    /* Estados de Órdenes - Colores corporativos ENAR */
+    /* Estados de Órdenes - Colores sincronizados con CRM */
     .estado-pendiente {
-      background: #ffff00;
-      color: #000000;
+      background: #fef3c7;
+      color: #92400e;
     }
     .estado-en_proceso {
       background: #e0e7ff;
       color: #3730a3;
     }
     .estado-alistamiento {
-      background: #3bb6ff;
-      color: #FFFFFF;
+      background: #dbeafe;
+      color: #1e40af;
     }
-    .estado-completo {
-      background: #2e9b00;
-      color: #FFFFFF;
-    }
-    .estado-parcial {
-      background: #ffd800;
-      color: #000000;
-    }
-    .estado-en_espera {
-      background: #ff8c00;
-      color: #FFFFFF;
+    .estado-terminada {
+      background: #d1fae5;
+      color: #065f46;
     }
     .estado-cancelada {
-      background: #cc0000;
-      color: #FFFFFF;
+      background: #fee2e2;
+      color: #991b1b;
     }
 
     /* Custom Dropdown para Estados */
@@ -546,7 +538,7 @@
       overflow-y: auto;
     }
     .modal-header {
-      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      background: #D9232D;
       padding: 15px 20px;
       color: white;
       display: flex;
@@ -601,17 +593,18 @@
     .btn-cancel {
       flex: 1;
       padding: 10px;
-      background: #f3f4f6;
-      color: #374151;
+      background: #000;
+      color: #fff;
       border: none;
       border-radius: 6px;
       font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
     }
     .btn-save {
       flex: 1;
       padding: 10px;
-      background: #10b981;
+      background: #D9232D;
       color: white;
       border: none;
       border-radius: 6px;
@@ -929,14 +922,8 @@
                   <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('alistamiento', 'Alistamiento'); return false;">
                     <span class="order-status estado-alistamiento">Alistamiento</span>
                   </a></li>
-                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('completo', 'Completo'); return false;">
-                    <span class="order-status estado-completo">Completo</span>
-                  </a></li>
-                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('parcial', 'Parcial'); return false;">
-                    <span class="order-status estado-parcial">Parcial</span>
-                  </a></li>
-                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('en_espera', 'En Espera'); return false;">
-                    <span class="order-status estado-en_espera">En Espera</span>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('terminada', 'Terminada'); return false;">
+                    <span class="order-status estado-terminada">Terminada</span>
                   </a></li>
                   <li><hr class="dropdown-divider"></li>
                   <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('cancelada', 'Cancelada'); return false;">
@@ -1051,6 +1038,12 @@
               <option value="pendiente">Pendiente</option>
             </select>
           </div>
+          <div class="form-group" id="filaVendedorAsignado" style="display:none;">
+            <label for="editarVendedorAsignado">Vendedor Asignado</label>
+            <select id="editarVendedorAsignado">
+              <option value="">Sin asignar</option>
+            </select>
+          </div>
         </div>
 
         <div class="form-row">
@@ -1110,7 +1103,7 @@
         </div>
 
         <!-- Botón agregar -->
-        <button type="button" class="btn-save" id="btnMostrarFormSede" style="margin-bottom:15px;background:#3b82f6;">
+        <button type="button" class="btn-save" id="btnMostrarFormSede" style="margin-bottom:15px;">
           <i class="bi bi-plus-lg"></i> Agregar Sede
         </button>
 
@@ -1195,7 +1188,7 @@
 
         <div class="modal-actions">
           <button class="btn-cancel" onclick="cerrarModal('modalRechazar')">Cancelar</button>
-          <button class="btn-save" style="background: #ef4444;" id="btnConfirmarRechazar">Rechazar Usuario</button>
+          <button class="btn-save" id="btnConfirmarRechazar">Rechazar Usuario</button>
         </div>
       </div>
     </div>
@@ -1229,14 +1222,8 @@
               <div class="custom-dropdown-option" data-value="alistamiento">
                 <span class="estado-badge estado-alistamiento">Alistamiento</span>
               </div>
-              <div class="custom-dropdown-option" data-value="completo">
-                <span class="estado-badge estado-completo">Completo</span>
-              </div>
-              <div class="custom-dropdown-option" data-value="parcial">
-                <span class="estado-badge estado-parcial">Parcial</span>
-              </div>
-              <div class="custom-dropdown-option" data-value="en_espera">
-                <span class="estado-badge estado-en_espera">En Espera</span>
+              <div class="custom-dropdown-option" data-value="terminada">
+                <span class="estado-badge estado-terminada">Terminada</span>
               </div>
               <div class="custom-dropdown-option" data-value="cancelada">
                 <span class="estado-badge estado-cancelada">Cancelada</span>
@@ -1278,7 +1265,7 @@
 
         <div class="modal-actions">
           <button class="btn-cancel" onclick="cerrarModal('modalEliminarOrden')">Cancelar</button>
-          <button class="btn-save" style="background: #dc2626;" id="btnConfirmarEliminar">Eliminar Orden</button>
+          <button class="btn-save" id="btnConfirmarEliminar">Eliminar Orden</button>
         </div>
       </div>
     </div>
@@ -1304,7 +1291,7 @@
 
         <div class="modal-actions">
           <button class="btn-cancel" onclick="cerrarModal('modalEliminarUsuario')">Cancelar</button>
-          <button class="btn-save" style="background: #dc2626;" id="btnConfirmarEliminarUsuario">Eliminar Usuario</button>
+          <button class="btn-save" id="btnConfirmarEliminarUsuario">Eliminar Usuario</button>
         </div>
       </div>
     </div>
@@ -1545,6 +1532,7 @@
     // Estado
     let usuarios = [];
     let ordenes = [];
+    let vendedoresLista = [];
     let clienteIds = new Set(); // IDs de clientes del gestor
     let usuarioSeleccionado = null;
     let ordenSeleccionada = null;
@@ -1622,6 +1610,26 @@
       }
     }
 
+    // Cargar vendedores para asignación
+    async function cargarVendedores() {
+      try {
+        const snap = await getDocs(query(
+          collection(db, 'usuarios'),
+          where('rol', 'in', ['vendedor', 'admin'])
+        ));
+        vendedoresLista = [];
+        snap.forEach(d => {
+          const data = d.data();
+          if (data.estado === 'aprobado' || data.email === 'sebastianbumq@enarapp.com') {
+            vendedoresLista.push({ uid: d.id, nombre: data.nombre || data.email, email: data.email });
+          }
+        });
+        vendedoresLista.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+      } catch (error) {
+        console.error('Error cargando vendedores:', error);
+      }
+    }
+
     // Actualizar stats usuarios
     function actualizarStatsUsuarios() {
       const stats = {
@@ -1678,7 +1686,10 @@
               <span class="user-email">${u.email}</span>
             </div>
           </td>
-          <td><span class="tipo-badge tipo-${u.tipo_cliente}">${TIPO_TEXTOS[u.tipo_cliente] || u.tipo_cliente}</span></td>
+          <td>
+            <span class="tipo-badge tipo-${u.tipo_cliente}">${TIPO_TEXTOS[u.tipo_cliente] || u.tipo_cliente}</span>
+            ${u.vendedor_asignado_nombre ? `<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;"><i class="bi bi-person-badge"></i> ${u.vendedor_asignado_nombre}</div>` : ''}
+          </td>
           <td>${u.razon_social || '-'}</td>
           <td><span class="status-badge status-${u.estado}">${u.estado}</span></td>
           <td>${formatearFecha(u.created_at)}</td>
@@ -1855,6 +1866,18 @@
         selectEditarCiudad.value = usuario.ciudad;
       }
 
+      // Vendedor asignado (solo para clientes)
+      const filaVendedor = document.getElementById('filaVendedorAsignado');
+      const selectVendedor = document.getElementById('editarVendedorAsignado');
+      if ((usuario.rol || 'cliente') === 'cliente') {
+        filaVendedor.style.display = '';
+        selectVendedor.innerHTML = '<option value="">Sin asignar</option>' +
+          vendedoresLista.map(v => `<option value="${v.uid}">${v.nombre}</option>`).join('');
+        selectVendedor.value = usuario.vendedor_asignado || '';
+      } else {
+        filaVendedor.style.display = 'none';
+      }
+
       document.getElementById('editarUsuarioError').style.display = 'none';
       document.getElementById('modalEditarUsuario').classList.add('active');
     };
@@ -1875,6 +1898,8 @@
       const direccion = document.getElementById('editarDireccion').value.trim();
       const departamento = selectEditarDepartamento.value.trim();
       const ciudad = selectEditarCiudad.value.trim();
+      const vendedorAsignadoUid = document.getElementById('editarVendedorAsignado').value;
+      const vendedorAsignadoNombre = vendedoresLista.find(v => v.uid === vendedorAsignadoUid)?.nombre || '';
 
       if (!nombre) {
         errorDiv.textContent = 'El nombre es obligatorio';
@@ -1887,7 +1912,7 @@
       btn.textContent = 'Guardando...';
 
       try {
-        await updateDoc(doc(db, 'usuarios', uid), {
+        const updateData = {
           nombre,
           telefono,
           rol,
@@ -1899,7 +1924,15 @@
           departamento,
           ciudad,
           updated_at: new Date().toISOString()
-        });
+        };
+
+        // Solo incluir vendedor_asignado para clientes
+        if (rol === 'cliente') {
+          updateData.vendedor_asignado = vendedorAsignadoUid || '';
+          updateData.vendedor_asignado_nombre = vendedorAsignadoNombre;
+        }
+
+        await updateDoc(doc(db, 'usuarios', uid), updateData);
 
         cerrarModal('modalEditarUsuario');
         mostrarMensaje('Usuario actualizado exitosamente');
@@ -2519,13 +2552,11 @@
 
     // Colores corporativos ENAR (sincronizados con VistaDespachos)
     const ESTADOS_CONFIG = {
-      'pendiente': { texto: 'Pendiente', clase: 'estado-pendiente', bg: '#ffff00', color: '#000000' },
+      'pendiente': { texto: 'Pendiente', clase: 'estado-pendiente', bg: '#fef3c7', color: '#92400e' },
       'en_proceso': { texto: 'En Proceso', clase: 'estado-en_proceso', bg: '#e0e7ff', color: '#3730a3' },
-      'alistamiento': { texto: 'Alistamiento', clase: 'estado-alistamiento', bg: '#3bb6ff', color: '#FFFFFF' },
-      'completo': { texto: 'Completo', clase: 'estado-completo', bg: '#2e9b00', color: '#FFFFFF' },
-      'parcial': { texto: 'Parcial', clase: 'estado-parcial', bg: '#ffd800', color: '#000000' },
-      'en_espera': { texto: 'En Espera', clase: 'estado-en_espera', bg: '#ff8c00', color: '#FFFFFF' },
-      'cancelada': { texto: 'Cancelada', clase: 'estado-cancelada', bg: '#cc0000', color: '#FFFFFF' }
+      'alistamiento': { texto: 'Alistamiento', clase: 'estado-alistamiento', bg: '#dbeafe', color: '#1e40af' },
+      'terminada': { texto: 'Terminada', clase: 'estado-terminada', bg: '#d1fae5', color: '#065f46' },
+      'cancelada': { texto: 'Cancelada', clase: 'estado-cancelada', bg: '#fee2e2', color: '#991b1b' }
     };
 
     // Toggle dropdown
@@ -2827,7 +2858,7 @@
       // Limpiar de nuevo tras breve delay (el navegador puede autocompletar después)
       setTimeout(() => { campoBusqueda.value = ''; renderizarUsuarios(); }, 300);
 
-      await cargarUsuarios();
+      await Promise.all([cargarUsuarios(), cargarVendedores()]);
       await cargarOrdenes();
     });
   </script>

@@ -9,7 +9,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
-  getFirestore, collection, doc, getDoc, getDocs, query, where, orderBy
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, query, where, orderBy
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import {
   getAuth, onAuthStateChanged, signOut
@@ -43,6 +43,9 @@ let metricas = [];
 let productos = [];
 let vendedoresMap = {}; // uid → { nombre, email }
 let charts = {};
+let comisionConfig = { mayorista: 0, negocio: 0, persona_natural: 0 };
+let esAdminReportes = false;
+let clientesMap = {}; // uid → { tipo_cliente, ... }
 
 function toDate(val) {
   if (!val) return null;
@@ -74,6 +77,7 @@ onAuthStateChanged(auth, async (user) => {
 
     const perfil = userDoc.data();
     const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin';
+    esAdminReportes = esAdmin;
     const esVendedor = perfil.rol === 'vendedor';
 
     if (!esAdmin && !esVendedor) {
@@ -107,11 +111,13 @@ $('btnLogout').addEventListener('click', async () => {
 // ═══════════ CARGAR DATOS ═══════════
 async function cargarDatos() {
   try {
-    const [ordenesSnap, metricasSnap, productosSnap, vendedoresSnap] = await Promise.all([
+    const [ordenesSnap, metricasSnap, productosSnap, vendedoresSnap, comisionDoc, clientesSnap] = await Promise.all([
       getDocs(query(collection(db, 'ordenes'), orderBy('created_at', 'desc'))),
       getDocs(collection(db, 'metricas_clientes')),
       getDocs(collection(db, 'productos')),
-      getDocs(query(collection(db, 'usuarios'), where('rol', 'in', ['vendedor', 'admin'])))
+      getDocs(query(collection(db, 'usuarios'), where('rol', 'in', ['vendedor', 'admin']))),
+      getDoc(doc(db, 'configuracion', 'comisiones')),
+      getDocs(query(collection(db, 'usuarios'), where('estado', '==', 'aprobado')))
     ]);
 
     ordenes = [];
@@ -130,6 +136,21 @@ async function cargarDatos() {
     vendedoresSnap.forEach(d => {
       const data = d.data();
       vendedoresMap[d.id] = { nombre: data.nombre || data.email, email: data.email };
+    });
+
+    if (comisionDoc.exists()) {
+      const data = comisionDoc.data();
+      comisionConfig = {
+        mayorista: data.mayorista || 0,
+        negocio: data.negocio || 0,
+        persona_natural: data.persona_natural || 0
+      };
+    }
+
+    clientesMap = {};
+    clientesSnap.forEach(d => {
+      const data = d.data();
+      clientesMap[d.id] = { tipo_cliente: data.tipo_cliente, nombre: data.nombre || data.razon_social || data.email };
     });
   } catch (error) {
     console.error('Error cargando datos:', error);
@@ -153,6 +174,7 @@ function initTabs() {
         case 'ventas': renderVentas(); break;
         case 'inventario': renderInventario(); break;
         case 'inteligencia': renderInteligencia(); break;
+        case 'comisiones': renderComisiones(); break;
       }
     });
   });
@@ -163,6 +185,8 @@ function initFiltros() {
   $('filtroABCInteligencia')?.addEventListener('change', () => renderTablaInteligencia());
   $('filtroRiesgoInteligencia')?.addEventListener('change', () => renderTablaInteligencia());
   $('filtroBusquedaInteligencia')?.addEventListener('input', debounce(() => renderTablaInteligencia(), 400));
+  $('filtroPeriodoComisiones')?.addEventListener('change', () => renderComisiones());
+  $('btnGuardarComisiones')?.addEventListener('click', () => guardarComisiones());
 }
 
 // ═══════════ TAB 1: GENERAL ═══════════
@@ -640,6 +664,171 @@ function generarRecomendaciones() {
     const priority = { CV01: 1, PC03: 2, CV02: 3, CE01: 4, PC02: 5, CV03: 6, PC01: 7, CE02: 8, CV04: 9 };
     return (priority[a.codigo] || 99) - (priority[b.codigo] || 99);
   });
+}
+
+// ═══════════ CHART HELPER ═══════════
+// ═══════════ TAB 5: COMISIONES ═══════════
+function renderComisiones() {
+  // Show/hide config section
+  const configEl = $('comisionesConfig');
+  if (configEl) {
+    configEl.style.display = esAdminReportes ? 'block' : 'none';
+    if (esAdminReportes) {
+      $('comisionMayorista').value = comisionConfig.mayorista;
+      $('comisionNegocio').value = comisionConfig.negocio;
+      $('comisionPersonaNatural').value = comisionConfig.persona_natural;
+    }
+  }
+
+  // Filter by period
+  const periodo = $('filtroPeriodoComisiones')?.value || 'todo';
+  const ahora = new Date();
+  let fechaInicio;
+  switch (periodo) {
+    case 'mes': fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1); break;
+    case 'trimestre': fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth() - 3, 1); break;
+    case 'anio': fechaInicio = new Date(ahora.getFullYear(), 0, 1); break;
+    default: fechaInicio = null;
+  }
+
+  // Only terminada orders
+  const ordenesComisionables = ordenes.filter(o => {
+    if (o.estado !== 'terminada') return false;
+    if (!fechaInicio) return true;
+    const f = toDate(o.created_at);
+    return f && f >= fechaInicio;
+  });
+
+  // Group by vendedor (creadaPor)
+  const comisionesPorVendedor = {};
+  ordenesComisionables.forEach(o => {
+    const uid = o.creadaPor || o.creado_por || 'desconocido';
+    if (!comisionesPorVendedor[uid]) {
+      const v = vendedoresMap[uid] || {};
+      comisionesPorVendedor[uid] = {
+        nombre: v.nombre || o.creadaPorNombre || o.creadaPorEmail || uid.substring(0, 12),
+        ordenes: 0,
+        totalVentas: 0,
+        totalComision: 0
+      };
+    }
+
+    const total = o.total || 0;
+    // Determine tipo_cliente from order's client
+    const clienteUid = o.user_id || o.clienteUid || '';
+    const clienteData = clientesMap[clienteUid];
+    const tipoCliente = o.clienteTipoCliente || (clienteData && clienteData.tipo_cliente) || o.tipo_cliente || 'persona_natural';
+    const pctComision = comisionConfig[tipoCliente] || 0;
+    const comision = total * (pctComision / 100);
+
+    comisionesPorVendedor[uid].ordenes++;
+    comisionesPorVendedor[uid].totalVentas += total;
+    comisionesPorVendedor[uid].totalComision += comision;
+  });
+
+  const vendedores = Object.values(comisionesPorVendedor).sort((a, b) => b.totalComision - a.totalComision);
+  const totalComisiones = vendedores.reduce((s, v) => s + v.totalComision, 0);
+  const totalVentas = vendedores.reduce((s, v) => s + v.totalVentas, 0);
+  const pctPromedio = totalVentas > 0 ? (totalComisiones / totalVentas) * 100 : 0;
+
+  // KPIs
+  $('kpisComisiones').innerHTML = `
+    <div class="crm-kpi crm-kpi--green">
+      <div class="crm-kpi-label">Total Comisiones</div>
+      <div class="crm-kpi-value">${formatearPrecio(totalComisiones)}</div>
+    </div>
+    <div class="crm-kpi">
+      <div class="crm-kpi-label">Órdenes Comisionables</div>
+      <div class="crm-kpi-value">${formatearNumero(ordenesComisionables.length)}</div>
+    </div>
+    <div class="crm-kpi crm-kpi--purple">
+      <div class="crm-kpi-label">% Promedio</div>
+      <div class="crm-kpi-value">${pctPromedio.toFixed(1)}%</div>
+    </div>
+    <div class="crm-kpi crm-kpi--yellow">
+      <div class="crm-kpi-label">Vendedores Activos</div>
+      <div class="crm-kpi-value">${vendedores.length}</div>
+    </div>
+  `;
+
+  // Chart
+  renderChart('chartComisiones', 'bar', {
+    labels: vendedores.map(v => v.nombre),
+    datasets: [{
+      label: 'Comisión',
+      data: vendedores.map(v => v.totalComision),
+      backgroundColor: 'rgba(16, 185, 129, 0.7)',
+      borderColor: '#10b981',
+      borderWidth: 1,
+      borderRadius: 4
+    }]
+  }, {
+    indexAxis: 'y',
+    scales: { x: { beginAtZero: true, ticks: { callback: v => formatearPrecio(v) } } },
+    plugins: { legend: { display: false } }
+  });
+
+  // Table
+  $('tablaComisiones').innerHTML = vendedores.length === 0
+    ? '<p style="color:var(--crm-text-light);font-size:0.85rem;padding:12px;">Sin órdenes terminadas en este período</p>'
+    : `
+    <div class="crm-tabla-wrapper">
+      <table class="crm-tabla">
+        <thead>
+          <tr>
+            <th>Vendedor</th>
+            <th style="text-align:center;">Órdenes</th>
+            <th style="text-align:right;">Total Ventas</th>
+            <th style="text-align:right;">Comisión</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${vendedores.map(v => `
+            <tr>
+              <td style="font-weight:500;">${v.nombre}</td>
+              <td style="text-align:center;">${v.ordenes}</td>
+              <td style="text-align:right;">${formatearPrecio(v.totalVentas)}</td>
+              <td style="text-align:right;font-weight:600;color:#10b981;">${formatearPrecio(v.totalComision)}</td>
+            </tr>
+          `).join('')}
+          <tr style="border-top:2px solid var(--crm-border);font-weight:700;">
+            <td>Total</td>
+            <td style="text-align:center;">${ordenesComisionables.length}</td>
+            <td style="text-align:right;">${formatearPrecio(totalVentas)}</td>
+            <td style="text-align:right;color:#10b981;">${formatearPrecio(totalComisiones)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function guardarComisiones() {
+  const mayorista = parseFloat($('comisionMayorista').value) || 0;
+  const negocio = parseFloat($('comisionNegocio').value) || 0;
+  const persona_natural = parseFloat($('comisionPersonaNatural').value) || 0;
+
+  if ([mayorista, negocio, persona_natural].some(v => v < 0 || v > 100)) {
+    showToast('Los porcentajes deben estar entre 0 y 100', 'error');
+    return;
+  }
+
+  try {
+    await setDoc(doc(db, 'configuracion', 'comisiones'), {
+      mayorista,
+      negocio,
+      persona_natural,
+      updated_at: new Date().toISOString(),
+      updated_by: currentUser.email
+    });
+
+    comisionConfig = { mayorista, negocio, persona_natural };
+    renderComisiones();
+    showToast('Configuración de comisiones guardada', 'success');
+  } catch (error) {
+    console.error('Error guardando comisiones:', error);
+    showToast('Error al guardar comisiones', 'error');
+  }
 }
 
 // ═══════════ CHART HELPER ═══════════
