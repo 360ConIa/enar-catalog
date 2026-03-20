@@ -644,7 +644,7 @@
       </div>
     </div>
     <nav class="crm-header-nav">
-      <a href="vendedor.html">Órdenes</a>
+      <a href="vendedor.html" id="navOrdenes">Órdenes</a>
       <a href="/">Catálogo</a>
       <div class="nav-user-dropdown">
         <a onclick="document.getElementById('navUserMenu').classList.toggle('open');event.stopPropagation();" id="navUserName" style="background:#D9232D;color:white;"><i class="bi bi-person-circle"></i> <i class="bi bi-caret-down-fill"></i></a>
@@ -653,10 +653,10 @@
           <a href="mis-ordenes.html"><i class="bi bi-bag-check"></i> Mis Compras</a>
         </div>
       </div>
-      <a href="admin.html">Admin</a>
+      <a href="admin.html" id="navAdmin">Admin</a>
       <button id="logoutLink" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
     </nav>
-    <script>(function(){var n=localStorage.getItem('enar_user_name');if(n){var el=document.getElementById('navUserName');if(el)el.innerHTML='<i class="bi bi-person-circle"></i> '+n+' <i class="bi bi-caret-down-fill"></i>';}})();</script>
+    <script>(function(){var n=localStorage.getItem('enar_user_name');if(n){var el=document.getElementById('navUserName');if(el)el.innerHTML='<i class="bi bi-person-circle"></i> '+n+' <i class="bi bi-caret-down-fill"></i>';}var r=localStorage.getItem('enar_user_rol')||'cliente';var p=localStorage.getItem('enar_user_privileged')==='1';var o=document.getElementById('navOrdenes');var a=document.getElementById('navAdmin');if(o&&r==='cliente')o.style.display='none';if(a&&!p)a.style.display='none';})();</script>
   </header>
 
   <!-- Main Content -->
@@ -832,6 +832,12 @@
 
         <div class="detail-section">
           <h4>Dirección de Entrega</h4>
+          ${orden.sede ? `
+          <div class="detail-row">
+            <span class="detail-label">Sede</span>
+            <span class="detail-value"><span style="background:#1e3a8a;color:white;padding:1px 8px;border-radius:4px;font-size:11px;font-weight:600;">${orden.sede.codigo}</span> ${orden.sede.nombre}</span>
+          </div>
+          ` : ''}
           <div class="detail-row">
             <span class="detail-label">Dirección</span>
             <span class="detail-value">${orden.direccion_entrega?.direccion || '-'}</span>
@@ -1205,6 +1211,8 @@
     logoutLink.addEventListener('click', async (e) => {
       e.preventDefault();
       localStorage.removeItem('enar_user_name');
+      localStorage.removeItem('enar_user_rol');
+      localStorage.removeItem('enar_user_privileged');
       await cerrarSesion();
       window.location.href = '/login.html';
     });

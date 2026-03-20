@@ -375,6 +375,35 @@
             </div>
           </div>
 
+          <!-- Sede de Entrega (solo si el usuario tiene sedes) -->
+          <div class="checkout-card" id="cardSedeEntrega" style="display:none;">
+            <div class="card-header">
+              <h2>Sede de Entrega</h2>
+            </div>
+            <div class="card-body">
+              <div id="sedeEntregaInfo">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                  <span style="background:#1e3a8a;color:white;padding:2px 10px;border-radius:4px;font-size:12px;font-weight:700;" id="sedeEntregaCodigo">-</span>
+                  <strong style="font-size:15px;color:#1e293b;" id="sedeEntregaNombre">-</strong>
+                </div>
+                <p style="font-size:13px;color:#555;margin:4px 0;" id="sedeEntregaDireccion">-</p>
+                <p style="font-size:13px;color:#888;margin:4px 0;" id="sedeEntregaCiudadDepto">-</p>
+                <p style="font-size:12px;color:#888;margin:4px 0;" id="sedeEntregaContacto">-</p>
+              </div>
+              <div id="sedeEntregaAlerta" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px;margin-top:10px;font-size:13px;color:#c2410c;">
+                <i style="margin-right:4px;">⚠️</i> Debes seleccionar una sede antes de confirmar la orden.
+              </div>
+              <div id="sedeEntregaSelector" style="display:none;margin-top:12px;">
+                <select id="selectSedeOrden" style="width:100%;padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-size:13px;font-family:'Poppins',sans-serif;">
+                  <option value="">Seleccione una sede...</option>
+                </select>
+              </div>
+              <button type="button" id="btnCambiarSedeOrden" style="margin-top:10px;padding:6px 14px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Poppins',sans-serif;">
+                Cambiar sede
+              </button>
+            </div>
+          </div>
+
           <!-- Observaciones -->
           <div class="checkout-card">
             <div class="card-header">
@@ -427,9 +456,10 @@
   <script type="module">
     import { onAuthChange, obtenerDatosUsuario } from './js/auth.js';
     import { crearOrdenDesdeLocalStorage, formatearPrecio } from './js/ordenes.js';
+    import { db, collection, getDocs, query, where } from './js/firebase-config.js';
 
     // Constantes
-    const STORAGE_KEY = 'enar_carrito';
+    const SEDE_STORAGE_KEY = 'enar_sede_activa';
     const IVA_PORCENTAJE = 0.19;
 
     // Elementos del DOM
@@ -446,11 +476,25 @@
     let currentUser = null;
     let userData = null;
     let carritoItems = [];
+    let sedesUsuario = [];
+    let sedeSeleccionada = null;
 
-    // Leer carrito desde localStorage
+    // Obtener sede activa de localStorage
+    function getSedeActiva() {
+      try { return JSON.parse(localStorage.getItem(SEDE_STORAGE_KEY)); } catch { return null; }
+    }
+
+    // Obtener sedeId para localStorage key del carrito
+    function getSedeId() {
+      const sede = getSedeActiva();
+      return sede?.id || 'default';
+    }
+
+    // Leer carrito desde localStorage (sede-aware)
     function leerCarritoLocal() {
       try {
-        const datos = localStorage.getItem(STORAGE_KEY);
+        const key = `enar_carrito_${getSedeId()}`;
+        const datos = localStorage.getItem(key);
         return datos ? JSON.parse(datos) : [];
       } catch (error) {
         return [];
@@ -517,9 +561,86 @@
         userData = resultadoUsuario.data;
       }
 
+      // Cargar sedes del usuario
+      await cargarSedesOrden(user.uid);
+
       carritoItems = leerCarritoLocal();
       renderizarCarrito();
     }
+
+    // Cargar sedes y mostrar card de sede
+    async function cargarSedesOrden(uid) {
+      try {
+        const snap = await getDocs(query(
+          collection(db, 'usuarios', uid, 'sedes'),
+          where('activo', '==', true)
+        ));
+        sedesUsuario = [];
+        snap.forEach(d => sedesUsuario.push({ id: d.id, ...d.data() }));
+        sedesUsuario.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+
+        if (sedesUsuario.length === 0) return;
+
+        // Mostrar card de sede
+        document.getElementById('cardSedeEntrega').style.display = '';
+
+        // Restaurar sede activa
+        const guardada = getSedeActiva();
+        const sedeValida = guardada && sedesUsuario.find(s => s.id === guardada.id);
+
+        if (sedeValida) {
+          setSedeOrden(sedeValida);
+        } else {
+          // Auto-seleccionar: sede principal > única sede > forzar selección
+          const sedePrincipal = sedesUsuario.find(s => s.principal);
+          if (sedePrincipal) {
+            setSedeOrden(sedePrincipal);
+          } else if (sedesUsuario.length === 1) {
+            setSedeOrden(sedesUsuario[0]);
+          } else {
+            mostrarSelectorSede();
+          }
+        }
+      } catch (error) {
+        console.error('Error cargando sedes:', error);
+      }
+    }
+
+    function setSedeOrden(sede) {
+      sedeSeleccionada = sede;
+      document.getElementById('sedeEntregaCodigo').textContent = sede.codigo;
+      document.getElementById('sedeEntregaNombre').textContent = sede.nombre;
+      document.getElementById('sedeEntregaDireccion').textContent = sede.direccion || '-';
+      document.getElementById('sedeEntregaCiudadDepto').textContent = [sede.ciudad, sede.departamento].filter(Boolean).join(', ') || '-';
+      document.getElementById('sedeEntregaContacto').textContent = sede.contacto ? `${sede.contacto} — ${sede.telefono || ''}` : '';
+      document.getElementById('sedeEntregaInfo').style.display = '';
+      document.getElementById('sedeEntregaAlerta').style.display = 'none';
+      document.getElementById('sedeEntregaSelector').style.display = 'none';
+      document.getElementById('btnCambiarSedeOrden').style.display = sedesUsuario.length > 1 ? '' : 'none';
+    }
+
+    function mostrarSelectorSede() {
+      sedeSeleccionada = null;
+      document.getElementById('sedeEntregaInfo').style.display = 'none';
+      document.getElementById('sedeEntregaAlerta').style.display = 'block';
+      document.getElementById('sedeEntregaSelector').style.display = 'block';
+      document.getElementById('btnCambiarSedeOrden').style.display = 'none';
+
+      const select = document.getElementById('selectSedeOrden');
+      select.innerHTML = '<option value="">Seleccione una sede...</option>' +
+        sedesUsuario.map(s => `<option value="${s.id}">${s.codigo} — ${s.nombre} (${s.ciudad || ''})</option>`).join('');
+    }
+
+    // Cambiar sede
+    document.getElementById('btnCambiarSedeOrden')?.addEventListener('click', () => {
+      mostrarSelectorSede();
+    });
+
+    // Seleccionar sede desde dropdown
+    document.getElementById('selectSedeOrden')?.addEventListener('change', (e) => {
+      const sede = sedesUsuario.find(s => s.id === e.target.value);
+      if (sede) setSedeOrden(sede);
+    });
 
     // Confirmar orden
     btnConfirm?.addEventListener('click', async () => {
@@ -530,18 +651,40 @@
         return;
       }
 
+      // Validar sede si el usuario tiene sedes
+      if (sedesUsuario.length > 0 && !sedeSeleccionada) {
+        showMessage('Debes seleccionar una sede de entrega', 'error');
+        return;
+      }
+
       btnConfirm.disabled = true;
       btnConfirm.innerHTML = '<span class="loader"></span>Procesando...';
 
       try {
-        // Usar datos del perfil del usuario directamente
-        const datosEntrega = {
-          direccion: userData?.direccion || '',
-          ciudad: userData?.ciudad || '',
-          departamento: userData?.departamento || '',
-          contacto: userData?.nombre || '',
-          telefonoContacto: userData?.telefono || ''
-        };
+        // Construir datos de entrega desde sede o perfil
+        let datosEntrega;
+        if (sedeSeleccionada) {
+          datosEntrega = {
+            direccion: sedeSeleccionada.direccion || '',
+            ciudad: sedeSeleccionada.ciudad || '',
+            departamento: sedeSeleccionada.departamento || '',
+            contacto: sedeSeleccionada.contacto || userData?.nombre || '',
+            telefonoContacto: sedeSeleccionada.telefono || userData?.telefono || '',
+            sede: {
+              id: sedeSeleccionada.id,
+              codigo: sedeSeleccionada.codigo,
+              nombre: sedeSeleccionada.nombre
+            }
+          };
+        } else {
+          datosEntrega = {
+            direccion: userData?.direccion || '',
+            ciudad: userData?.ciudad || '',
+            departamento: userData?.departamento || '',
+            contacto: userData?.nombre || '',
+            telefonoContacto: userData?.telefono || ''
+          };
+        }
 
         const resultado = await crearOrdenDesdeLocalStorage(
           currentUser.uid,
@@ -551,7 +694,9 @@
         );
 
         if (resultado.success) {
-          localStorage.removeItem(STORAGE_KEY);
+          // Limpiar solo el carrito de la sede activa
+          const sedeId = getSedeId();
+          localStorage.removeItem(`enar_carrito_${sedeId}`);
           window.location.href = `/orden-confirmacion.html?orden=${resultado.orden.id}`;
         } else {
           showMessage(resultado.error || 'Error al crear la orden', 'error');

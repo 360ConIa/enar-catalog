@@ -52,6 +52,7 @@ const auth = getAuth(app);
 const ESTADOS_ORDEN = {
   BORRADOR: 'borrador',
   PENDIENTE: 'pendiente',
+  EN_PROCESO: 'en_proceso',
   ALISTAMIENTO: 'alistamiento',
   COMPLETO: 'completo',
   PARCIAL: 'parcial',
@@ -328,6 +329,9 @@ async function crearOrdenDesdeLocalStorage(userId, items, datosEntrega, observac
       total: total,
       cantidad_productos: items.length,
       cantidad_unidades: cantidadUnidades,
+
+      // Sede (si aplica)
+      ...(datosEntrega.sede ? { sede: datosEntrega.sede } : {}),
 
       // Estado y fechas
       estado: ESTADOS_ORDEN.PENDIENTE,
@@ -834,6 +838,7 @@ function textoEstado(estado) {
   const textos = {
     [ESTADOS_ORDEN.BORRADOR]: 'Borrador',
     [ESTADOS_ORDEN.PENDIENTE]: 'Pendiente',
+    [ESTADOS_ORDEN.EN_PROCESO]: 'En Proceso',
     [ESTADOS_ORDEN.ALISTAMIENTO]: 'Alistamiento',
     [ESTADOS_ORDEN.COMPLETO]: 'Completo',
     [ESTADOS_ORDEN.PARCIAL]: 'Parcial',
@@ -851,6 +856,7 @@ function claseEstado(estado) {
   const clases = {
     [ESTADOS_ORDEN.BORRADOR]: 'estado-borrador',
     [ESTADOS_ORDEN.PENDIENTE]: 'estado-pendiente',
+    [ESTADOS_ORDEN.EN_PROCESO]: 'estado-en_proceso',
     [ESTADOS_ORDEN.ALISTAMIENTO]: 'estado-alistamiento',
     [ESTADOS_ORDEN.COMPLETO]: 'estado-completo',
     [ESTADOS_ORDEN.PARCIAL]: 'estado-parcial',

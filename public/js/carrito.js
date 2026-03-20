@@ -17,10 +17,46 @@ import { obtenerPrecioCliente } from './usuario.js?v=2';
 
 class Carrito {
   constructor() {
-    this.STORAGE_KEY = 'enar_carrito';
+    this.SEDE_STORAGE_KEY = 'enar_sede_activa';
     this.IVA_PORCENTAJE = 0.19;
+    this.sedeId = this._getSedeId();
+    this.STORAGE_KEY = `enar_carrito_${this.sedeId}`;
+    this._migrarLegacy();
     this.items = this.cargarDesdeStorage();
     this.inicializarUI();
+  }
+
+  /**
+   * Obtiene el ID de la sede activa desde localStorage
+   */
+  _getSedeId() {
+    try {
+      const sede = JSON.parse(localStorage.getItem(this.SEDE_STORAGE_KEY));
+      return sede?.id || 'default';
+    } catch { return 'default'; }
+  }
+
+  /**
+   * Migra carrito legacy (enar_carrito) a enar_carrito_default
+   */
+  _migrarLegacy() {
+    const legacy = localStorage.getItem('enar_carrito');
+    if (legacy && !localStorage.getItem('enar_carrito_default')) {
+      localStorage.setItem('enar_carrito_default', legacy);
+    }
+    if (legacy) {
+      localStorage.removeItem('enar_carrito');
+    }
+  }
+
+  /**
+   * Cambia la sede activa del carrito
+   */
+  cambiarSede(nuevoSedeId) {
+    this.sedeId = nuevoSedeId || 'default';
+    this.STORAGE_KEY = `enar_carrito_${this.sedeId}`;
+    this.items = this.cargarDesdeStorage();
+    this.actualizarUI();
   }
 
   /**
@@ -219,6 +255,12 @@ class Carrito {
     // Cerrar al hacer click en overlay
     this.elementos.modal?.querySelector('.modal__overlay')?.addEventListener('click', () => {
       this.cerrarModal();
+    });
+
+    // Escuchar cambio de sede → cambiar carrito
+    window.addEventListener('sedeChanged', (e) => {
+      const sedeId = e.detail?.id || 'default';
+      this.cambiarSede(sedeId);
     });
 
     // Escuchar actualizaciones del carrito desde otros componentes (ej: ENAR IA)

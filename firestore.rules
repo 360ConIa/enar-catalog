@@ -7,10 +7,13 @@ service cloud.firestore {
         request.auth.token.email == 'sebastianbumq@enarapp.com';
     }
 
-    // Helper: Gestor de usuarios (puede gestionar usuarios pero no órdenes ni productos)
+    // Helper: Gestor de usuarios (asistente de admin)
     function isUserManager() {
-      return request.auth != null &&
-        request.auth.token.email == 'ventas@enar.com.co';
+      return request.auth != null && (
+        request.auth.token.email == 'ventas@enar.com.co' ||
+        (exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'gestor')
+      );
     }
 
     // Helper: Usuario autenticado
@@ -73,30 +76,35 @@ service cloud.firestore {
         isUserManager()
       );
 
-      // Usuario puede leer su propio documento, admin puede leer todos,
-      // gestores pueden leer usuarios que crearon O usuarios pendientes (auto-registrados),
-      // vendedores y despachos pueden leer usuarios aprobados (para buscar clientes)
+      // Usuario puede leer su propio doc, admin y gestor leen todos,
+      // vendedores y despachos pueden leer usuarios aprobados
       allow read: if isAuthenticated() && (
         request.auth.uid == userId ||
         isAdmin() ||
-        (isUserManager() && resource.data.creado_por == request.auth.token.email) ||
-        (isUserManager() && resource.data.estado == 'pendiente') ||
+        isUserManager() ||
         (isVendedor() && resource.data.estado == 'aprobado') ||
         (isDespachos() && resource.data.estado == 'aprobado')
       );
 
-      // Usuario puede actualizar su propio documento (datos limitados)
-      // Admin puede actualizar cualquier documento
-      // Gestores pueden actualizar usuarios que crearon O usuarios pendientes (para aprobar/rechazar)
+      // Usuario puede actualizar su propio doc (datos limitados)
+      // Admin y gestor pueden actualizar cualquier usuario
       allow update: if isAuthenticated() && (
         (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional'])) ||
         isAdmin() ||
-        (isUserManager() && resource.data.creado_por == request.auth.token.email) ||
-        (isUserManager() && resource.data.estado == 'pendiente')
+        isUserManager()
       );
 
       // Solo admin puede eliminar
       allow delete: if isAdmin();
+
+      // Sedes: subcollection de cada usuario
+      match /sedes/{sedeId} {
+        allow read: if isAuthenticated() && (
+          request.auth.uid == userId || isCRM()
+        );
+        allow create, update: if isAdmin() || isUserManager();
+        allow delete: if isAdmin();
+      }
     }
 
     // Carrito: cada usuario solo su propio carrito

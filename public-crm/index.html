@@ -323,7 +323,7 @@
       </div>
 
       <div class="apps-grid" id="appsGrid">
-        <a href="crm-dashboard.html" class="app-card" data-roles="admin,vendedor">
+        <a class="app-card" data-disabled="true">
           <div class="app-icon"><img src="img/icons/dashboard.png" alt="Dashboard" onerror="this.parentElement.innerHTML='<i class=\'bi bi-speedometer2\'></i>'"></div>
           <h3 class="app-name">Dashboard</h3>
           <p class="app-description">Panel general con KPIs, ventas, clientes en riesgo y actividad reciente.</p>
@@ -340,19 +340,19 @@
         </a>
         -->
 
-        <a href="crm-clientes.html" class="app-card" data-roles="admin,vendedor">
+        <a class="app-card" data-disabled="true">
           <div class="app-icon"><img src="img/icons/clientes.png" alt="Clientes" onerror="this.parentElement.innerHTML='<i class=\'bi bi-people\'></i>'"></div>
           <h3 class="app-name">Clientes</h3>
           <p class="app-description">Gestión de clientes con métricas de salud, ABC, riesgo y tendencias.</p>
         </a>
 
-        <a href="crm-ordenes.html" class="app-card" data-roles="admin,vendedor">
+        <a href="crm-ordenes.html" class="app-card" data-roles="admin,vendedor,gestor">
           <div class="app-icon"><img src="img/icons/ordenes-crm.png" alt="Órdenes CRM" onerror="this.parentElement.innerHTML='<i class=\'bi bi-receipt\'></i>'"></div>
           <h3 class="app-name">Órdenes</h3>
           <p class="app-description">Crear y gestionar órdenes de compra, seguimiento de estado y facturación.</p>
         </a>
 
-        <a href="crm-despachos.html" class="app-card" data-roles="admin,despachos">
+        <a href="crm-despachos.html" class="app-card" data-roles="admin,despachos,gestor">
           <div class="app-icon">
             <img src="img/icons/despachos.png" alt="Despachos"
                  onerror="this.parentElement.innerHTML='<i class=\'bi bi-truck\'></i>'">
@@ -361,7 +361,7 @@
           <p class="app-description">Alistamiento, preparación, logística de envíos y chat en tiempo real.</p>
         </a>
 
-        <a href="crm-reportes.html" class="app-card" data-roles="admin,vendedor">
+        <a class="app-card" data-disabled="true">
           <div class="app-icon"><img src="img/icons/reportes.png" alt="Reportes" onerror="this.parentElement.innerHTML='<i class=\'bi bi-bar-chart-line\'></i>'"></div>
           <h3 class="app-name">Reportes</h3>
           <p class="app-description">Análisis de ventas, inventario e inteligencia de clientes con recomendaciones.</p>
@@ -407,7 +407,7 @@
 
     const googleProvider = new GoogleAuthProvider();
     const ADMIN_EMAIL = 'sebastianbumq@enarapp.com';
-    const CRM_ROLES = ['admin', 'vendedor', 'despachos'];
+    const CRM_ROLES = ['admin', 'vendedor', 'despachos', 'gestor'];
 
     const loginSection = document.getElementById('loginSection');
     const loadingSection = document.getElementById('loadingSection');
@@ -512,8 +512,26 @@
 
         const cards = document.querySelectorAll('#appsGrid .app-card');
         cards.forEach(card => {
+          // Cards marcadas como deshabilitadas (Dashboard, Clientes, Reportes)
+          if (card.dataset.disabled === 'true') {
+            card.style.opacity = '0.4';
+            card.style.pointerEvents = 'none';
+            card.style.cursor = 'not-allowed';
+            card.title = 'Próximamente';
+            return;
+          }
           const allowedRoles = (card.dataset.roles || '').split(',');
-          card.style.display = allowedRoles.includes(rol) ? '' : 'none';
+          if (allowedRoles.includes(rol)) {
+            card.style.opacity = '';
+            card.style.pointerEvents = '';
+            card.style.cursor = 'pointer';
+          } else {
+            card.style.opacity = '0.4';
+            card.style.pointerEvents = 'none';
+            card.style.cursor = 'not-allowed';
+            card.title = 'Módulo no disponible para tu rol';
+            card.removeAttribute('href');
+          }
         });
 
         showSection(portalSection);

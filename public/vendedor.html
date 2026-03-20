@@ -80,23 +80,9 @@
       position: relative;
     }
     .filtro-date-wrap .filtro-date {
-      color: transparent;
-    }
-    .filtro-date-wrap .filtro-date:focus,
-    .filtro-date-wrap .filtro-date:valid:not([value=""]) {
       color: #333;
     }
     .filtro-date-label {
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 13px;
-      color: #999;
-      pointer-events: none;
-    }
-    .filtro-date-wrap .filtro-date:focus + .filtro-date-label,
-    .filtro-date-wrap .filtro-date.has-value + .filtro-date-label {
       display: none;
     }
 
@@ -186,10 +172,10 @@
           <a href="mis-ordenes.html"><i class="bi bi-bag-check"></i> Mis Compras</a>
         </div>
       </div>
-      <a href="admin.html">Admin</a>
+      <a href="admin.html" id="navAdmin">Admin</a>
       <button id="btnLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
     </nav>
-    <script>(function(){var n=localStorage.getItem('enar_user_name');if(n){var el=document.getElementById('navUserName');if(el)el.innerHTML='<i class="bi bi-person-circle"></i> '+n+' <i class="bi bi-caret-down-fill"></i>';}})();</script>
+    <script>(function(){var n=localStorage.getItem('enar_user_name');if(n){var el=document.getElementById('navUserName');if(el)el.innerHTML='<i class="bi bi-person-circle"></i> '+n+' <i class="bi bi-caret-down-fill"></i>';}var p=localStorage.getItem('enar_user_privileged')==='1';var a=document.getElementById('navAdmin');if(a&&!p)a.style.display='none';})();</script>
   </header>
 
   <!-- Loading -->
@@ -312,6 +298,16 @@
             <div style="font-weight:600;" id="selClienteNombre">-</div>
             <div style="font-size:0.78rem;color:var(--crm-text-light);">NIT: <span id="selClienteNit">-</span></div>
           </div>
+        </div>
+
+        <!-- Selector de Sede -->
+        <div id="selSedeContainer" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+          <label style="font-size:0.75rem;font-weight:600;color:#1e3a8a;margin-bottom:4px;display:block;">
+            <i class="bi bi-geo-alt-fill"></i> Sede de entrega
+          </label>
+          <select id="selectSedeVendedor" class="crm-input" style="width:100%;padding:6px 10px;font-size:0.82rem;">
+            <option value="">Seleccione sede...</option>
+          </select>
         </div>
 
         <!-- Product search -->

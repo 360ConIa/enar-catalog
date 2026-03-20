@@ -25,11 +25,11 @@
       </div>
     </div>
     <nav class="crm-header-nav">
-      <a href="crm-dashboard.html">Dashboard</a>
-      <a href="crm-clientes.html">Clientes</a>
+      <a style="opacity:0.4;pointer-events:none;cursor:not-allowed;" title="Próximamente">Dashboard</a>
+      <a style="opacity:0.4;pointer-events:none;cursor:not-allowed;" title="Próximamente">Clientes</a>
       <a href="crm-ordenes.html" style="background:#D9232D;color:white;">Órdenes</a>
       <a href="crm-despachos.html">Despachos</a>
-      <a href="crm-reportes.html">Reportes</a>
+      <a style="opacity:0.4;pointer-events:none;cursor:not-allowed;" title="Próximamente">Reportes</a>
       <a href="index.html" title="Portal"><i class="bi bi-grid"></i></a>
       <button id="btnLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
     </nav>
@@ -159,6 +159,16 @@
             <div style="font-weight:600;" id="selClienteNombre">-</div>
             <div style="font-size:0.78rem;color:var(--crm-text-light);">NIT: <span id="selClienteNit">-</span></div>
           </div>
+        </div>
+
+        <!-- Selector de Sede -->
+        <div id="selSedeContainer" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+          <label style="font-size:0.75rem;font-weight:600;color:#1e3a8a;margin-bottom:4px;display:block;">
+            <i class="bi bi-geo-alt-fill"></i> Sede de entrega
+          </label>
+          <select id="selectSedeVendedor" class="crm-input" style="width:100%;padding:6px 10px;font-size:0.82rem;">
+            <option value="">Seleccione sede...</option>
+          </select>
         </div>
 
         <!-- Product search -->

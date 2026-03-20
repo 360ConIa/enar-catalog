@@ -75,16 +75,22 @@ function esAdmin(user) {
 
 /**
  * Verifica si el usuario es gestor de usuarios
+ * Acepta email hardcoded O rol 'gestor' en Firestore
+ * @param {Object} user - Firebase Auth user
+ * @param {Object} [userData] - Datos de Firestore del usuario (opcional)
  */
-function esUserManager(user) {
-  return user && USER_MANAGER_EMAILS.includes(user.email);
+function esUserManager(user, userData) {
+  if (!user) return false;
+  if (USER_MANAGER_EMAILS.includes(user.email)) return true;
+  if (userData && userData.rol === 'gestor') return true;
+  return false;
 }
 
 /**
  * Verifica si tiene acceso al panel admin (admin o gestor)
  */
-function tieneAccesoAdmin(user) {
-  return esAdmin(user) || esUserManager(user);
+function tieneAccesoAdmin(user, userData) {
+  return esAdmin(user) || esUserManager(user, userData);
 }
 
 /**

@@ -1228,6 +1228,12 @@ elementos.modalFichaTecnica?.querySelector('.modal__overlay')?.addEventListener(
 // MODAL POR ENCARGO
 // ============================================
 
+// Resuelve la clave de carta de colores para un tipo de pintura
+function cartaColorKey(tipo) {
+  if (tipo.startsWith('Vinilo')) return 'Vinilo';
+  return tipo;
+}
+
 // Carta de colores por tipo de pintura
 const CARTA_COLORES = {
   Esmalte: [
@@ -1367,7 +1373,7 @@ function abrirCartaColores() {
   const tipo = document.getElementById('encargoTipo')?.value;
   if (!tipo) { alert('Seleccione primero el tipo de pintura'); return; }
 
-  const colores = CARTA_COLORES[tipo] || [];
+  const colores = CARTA_COLORES[cartaColorKey(tipo)] || [];
   if (colores.length === 0) {
     alert(`No hay carta de colores disponible para "${tipo}". Escriba el color manualmente.`);
     return;
@@ -1535,7 +1541,7 @@ document.getElementById('btnAgregarEncargo')?.addEventListener('click', agregarE
 document.getElementById('encargoTipo')?.addEventListener('change', (e) => {
   const tipo = e.target.value;
   const btn = document.getElementById('btnCartaColores');
-  const colores = CARTA_COLORES[tipo] || [];
+  const colores = CARTA_COLORES[cartaColorKey(tipo)] || [];
   btn.disabled = !tipo || colores.length === 0;
   // Limpiar color al cambiar tipo
   document.getElementById('encargoColor').value = '';
@@ -1559,7 +1565,7 @@ document.getElementById('btnCerrarCartaFooter')?.addEventListener('click', () =>
 document.getElementById('cartaBuscarColor')?.addEventListener('input', (e) => {
   const tipo = document.getElementById('encargoTipo')?.value;
   const termino = normalizarTexto(e.target.value);
-  const colores = (CARTA_COLORES[tipo] || []).filter(c =>
+  const colores = (CARTA_COLORES[cartaColorKey(tipo)] || []).filter(c =>
     normalizarTexto(c.nombre).includes(termino)
   );
   renderizarCartaColores(colores);

@@ -47,6 +47,8 @@ let ordenesFiltradas = [];
 let todosLosClientes = [];
 let todosLosProductos = [];
 let clienteSeleccionado = null;
+let sedeSeleccionadaVendedor = null;
+let sedesClienteActual = [];
 let productosOrden = [];
 let papeleraOrdenPendiente = null;
 let unsubOrdenes = null;
@@ -125,6 +127,8 @@ onAuthStateChanged(auth, async (user) => {
 $('btnLogout').addEventListener('click', async () => {
   if (unsubOrdenes) unsubOrdenes();
   localStorage.removeItem('enar_user_name');
+  localStorage.removeItem('enar_user_rol');
+  localStorage.removeItem('enar_user_privileged');
   await signOut(auth);
   window.location.href = '/login.html';
 });
@@ -517,14 +521,46 @@ function renderClienteResultados(resultados) {
 }
 
 // ═══════════ NUEVA ORDEN - PASO 2: PRODUCTOS ═══════════
-function seleccionarCliente(cliente) {
+async function seleccionarCliente(cliente) {
   clienteSeleccionado = cliente;
+  sedeSeleccionadaVendedor = null;
+  sedesClienteActual = [];
   productosOrden = [];
 
   cerrarModal('modalBuscarCliente');
 
   $('selClienteNombre').textContent = cliente.razon_social || cliente.nombre || cliente.email;
   $('selClienteNit').textContent = cliente.nit || 'N/A';
+
+  // Cargar sedes del cliente
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'usuarios', cliente.uid, 'sedes'),
+      where('activo', '==', true)
+    ));
+    sedesClienteActual = [];
+    snap.forEach(d => sedesClienteActual.push({ id: d.id, ...d.data() }));
+    sedesClienteActual.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+  } catch (e) {
+    console.error('Error cargando sedes del cliente:', e);
+  }
+
+  // Mostrar/ocultar selector de sede
+  const sedeContainer = $('selSedeContainer');
+  if (sedesClienteActual.length > 0 && sedeContainer) {
+    sedeContainer.style.display = '';
+    const select = $('selectSedeVendedor');
+    if (select) {
+      select.innerHTML = (sedesClienteActual.length > 1 ? '<option value="">Seleccione sede...</option>' : '') +
+        sedesClienteActual.map(s => `<option value="${s.id}">${s.codigo} — ${s.nombre} (${s.ciudad || ''})</option>`).join('');
+      if (sedesClienteActual.length === 1) {
+        select.value = sedesClienteActual[0].id;
+        sedeSeleccionadaVendedor = sedesClienteActual[0];
+      }
+    }
+  } else if (sedeContainer) {
+    sedeContainer.style.display = 'none';
+  }
 
   $('inputBuscarProducto').value = '';
   $('productoResultados').style.display = 'none';
@@ -907,13 +943,27 @@ async function confirmarOrden() {
         nit: clienteSeleccionado.nit || ''
       },
 
-      direccion_entrega: {
+      direccion_entrega: sedeSeleccionadaVendedor ? {
+        direccion: sedeSeleccionadaVendedor.direccion || '',
+        ciudad: sedeSeleccionadaVendedor.ciudad || '',
+        departamento: sedeSeleccionadaVendedor.departamento || '',
+        contacto: sedeSeleccionadaVendedor.contacto || clienteSeleccionado.nombre || '',
+        telefono_contacto: sedeSeleccionadaVendedor.telefono || clienteSeleccionado.telefono || ''
+      } : {
         direccion: clienteSeleccionado.direccion || '',
         ciudad: clienteSeleccionado.ciudad || '',
         departamento: clienteSeleccionado.departamento || '',
         contacto: clienteSeleccionado.nombre || '',
         telefono_contacto: clienteSeleccionado.telefono || ''
       },
+
+      ...(sedeSeleccionadaVendedor ? {
+        sede: {
+          id: sedeSeleccionadaVendedor.id,
+          codigo: sedeSeleccionadaVendedor.codigo,
+          nombre: sedeSeleccionadaVendedor.nombre
+        }
+      } : {}),
 
       creadaPor: currentUser.uid,
       creadaPorNombre: userPerfil.nombre || currentUser.email,
@@ -1047,6 +1097,12 @@ function initEventListeners() {
     } else {
       confirmarOrden();
     }
+  });
+
+  // Selector de sede del vendedor
+  $('selectSedeVendedor')?.addEventListener('change', (e) => {
+    const sede = sedesClienteActual.find(s => s.id === e.target.value);
+    sedeSeleccionadaVendedor = sede || null;
   });
 }
 

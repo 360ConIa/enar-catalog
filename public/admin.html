@@ -337,6 +337,10 @@
       background: #ffff00;
       color: #000000;
     }
+    .estado-en_proceso {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
     .estado-alistamiento {
       background: #3bb6ff;
       color: #FFFFFF;
@@ -736,7 +740,7 @@
       </div>
     </div>
     <nav class="crm-header-nav">
-      <a href="vendedor.html">Órdenes</a>
+      <a href="vendedor.html" id="navOrdenes">Órdenes</a>
       <a href="/">Catálogo</a>
       <div class="nav-user-dropdown">
         <a onclick="document.getElementById('navUserMenu').classList.toggle('open');event.stopPropagation();" id="navUserName"><i class="bi bi-person-circle"></i> <i class="bi bi-caret-down-fill"></i></a>
@@ -748,7 +752,7 @@
       <a href="admin.html" style="background:#D9232D;color:white;">Admin</a>
       <button id="logoutLink" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
     </nav>
-    <script>(function(){var n=localStorage.getItem('enar_user_name');if(n){var el=document.getElementById('navUserName');if(el)el.innerHTML='<i class="bi bi-person-circle"></i> '+n+' <i class="bi bi-caret-down-fill"></i>';}})();</script>
+    <script>(function(){var n=localStorage.getItem('enar_user_name');if(n){var el=document.getElementById('navUserName');if(el)el.innerHTML='<i class="bi bi-person-circle"></i> '+n+' <i class="bi bi-caret-down-fill"></i>';}var r=localStorage.getItem('enar_user_rol')||'cliente';var o=document.getElementById('navOrdenes');if(o&&r==='cliente')o.style.display='none';})();</script>
   </header>
 
   <!-- Main Content -->
@@ -919,6 +923,9 @@
                   <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('pendiente', 'Pendiente'); return false;">
                     <span class="order-status estado-pendiente">Pendiente</span>
                   </a></li>
+                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('en_proceso', 'En Proceso'); return false;">
+                    <span class="order-status estado-en_proceso">En Proceso</span>
+                  </a></li>
                   <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('alistamiento', 'Alistamiento'); return false;">
                     <span class="order-status estado-alistamiento">Alistamiento</span>
                   </a></li>
@@ -1085,6 +1092,92 @@
     </div>
   </div>
 
+  <!-- Modal Gestión de Sedes -->
+  <div class="modal-overlay" id="modalGestionSedes">
+    <div class="modal-content" style="max-width: 780px;">
+      <div class="modal-header">
+        <h3><i class="bi bi-geo-alt"></i> Sedes de <span id="sedesClienteNombre">-</span></h3>
+        <button class="modal-close" onclick="cerrarModal('modalGestionSedes')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="sedesError" style="background:#fee2e2;color:#dc2626;padding:10px;border-radius:6px;margin-bottom:15px;display:none;"></div>
+        <input type="hidden" id="sedesClienteUid">
+
+        <!-- Lista de sedes -->
+        <div id="listaSedesContainer">
+          <div id="listaSedes" style="margin-bottom:15px;"></div>
+          <p id="sedesVacio" style="color:#999;font-size:13px;display:none;">Este cliente no tiene sedes registradas.</p>
+        </div>
+
+        <!-- Botón agregar -->
+        <button type="button" class="btn-save" id="btnMostrarFormSede" style="margin-bottom:15px;background:#3b82f6;">
+          <i class="bi bi-plus-lg"></i> Agregar Sede
+        </button>
+
+        <!-- Formulario crear/editar sede (oculto por defecto) -->
+        <div id="formSedeContainer" style="display:none;border-top:2px solid #e5e7eb;padding-top:20px;">
+          <h4 id="formSedeTitle" style="font-size:14px;font-weight:600;margin-bottom:15px;">Nueva Sede</h4>
+          <input type="hidden" id="sedeEditId">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="sedeCodigo">Código de Sede</label>
+              <input type="text" id="sedeCodigo" readonly style="background:#f1f5f9;font-weight:700;color:#1e3a8a;cursor:default;">
+            </div>
+            <div class="form-group">
+              <label for="sedeNombre">Nombre *</label>
+              <input type="text" id="sedeNombre" placeholder="Sede Norte">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="sedeDireccion">Dirección *</label>
+            <input type="text" id="sedeDireccion" placeholder="Calle 123 # 45-67">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="sedeDepartamento">Departamento</label>
+              <select id="sedeDepartamento">
+                <option value="">Seleccionar...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="sedeCiudad">Ciudad</label>
+              <select id="sedeCiudad" disabled>
+                <option value="">Seleccione departamento</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="sedeContacto">Contacto</label>
+              <input type="text" id="sedeContacto" placeholder="Nombre del contacto">
+            </div>
+            <div class="form-group">
+              <label for="sedeTelefono">Teléfono</label>
+              <input type="tel" id="sedeTelefono" placeholder="310 555 1234">
+            </div>
+          </div>
+
+          <div style="margin-bottom:15px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="sedePrincipal" style="width:16px;height:16px;accent-color:#1e3a8a;">
+              <span style="font-weight:500;">Sede Principal</span>
+              <span style="font-size:11px;color:#888;">(se selecciona automáticamente al iniciar sesión)</span>
+            </label>
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn-cancel" id="btnCancelarSede">Cancelar</button>
+            <button class="btn-save" id="btnGuardarSede">Guardar Sede</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Rechazar Usuario -->
   <div class="modal-overlay" id="modalRechazar">
     <div class="modal-content">
@@ -1129,6 +1222,9 @@
             <div class="custom-dropdown-options">
               <div class="custom-dropdown-option" data-value="pendiente">
                 <span class="estado-badge estado-pendiente">Pendiente</span>
+              </div>
+              <div class="custom-dropdown-option" data-value="en_proceso">
+                <span class="estado-badge estado-en_proceso">En Proceso</span>
               </div>
               <div class="custom-dropdown-option" data-value="alistamiento">
                 <span class="estado-badge estado-alistamiento">Alistamiento</span>
@@ -1233,6 +1329,7 @@
           </div>
           <div>
             <h4 style="font-size: 14px; color: #666; margin-bottom: 10px;">Entrega</h4>
+            <p style="margin: 4px 0; font-size: 13px; display:none;" id="detalleSede">-</p>
             <p style="margin: 4px 0; font-size: 13px;" id="detalleDireccion">-</p>
             <p style="margin: 4px 0; font-size: 13px;" id="detalleCiudad">-</p>
             <p style="margin: 4px 0; font-size: 13px;" id="detalleContacto">-</p>
@@ -1371,7 +1468,7 @@
           </div>
           <div class="form-group">
             <label for="nuevoNit">NIT</label>
-            <input type="text" id="nuevoNit" placeholder="900.123.456-7">
+            <input type="text" id="nuevoNit" placeholder="Sin dígito de verificación">
           </div>
         </div>
 
@@ -1409,7 +1506,7 @@
   <script type="module">
     import { initializeApp, deleteApp, getApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-    import { getFirestore, doc, setDoc, deleteDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, collection, getDocs, addDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import {
       esAdmin,
       esUserManager,
@@ -1465,6 +1562,8 @@
     logoutLink?.addEventListener('click', async (e) => {
       e.preventDefault();
       localStorage.removeItem('enar_user_name');
+      localStorage.removeItem('enar_user_rol');
+      localStorage.removeItem('enar_user_privileged');
       await getAuth().signOut();
       window.location.href = '/login.html';
     });
@@ -1512,34 +1611,12 @@
       return `${dia} ${mes} ${hora}:${min} hs`;
     }
 
-    // Cargar usuarios (admin ve todos, gestor ve los suyos + pendientes auto-registrados)
+    // Cargar usuarios (admin y gestor ven todos)
     async function cargarUsuarios() {
-      let resultado;
-      if (isAdminUser) {
-        resultado = await obtenerTodosLosUsuarios();
-      } else {
-        // Gestor: cargar sus usuarios creados + todos los pendientes (auto-registrados)
-        const [propios, pendientes] = await Promise.all([
-          obtenerUsuariosPorCreador(currentUserEmail),
-          obtenerUsuariosPendientes()
-        ]);
-
-        // Merge sin duplicados
-        const mapa = new Map();
-        (propios.usuarios || []).forEach(u => mapa.set(u.uid, u));
-        (pendientes.usuarios || []).forEach(u => mapa.set(u.uid, u));
-
-        resultado = { success: true, usuarios: Array.from(mapa.values()) };
-      }
+      const resultado = await obtenerTodosLosUsuarios();
 
       if (resultado.success || resultado.usuarios) {
         usuarios = resultado.usuarios || [];
-
-        // Construir set de IDs de clientes del gestor
-        if (!isAdminUser) {
-          clienteIds = new Set(usuarios.map(u => u.uid));
-        }
-
         actualizarStatsUsuarios();
         renderizarUsuarios();
       }
@@ -1619,10 +1696,17 @@
                 <button class="btn btn-outline-enar" onclick="abrirEditarUsuario('${u.uid}')" title="Editar">
                   <i class="bi bi-pencil"></i>
                 </button>
+                ${(u.rol || 'cliente') === 'cliente' ? `
+                <button class="btn btn-outline-info" onclick="abrirGestionSedes('${u.uid}')" title="Gestionar Sedes">
+                  <i class="bi bi-geo-alt"></i>
+                </button>
+                ` : ''}
               ` : ''}
+              ${isAdminUser ? `
               <button class="btn btn-outline-danger" onclick="abrirEliminarUsuario('${u.uid}')" title="Eliminar">
                 <i class="bi bi-trash"></i>
               </button>
+              ` : ''}
             </div>
           </td>
         </tr>
@@ -1882,6 +1966,30 @@
 
       const btn = document.getElementById('btnCrearUsuario');
       btn.disabled = true;
+      btn.textContent = 'Verificando...';
+
+      // Validar email duplicado en Firestore
+      const emailSnap = await getDocs(query(collection(db, 'usuarios'), where('email', '==', email)));
+      if (!emailSnap.empty) {
+        errorDiv.textContent = 'Ya existe un usuario con este email';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Crear Usuario';
+        return;
+      }
+
+      // Validar NIT duplicado en Firestore
+      if (nit) {
+        const nitSnap = await getDocs(query(collection(db, 'usuarios'), where('nit', '==', nit)));
+        if (!nitSnap.empty) {
+          errorDiv.textContent = 'Ya existe un usuario con este NIT';
+          errorDiv.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Crear Usuario';
+          return;
+        }
+      }
+
       btn.textContent = 'Creando...';
 
       let secondaryApp = null;
@@ -1954,17 +2062,339 @@
       }
     });
 
+    // ============================================
+    // GESTIÓN DE SEDES
+    // ============================================
+
+    // Poblar select de departamentos del modal sedes
+    const selectSedeDepartamento = document.getElementById('sedeDepartamento');
+    const selectSedeCiudad = document.getElementById('sedeCiudad');
+    Object.keys(DEPARTAMENTOS_CIUDADES).sort().forEach(dep => {
+      const opt = document.createElement('option');
+      opt.value = dep;
+      opt.textContent = dep;
+      selectSedeDepartamento.appendChild(opt);
+    });
+
+    selectSedeDepartamento.addEventListener('change', () => {
+      const dep = selectSedeDepartamento.value;
+      selectSedeCiudad.innerHTML = '';
+      if (dep && DEPARTAMENTOS_CIUDADES[dep]) {
+        selectSedeCiudad.disabled = false;
+        const defOpt = document.createElement('option');
+        defOpt.value = '';
+        defOpt.textContent = 'Seleccionar...';
+        selectSedeCiudad.appendChild(defOpt);
+        DEPARTAMENTOS_CIUDADES[dep].forEach(ciudad => {
+          const opt = document.createElement('option');
+          opt.value = ciudad;
+          opt.textContent = ciudad;
+          selectSedeCiudad.appendChild(opt);
+        });
+      } else {
+        selectSedeCiudad.disabled = true;
+        const defOpt = document.createElement('option');
+        defOpt.value = '';
+        defOpt.textContent = 'Seleccione departamento';
+        selectSedeCiudad.appendChild(defOpt);
+      }
+    });
+
+    // Abrir gestión de sedes
+    window.abrirGestionSedes = async function(uid) {
+      const usuario = usuarios.find(u => u.uid === uid);
+      if (!usuario) return;
+
+      document.getElementById('sedesClienteUid').value = uid;
+      document.getElementById('sedesClienteNombre').textContent = usuario.razon_social || usuario.nombre || usuario.email;
+      document.getElementById('sedesError').style.display = 'none';
+      document.getElementById('formSedeContainer').style.display = 'none';
+
+      await cargarSedes(uid);
+      document.getElementById('modalGestionSedes').classList.add('active');
+    };
+
+    // Cargar sedes de un usuario
+    async function cargarSedes(uid) {
+      const listaSedes = document.getElementById('listaSedes');
+      const sedesVacio = document.getElementById('sedesVacio');
+
+      try {
+        const sedesSnap = await getDocs(collection(db, 'usuarios', uid, 'sedes'));
+        const sedes = [];
+        sedesSnap.forEach(d => sedes.push({ id: d.id, ...d.data() }));
+
+        // Ordenar: activos primero, luego por código
+        sedes.sort((a, b) => {
+          if (a.activo !== false && b.activo === false) return -1;
+          if (a.activo === false && b.activo !== false) return 1;
+          return (a.codigo || '').localeCompare(b.codigo || '');
+        });
+
+        if (sedes.length === 0) {
+          listaSedes.innerHTML = '';
+          sedesVacio.style.display = 'block';
+          return;
+        }
+
+        sedesVacio.style.display = 'none';
+        listaSedes.innerHTML = `
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                <th style="padding:8px 10px;text-align:center;width:60px;">Principal</th>
+                <th style="padding:8px 10px;text-align:left;">Código</th>
+                <th style="padding:8px 10px;text-align:left;">Nombre</th>
+                <th style="padding:8px 10px;text-align:left;">Ciudad</th>
+                <th style="padding:8px 10px;text-align:left;">Dirección</th>
+                <th style="padding:8px 10px;text-align:center;">Estado</th>
+                <th style="padding:8px 10px;text-align:center;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sedes.map(s => `
+                <tr style="border-bottom:1px solid #e2e8f0;${s.activo === false ? 'opacity:0.5;' : ''}">
+                  <td style="padding:8px 10px;text-align:center;">
+                    ${s.activo !== false ? `
+                      <button class="btn btn-sm" onclick="marcarPrincipal('${s.id}')" title="${s.principal ? 'Sede principal' : 'Marcar como principal'}"
+                        style="border:none;background:none;font-size:16px;cursor:pointer;${s.principal ? 'color:#D9232D;' : 'color:#cbd5e1;'}">
+                        <i class="bi bi-star${s.principal ? '-fill' : ''}"></i>
+                      </button>
+                    ` : '<span style="color:#cbd5e1;font-size:16px;"><i class="bi bi-star"></i></span>'}
+                  </td>
+                  <td style="padding:8px 10px;font-weight:600;">${s.codigo || '-'}</td>
+                  <td style="padding:8px 10px;">${s.nombre || '-'}${s.principal ? ' <span style="font-size:10px;background:#D9232D;color:white;padding:1px 6px;border-radius:3px;vertical-align:middle;">Principal</span>' : ''}</td>
+                  <td style="padding:8px 10px;">${s.ciudad || '-'}</td>
+                  <td style="padding:8px 10px;font-size:12px;color:#666;">${s.direccion || '-'}</td>
+                  <td style="padding:8px 10px;text-align:center;">
+                    <span style="font-size:11px;padding:2px 8px;border-radius:4px;${s.activo === false ? 'background:#fee2e2;color:#dc2626;' : 'background:#dcfce7;color:#16a34a;'}">
+                      ${s.activo === false ? 'Inactiva' : 'Activa'}
+                    </span>
+                  </td>
+                  <td style="padding:8px 10px;text-align:center;">
+                    <div class="btn-group btn-group-sm" style="justify-content:center;">
+                      <button class="btn btn-outline-enar" onclick="editarSede('${s.id}')" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button class="btn btn-outline-${s.activo === false ? 'success' : 'warning'}" onclick="toggleActivoSede('${s.id}', ${s.activo === false})" title="${s.activo === false ? 'Activar' : 'Desactivar'}">
+                        <i class="bi bi-${s.activo === false ? 'check-circle' : 'pause-circle'}"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      } catch (error) {
+        console.error('Error cargando sedes:', error);
+        listaSedes.innerHTML = '<p style="color:#dc2626;">Error al cargar sedes</p>';
+      }
+    }
+
+    // Almacén temporal de sedes cargadas para edición
+    let sedesCache = [];
+
+    async function cargarSedesCache(uid) {
+      const snap = await getDocs(collection(db, 'usuarios', uid, 'sedes'));
+      sedesCache = [];
+      snap.forEach(d => sedesCache.push({ id: d.id, ...d.data() }));
+    }
+
+    // Obtener siguiente código consecutivo global
+    const SEDE_CONTADOR_REF = doc(db, 'configuracion', 'sedes');
+    const SEDE_INICIO = 10000;
+
+    async function obtenerSiguienteCodigo() {
+      const snap = await getDoc(SEDE_CONTADOR_REF);
+      const actual = snap.exists() ? (snap.data().consecutivo || SEDE_INICIO) : SEDE_INICIO;
+      return actual + 1;
+    }
+
+    async function guardarConsecutivo(nuevo) {
+      await setDoc(SEDE_CONTADOR_REF, { consecutivo: nuevo }, { merge: true });
+    }
+
+    // Mostrar formulario para agregar sede
+    document.getElementById('btnMostrarFormSede').addEventListener('click', async () => {
+      document.getElementById('formSedeTitle').textContent = 'Nueva Sede';
+      document.getElementById('sedeEditId').value = '';
+      document.getElementById('sedeNombre').value = '';
+      document.getElementById('sedeDireccion').value = '';
+      document.getElementById('sedeContacto').value = '';
+      document.getElementById('sedeTelefono').value = '';
+      document.getElementById('sedePrincipal').checked = false;
+      selectSedeDepartamento.value = '';
+      selectSedeDepartamento.dispatchEvent(new Event('change'));
+
+      // Auto-generar código
+      const codigoInput = document.getElementById('sedeCodigo');
+      codigoInput.value = 'Generando...';
+      try {
+        const siguiente = await obtenerSiguienteCodigo();
+        codigoInput.value = String(siguiente);
+      } catch (e) {
+        console.error('Error obteniendo consecutivo:', e);
+        codigoInput.value = '';
+      }
+
+      document.getElementById('formSedeContainer').style.display = 'block';
+    });
+
+    // Cancelar formulario sede
+    document.getElementById('btnCancelarSede').addEventListener('click', () => {
+      document.getElementById('formSedeContainer').style.display = 'none';
+    });
+
+    // Editar sede
+    window.editarSede = async function(sedeId) {
+      const uid = document.getElementById('sedesClienteUid').value;
+      await cargarSedesCache(uid);
+      const sede = sedesCache.find(s => s.id === sedeId);
+      if (!sede) return;
+
+      document.getElementById('formSedeTitle').textContent = 'Editar Sede';
+      document.getElementById('sedeEditId').value = sedeId;
+      document.getElementById('sedeCodigo').value = sede.codigo || '';
+      document.getElementById('sedeNombre').value = sede.nombre || '';
+      document.getElementById('sedeDireccion').value = sede.direccion || '';
+      document.getElementById('sedeContacto').value = sede.contacto || '';
+      document.getElementById('sedeTelefono').value = sede.telefono || '';
+      document.getElementById('sedePrincipal').checked = !!sede.principal;
+
+      selectSedeDepartamento.value = sede.departamento || '';
+      selectSedeDepartamento.dispatchEvent(new Event('change'));
+      if (sede.ciudad) {
+        setTimeout(() => { selectSedeCiudad.value = sede.ciudad; }, 50);
+      }
+
+      document.getElementById('formSedeContainer').style.display = 'block';
+    };
+
+    // Toggle activo/inactivo sede
+    window.toggleActivoSede = async function(sedeId, activar) {
+      const uid = document.getElementById('sedesClienteUid').value;
+      try {
+        await updateDoc(doc(db, 'usuarios', uid, 'sedes', sedeId), {
+          activo: activar,
+          updated_at: new Date().toISOString()
+        });
+        mostrarMensaje(activar ? 'Sede activada' : 'Sede desactivada');
+        await cargarSedes(uid);
+      } catch (error) {
+        console.error('Error al cambiar estado sede:', error);
+        const errorDiv = document.getElementById('sedesError');
+        errorDiv.textContent = 'Error: ' + error.message;
+        errorDiv.style.display = 'block';
+      }
+    };
+
+    // Quitar principal de todas las sedes (excepto la excluida)
+    async function quitarPrincipalTodas(uid, excepto) {
+      await cargarSedesCache(uid);
+      const promesas = sedesCache
+        .filter(s => s.principal && s.id !== excepto)
+        .map(s => updateDoc(doc(db, 'usuarios', uid, 'sedes', s.id), { principal: false }));
+      await Promise.all(promesas);
+    }
+
+    // Marcar sede como principal (desde botón estrella en tabla)
+    window.marcarPrincipal = async function(sedeId) {
+      const uid = document.getElementById('sedesClienteUid').value;
+      try {
+        await quitarPrincipalTodas(uid, sedeId);
+        await updateDoc(doc(db, 'usuarios', uid, 'sedes', sedeId), {
+          principal: true,
+          updated_at: new Date().toISOString()
+        });
+        mostrarMensaje('Sede marcada como principal');
+        await cargarSedes(uid);
+      } catch (error) {
+        console.error('Error marcando sede principal:', error);
+        const errorDiv = document.getElementById('sedesError');
+        errorDiv.textContent = 'Error: ' + error.message;
+        errorDiv.style.display = 'block';
+      }
+    };
+
+    // Guardar sede (crear o editar)
+    document.getElementById('btnGuardarSede').addEventListener('click', async () => {
+      const errorDiv = document.getElementById('sedesError');
+      errorDiv.style.display = 'none';
+
+      const uid = document.getElementById('sedesClienteUid').value;
+      const sedeEditId = document.getElementById('sedeEditId').value;
+      const codigo = document.getElementById('sedeCodigo').value.trim();
+      const nombre = document.getElementById('sedeNombre').value.trim();
+      const direccion = document.getElementById('sedeDireccion').value.trim();
+      const departamento = selectSedeDepartamento.value;
+      const ciudad = selectSedeCiudad.value;
+      const contacto = document.getElementById('sedeContacto').value.trim();
+      const telefono = document.getElementById('sedeTelefono').value.trim();
+
+      // Validaciones
+      if (!codigo || !nombre || !direccion) {
+        errorDiv.textContent = 'Código, nombre y dirección son obligatorios';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      const principal = document.getElementById('sedePrincipal').checked;
+
+      const btn = document.getElementById('btnGuardarSede');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+
+      try {
+        // Si se marca como principal, quitar principal de las demás
+        if (principal) {
+          await quitarPrincipalTodas(uid, sedeEditId || null);
+        }
+
+        const sedeData = {
+          codigo,
+          nombre,
+          direccion,
+          departamento,
+          ciudad,
+          contacto,
+          telefono,
+          principal,
+          updated_at: new Date().toISOString()
+        };
+
+        if (sedeEditId) {
+          // Editar existente
+          await updateDoc(doc(db, 'usuarios', uid, 'sedes', sedeEditId), sedeData);
+          mostrarMensaje('Sede actualizada');
+        } else {
+          // Crear nueva
+          sedeData.activo = true;
+          sedeData.created_at = new Date().toISOString();
+          await addDoc(collection(db, 'usuarios', uid, 'sedes'), sedeData);
+          // Guardar consecutivo global
+          await guardarConsecutivo(parseInt(codigo));
+          mostrarMensaje('Sede creada exitosamente');
+        }
+
+        document.getElementById('formSedeContainer').style.display = 'none';
+        await cargarSedes(uid);
+      } catch (error) {
+        console.error('Error guardando sede:', error);
+        errorDiv.textContent = 'Error al guardar: ' + error.message;
+        errorDiv.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar Sede';
+      }
+    });
+
     // Cargar órdenes
     async function cargarOrdenes() {
       const resultado = await obtenerTodasLasOrdenes();
 
       if (resultado.success) {
-        // Gestor: solo órdenes de sus clientes
-        if (!isAdminUser) {
-          ordenes = resultado.ordenes.filter(o => clienteIds.has(o.user_id));
-        } else {
-          ordenes = resultado.ordenes;
-        }
+        ordenes = resultado.ordenes;
         actualizarStatsOrdenes();
         renderizarOrdenes();
       }
@@ -1986,6 +2416,44 @@
       document.getElementById('ordenesTerminadas').textContent = stats.terminadas;
       document.getElementById('montoTotal').textContent = formatearPrecio(stats.monto);
       document.getElementById('ordenesBadge').textContent = stats.pendientes;
+    }
+
+    // Transiciones de estado permitidas (misma lógica que CRM)
+    const TRANSICIONES_ESTADO = {
+      pendiente: ['en_proceso', 'cancelada'],
+      en_proceso: ['alistamiento', 'cancelada'],
+      alistamiento: ['completo', 'cancelada'],
+      completo: ['terminada'],
+      parcial: ['alistamiento', 'cancelada'],
+      en_espera: ['en_proceso', 'cancelada'],
+      terminada: [],
+      cancelada: []
+    };
+
+    // Dropdown dinámico de cambio de estado
+    function renderDropdownEstado(orden) {
+      const transiciones = TRANSICIONES_ESTADO[orden.estado] || [];
+      if (transiciones.length === 0) {
+        return `<button class="btn btn-outline-info btn-sm" disabled style="opacity:0.4;cursor:not-allowed;" title="Sin transiciones">
+          <i class="bi bi-arrow-repeat"></i>
+        </button>`;
+      }
+      return `
+        <div class="btn-group btn-group-sm" role="group">
+          <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" title="Cambiar estado">
+            <i class="bi bi-arrow-repeat"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            ${transiciones.map(est => {
+              const cfg = ESTADOS_CONFIG[est] || { texto: est, bg: '#e2e8f0', color: '#333' };
+              const esCancelada = est === 'cancelada';
+              return `${esCancelada ? '<li><hr class="dropdown-divider"></li>' : ''}
+              <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${orden.id}', '${est}'); return false;">
+                <span class="order-status" style="background:${cfg.bg};color:${cfg.color};">${cfg.texto}</span>
+              </a></li>`;
+            }).join('')}
+          </ul>
+        </div>`;
     }
 
     // Renderizar órdenes
@@ -2032,32 +2500,7 @@
               <button class="btn btn-outline-enar" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">
                 <i class="bi bi-eye"></i>
               </button>
-              <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn btn-outline-info dropdown-toggle" data-bs-toggle="dropdown" title="Cambiar estado">
-                  <i class="bi bi-arrow-repeat"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'pendiente'); return false;">
-                    <span class="order-status estado-pendiente">Pendiente</span>
-                  </a></li>
-                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'alistamiento'); return false;">
-                    <span class="order-status estado-alistamiento">Alistamiento</span>
-                  </a></li>
-                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'completo'); return false;">
-                    <span class="order-status estado-completo">Completo</span>
-                  </a></li>
-                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'parcial'); return false;">
-                    <span class="order-status estado-parcial">Parcial</span>
-                  </a></li>
-                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'en_espera'); return false;">
-                    <span class="order-status estado-en_espera">En Espera</span>
-                  </a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${o.id}', 'cancelada'); return false;">
-                    <span class="order-status estado-cancelada">Cancelada</span>
-                  </a></li>
-                </ul>
-              </div>
+              ${renderDropdownEstado(o)}
               ${isAdminUser ? `
               <button class="btn btn-outline-danger" onclick="abrirEliminarOrden('${o.id}')" title="Eliminar orden">
                 <i class="bi bi-trash"></i>
@@ -2077,6 +2520,7 @@
     // Colores corporativos ENAR (sincronizados con VistaDespachos)
     const ESTADOS_CONFIG = {
       'pendiente': { texto: 'Pendiente', clase: 'estado-pendiente', bg: '#ffff00', color: '#000000' },
+      'en_proceso': { texto: 'En Proceso', clase: 'estado-en_proceso', bg: '#e0e7ff', color: '#3730a3' },
       'alistamiento': { texto: 'Alistamiento', clase: 'estado-alistamiento', bg: '#3bb6ff', color: '#FFFFFF' },
       'completo': { texto: 'Completo', clase: 'estado-completo', bg: '#2e9b00', color: '#FFFFFF' },
       'parcial': { texto: 'Parcial', clase: 'estado-parcial', bg: '#ffd800', color: '#000000' },
@@ -2142,6 +2586,15 @@
 
       // Info entrega
       const direccion = orden.direccion_entrega || {};
+      // Sede (si aplica)
+      const sedeEl = document.getElementById('detalleSede');
+      if (orden.sede) {
+        sedeEl.innerHTML = `<span style="background:#1e3a8a;color:white;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${orden.sede.codigo}</span> ${orden.sede.nombre}`;
+        sedeEl.style.display = '';
+      } else {
+        sedeEl.style.display = 'none';
+      }
+
       document.getElementById('detalleDireccion').textContent = direccion.direccion || '-';
       document.getElementById('detalleCiudad').textContent = `${direccion.ciudad || ''}, ${direccion.departamento || ''}`;
       document.getElementById('detalleContacto').textContent = `${direccion.contacto || ''} - ${direccion.telefono_contacto || ''}`;
@@ -2344,8 +2797,12 @@
       }
 
       isAdminUser = esAdmin(user);
-      const isManager = esUserManager(user);
       currentUserEmail = user.email;
+
+      // Obtener datos del usuario para verificar rol gestor
+      const datosUsr = await obtenerDatosUsuario(user.uid);
+      const userData = datosUsr.success ? datosUsr.data : null;
+      const isManager = esUserManager(user, userData);
 
       if (!isAdminUser && !isManager) {
         noAccess.style.display = 'block';
@@ -2355,17 +2812,13 @@
       adminPanel.style.display = 'block';
 
       // Mostrar nombre del usuario en link Perfil
-      const datosUsr = await obtenerDatosUsuario(user.uid);
       const navUserName = document.getElementById('navUserName');
-      if (navUserName && datosUsr.success) {
-        const displayName = (datosUsr.data.nombre || user.email).split(' ')[0];
+      if (navUserName && userData) {
+        const displayName = (userData.nombre || user.email).split(' ')[0];
         navUserName.innerHTML = '<i class="bi bi-person-circle"></i> ' + displayName + ' <i class="bi bi-caret-down-fill"></i>';
         localStorage.setItem('enar_user_name', displayName);
-      }
-
-      if (!isAdminUser) {
-        // Gestor: mostrar título personalizado en usuarios
-        document.querySelector('.card-header h2').textContent = 'Mis Clientes';
+        localStorage.setItem('enar_user_rol', userData.rol || 'cliente');
+        localStorage.setItem('enar_user_privileged', (isAdminUser || isManager) ? '1' : '0');
       }
 
       // Limpiar campo de búsqueda (evitar autocomplete del navegador)

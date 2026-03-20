@@ -29,8 +29,14 @@ class EnarIAWidget {
     const functions = firebase.app().functions('us-central1');
     this.chatAgent = functions.httpsCallable('chatAgent');
 
-    firebase.auth().onAuthStateChanged((user) => {
+    firebase.auth().onAuthStateChanged(async (user) => {
       if (user) {
+        const adminEmail = 'sebastianbumq@enarapp.com';
+        if (user.email !== adminEmail) {
+          // No-admin: botón visible pero deshabilitado
+          this.deshabilitarBoton();
+          return;
+        }
         this.usuario = user;
         this.mostrarBoton();
       } else {
@@ -801,6 +807,17 @@ class EnarIAWidget {
   mostrarBoton() {
     const btn = document.getElementById('btn-enar-ia');
     if (btn) btn.style.display = 'inline-flex';
+  }
+
+  deshabilitarBoton() {
+    const btn = document.getElementById('btn-enar-ia');
+    if (btn) {
+      btn.style.display = 'inline-flex';
+      btn.style.opacity = '0.4';
+      btn.style.cursor = 'not-allowed';
+      btn.style.pointerEvents = 'none';
+      btn.title = 'Disponible solo para administradores';
+    }
   }
 
   ocultarTodo() {

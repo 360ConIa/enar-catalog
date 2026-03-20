@@ -50,6 +50,18 @@
       </div>
       <!-- Estado autenticado -->
       <div id="navAuth" class="d-flex align-items-center gap-2 nav-hidden">
+        <!-- Selector de Sede -->
+        <div id="sedeSelectorContainer" class="d-none" style="position:relative;">
+          <button id="btnSedeSelector" class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:6px;font-size:11px;padding:3px 10px;white-space:nowrap;">
+            <i class="bi bi-geo-alt-fill"></i> <span id="sedeActivaNombre">Seleccionar sede</span> <i class="bi bi-caret-down-fill" style="font-size:9px;"></i>
+          </button>
+          <div id="sedeDropdownMenu" style="display:none;position:absolute;top:calc(100% + 5px);right:0;background:white;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,0.18);min-width:260px;z-index:1100;overflow:hidden;">
+            <div style="padding:10px 14px 6px;border-bottom:1px solid #f0f0f0;">
+              <span style="font-size:11px;font-weight:600;color:#1e3a8a;text-transform:uppercase;letter-spacing:0.5px;">Sedes disponibles</span>
+            </div>
+            <div id="sedeDropdownList" style="max-height:240px;overflow-y:auto;padding:6px 0;"></div>
+          </div>
+        </div>
         <a href="vendedor.html" id="navOrdenes">Órdenes</a>
         <a href="/" style="background:#D9232D;color:white;">Catálogo</a>
         <div class="nav-user-dropdown">
@@ -487,6 +499,7 @@
   <script type="module">
     import { onAuthChange, cerrarSesion, obtenerDatosUsuario, ESTADOS_USUARIO } from './js/auth.js';
     import { agregarAlCarrito, obtenerCarrito } from './js/ordenes.js';
+    import { db, collection, getDocs, query, where } from './js/firebase-config.js';
 
     const ADMIN_EMAILS = ['sebastianbumq@enarapp.com'];
     const USER_MANAGER_EMAILS = ['ventas@enar.com.co'];
@@ -527,12 +540,14 @@
     document.getElementById('gatePendienteLogout')?.addEventListener('click', async (e) => {
       e.preventDefault();
       localStorage.removeItem('enar_user_name');
+      localStorage.removeItem('enar_user_rol');
+      localStorage.removeItem('enar_user_privileged');
       await cerrarSesion();
       window.location.href = '/login.html';
     });
 
     function actualizarNavegacion(user, data) {
-      const esPrivilegiado = user && (ADMIN_EMAILS.includes(user.email) || USER_MANAGER_EMAILS.includes(user.email));
+      const esPrivilegiado = user && (ADMIN_EMAILS.includes(user.email) || USER_MANAGER_EMAILS.includes(user.email) || data?.rol === 'gestor');
 
       if (user && (data?.estado === 'aprobado' || esPrivilegiado)) {
         // Usuario aprobado o con permisos elevados - MOSTRAR CATÁLOGO
@@ -547,13 +562,22 @@
         const displayName = (palabras[0].length <= 2 && palabras.length > 1) ? palabras[0] + ' ' + palabras[1] : palabras[0];
         navUserName.innerHTML = '<i class="bi bi-person-circle"></i> ' + displayName + ' <i class="bi bi-caret-down-fill"></i>';
         localStorage.setItem('enar_user_name', displayName);
+        const rol = data?.rol || 'cliente';
+        localStorage.setItem('enar_user_rol', rol);
+        localStorage.setItem('enar_user_privileged', esPrivilegiado ? '1' : '0');
 
         // Ocultar Órdenes y Admin para clientes
-        const rol = data?.rol || 'cliente';
         const navOrdenes = document.getElementById('navOrdenes');
         const navAdmin = document.getElementById('navAdmin');
         if (navOrdenes) navOrdenes.style.display = (rol === 'cliente') ? 'none' : '';
         if (navAdmin) navAdmin.style.display = esPrivilegiado ? '' : 'none';
+
+        // Ocultar Por Encargo para clientes y vendedores
+        const rolesRestringidos = ['cliente', 'vendedor'];
+        const btnEncargo = document.getElementById('btnProductosEncargo');
+        if (btnEncargo) btnEncargo.closest('.col-6')?.style.setProperty('display', rolesRestringidos.includes(rol) ? 'none' : '');
+
+        // ENAR IA: visibilidad controlada por chatWidget.js
 
         btnSolicitarCotizacion.style.display = 'none';
         btnCrearOrden.style.display = 'inline-block';
@@ -595,6 +619,8 @@
     navLogout?.addEventListener('click', async (e) => {
       e.preventDefault();
       localStorage.removeItem('enar_user_name');
+      localStorage.removeItem('enar_user_rol');
+      localStorage.removeItem('enar_user_privileged');
       await cerrarSesion();
       window.location.href = '/login.html';
     });
@@ -617,12 +643,154 @@
 
       actualizarNavegacion(user, userData);
 
+      // Cargar sedes del usuario
+      if (user && userData?.estado === 'aprobado') {
+        await cargarSedesUsuario(user.uid);
+      } else {
+        ocultarSelectorSede();
+      }
+
       window.currentUserData = userData;
       window.currentUser = user;
 
       window.dispatchEvent(new CustomEvent('userStateChanged', {
         detail: { user, userData }
       }));
+    });
+
+    // ============================================
+    // GESTIÓN DE SEDES (B2B)
+    // ============================================
+
+    const SEDE_STORAGE_KEY = 'enar_sede_activa';
+    const sedeSelectorContainer = document.getElementById('sedeSelectorContainer');
+    const btnSedeSelector = document.getElementById('btnSedeSelector');
+    const sedeDropdownMenu = document.getElementById('sedeDropdownMenu');
+    const sedeDropdownList = document.getElementById('sedeDropdownList');
+    const sedeActivaNombre = document.getElementById('sedeActivaNombre');
+
+    let sedesUsuario = [];
+
+    async function cargarSedesUsuario(uid) {
+      try {
+        const snap = await getDocs(query(
+          collection(db, 'usuarios', uid, 'sedes'),
+          where('activo', '==', true)
+        ));
+        sedesUsuario = [];
+        snap.forEach(d => sedesUsuario.push({ id: d.id, ...d.data() }));
+        sedesUsuario.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+
+        if (sedesUsuario.length === 0) {
+          ocultarSelectorSede();
+          return;
+        }
+
+        // Mostrar selector
+        sedeSelectorContainer.classList.remove('d-none');
+
+        // Restaurar sede activa de localStorage
+        const guardada = getSedeActiva();
+        const sedeValida = guardada && sedesUsuario.find(s => s.id === guardada.id);
+
+        if (sedeValida) {
+          seleccionarSede(sedeValida, false);
+        } else {
+          // Auto-seleccionar: sede principal > única sede > pedir selección
+          const sedePrincipal = sedesUsuario.find(s => s.principal);
+          if (sedePrincipal) {
+            seleccionarSede(sedePrincipal, true);
+          } else if (sedesUsuario.length === 1) {
+            seleccionarSede(sedesUsuario[0], true);
+          } else {
+            sedeActivaNombre.textContent = 'Seleccionar sede';
+            localStorage.removeItem(SEDE_STORAGE_KEY);
+            window.dispatchEvent(new CustomEvent('sedeChanged', { detail: null }));
+          }
+        }
+
+        renderizarDropdownSedes();
+      } catch (error) {
+        console.error('Error cargando sedes:', error);
+        ocultarSelectorSede();
+      }
+    }
+
+    function getSedeActiva() {
+      try {
+        return JSON.parse(localStorage.getItem(SEDE_STORAGE_KEY));
+      } catch { return null; }
+    }
+
+    function seleccionarSede(sede, dispatch = true) {
+      const sedeRef = { id: sede.id, codigo: sede.codigo, nombre: sede.nombre };
+      localStorage.setItem(SEDE_STORAGE_KEY, JSON.stringify(sedeRef));
+      sedeActivaNombre.textContent = sede.codigo + ' - ' + sede.nombre;
+      sedeDropdownMenu.style.display = 'none';
+
+      // Guardar datos completos para orden
+      window.sedeActivaCompleta = sede;
+
+      if (dispatch) {
+        window.dispatchEvent(new CustomEvent('sedeChanged', { detail: sedeRef }));
+      }
+
+      renderizarDropdownSedes();
+    }
+
+    function renderizarDropdownSedes() {
+      const activa = getSedeActiva();
+      sedeDropdownList.innerHTML = sedesUsuario.map(s => {
+        const esActiva = activa && activa.id === s.id;
+        return `
+          <div class="sede-dropdown-item" data-sede-id="${s.id}"
+            style="padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background 0.15s;
+            ${esActiva ? 'background:#eff6ff;border-left:3px solid #D9232D;' : 'border-left:3px solid transparent;'}">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:${esActiva ? '600' : '500'};color:#1e293b;">
+                <span style="color:#1e3a8a;font-weight:700;">${s.codigo}</span> — ${s.nombre}${s.principal ? ' <i class="bi bi-star-fill" style="color:#D9232D;font-size:10px;"></i>' : ''}
+              </div>
+              <div style="font-size:11px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${s.ciudad || ''} · ${s.direccion || ''}
+              </div>
+            </div>
+            ${esActiva ? '<i class="bi bi-check-circle-fill" style="color:#D9232D;font-size:14px;"></i>' : ''}
+          </div>
+        `;
+      }).join('');
+
+      // Event listeners
+      sedeDropdownList.querySelectorAll('.sede-dropdown-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const sede = sedesUsuario.find(s => s.id === item.dataset.sedeId);
+          if (sede) seleccionarSede(sede);
+        });
+        item.addEventListener('mouseenter', () => {
+          if (!item.style.background.includes('eff6ff')) item.style.background = '#f8fafc';
+        });
+        item.addEventListener('mouseleave', () => {
+          const activa = getSedeActiva();
+          if (!activa || activa.id !== item.dataset.sedeId) item.style.background = '';
+        });
+      });
+    }
+
+    function ocultarSelectorSede() {
+      sedeSelectorContainer.classList.add('d-none');
+      sedesUsuario = [];
+    }
+
+    // Toggle dropdown
+    btnSedeSelector?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sedeDropdownMenu.style.display = sedeDropdownMenu.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Cerrar dropdown al click fuera
+    document.addEventListener('click', (e) => {
+      if (!sedeSelectorContainer.contains(e.target)) {
+        sedeDropdownMenu.style.display = 'none';
+      }
     });
   </script>
 
@@ -662,26 +830,30 @@
             <label for="encargoTipo" class="form-label fw-semibold" style="font-size:0.85rem;">Tipo de pintura <span class="text-danger">*</span></label>
             <select id="encargoTipo" class="form-select form-select-sm">
               <option value="">Seleccione...</option>
+              <option value="Vinilo Tipo Superior">Vinilo Tipo Superior</option>
+              <option value="Vinilo Tipo 2 Obra">Vinilo Tipo 2 Obra</option>
+              <option value="Vinilo Tipo 1 Super">Vinilo Tipo 1 Super</option>
+              <option value="Vinilo Tipo III Primer">Vinilo Tipo III Primer</option>
+              <option value="Vinilo Acrílico Aaa">Vinilo Acrílico Aaa</option>
               <option value="Esmalte">Esmalte</option>
-              <option value="Vinilo">Vinilo</option>
               <option value="Anticorrosivo">Anticorrosivo</option>
-              <option value="Impermeabilizante">Impermeabilizante</option>
-              <option value="Barniz">Barniz</option>
-              <option value="Laca">Laca</option>
-              <option value="Tintilla">Tintilla</option>
-              <option value="Disolvente">Disolvente</option>
-              <option value="Otro">Otro</option>
+              <option value="Otros">Otros</option>
             </select>
           </div>
 
           <!-- Color -->
           <div class="mb-3">
             <label class="form-label fw-semibold" style="font-size:0.85rem;">Color <span class="text-danger">*</span></label>
-            <div class="input-group input-group-sm">
-              <input type="text" id="encargoColor" class="form-control form-control-sm" placeholder="Seleccione o escriba un color..." autocomplete="off">
-              <button type="button" id="btnCartaColores" class="btn btn-outline-secondary" title="Abrir carta de colores" disabled>
-                <i class="bi bi-palette"></i>
-              </button>
+            <div class="row g-2 align-items-center">
+              <div style="flex:0 0 70%;max-width:70%;">
+                <input type="text" id="encargoColor" class="form-control form-control-sm" placeholder="Escriba un color..." autocomplete="off">
+              </div>
+              <div style="flex:0 0 30%;max-width:30%;">
+                <button type="button" id="btnCartaColores" class="w-100" title="Abrir carta de colores" disabled
+                  style="display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:0 0.6rem;height:31px;background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);border:1px solid transparent;border-radius:8px;color:#fff;font-weight:500;font-size:0.7rem;line-height:31px;cursor:pointer;transition:all 0.3s ease;box-shadow:0 2px 6px rgba(30,58,138,0.3);">
+                  Carta de colores
+                </button>
+              </div>
             </div>
             <div id="encargoColorPreview" style="display:none;margin-top:6px;">
               <span id="encargoColorSwatch" style="display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #ccc;vertical-align:middle;"></span>
