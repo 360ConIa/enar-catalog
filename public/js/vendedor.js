@@ -90,7 +90,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   const perfil = userDoc.data();
-  esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin';
+  esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin' || perfil.rol === 'gestor';
   const esVendedor = perfil.rol === 'vendedor';
 
   if (!esAdmin && !esVendedor) {
@@ -139,13 +139,13 @@ function cargarOrdenes() {
 
   let q;
   if (esAdmin) {
-    q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500));
+    q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(100));
   } else {
     q = query(
       collection(db, 'ordenes'),
       where('creadaPor', '==', currentUser.uid),
       orderBy('created_at', 'desc'),
-      limit(500)
+      limit(100)
     );
   }
 
@@ -451,10 +451,6 @@ async function cargarClientes() {
       (a.razon_social || a.nombre || '').localeCompare(b.razon_social || b.nombre || '')
     );
 
-    // Vendedores solo ven clientes asignados a ellos
-    if (!esAdmin && currentUser) {
-      todosLosClientes = todosLosClientes.filter(c => c.vendedor_asignado === currentUser.uid);
-    }
   } catch (error) {
     console.error('Error cargando clientes:', error);
   }
@@ -611,19 +607,26 @@ function obtenerPrecioCliente(producto, cliente) {
 }
 
 // ═══════════ CARGAR PRODUCTOS (preload) ═══════════
+let indiceBusquedaProductos = []; // Texto pre-normalizado para búsqueda rápida
+
 async function cargarProductos() {
   try {
-    const snap = await getDocs(collection(db, 'productos'));
+    const snap = await getDocs(query(collection(db, 'productos'), where('activo', '==', true)));
     todosLosProductos = [];
     snap.forEach(d => {
       const data = d.data();
-      if (data.cod_interno && data.cod_interno !== 'COD_INTERNO' && data.titulo !== 'TITULO' && data.activo !== false) {
+      if (data.cod_interno && data.cod_interno !== 'COD_INTERNO' && data.titulo !== 'TITULO') {
         todosLosProductos.push({ id: d.id, ...data });
       }
     });
-    todosLosProductos.sort((a, b) => (a.Orden_Cargue || 'ZZZ').localeCompare(b.Orden_Cargue || 'ZZZ') || (a.titulo || '').localeCompare(b.titulo || ''));
+    todosLosProductos.sort((a, b) => (a.orden_pareto || 9999) - (b.orden_pareto || 9999) || (a.titulo || '').localeCompare(b.titulo || ''));
     // Build Map for O(1) lookup in sortItemsPorCargue
     productosPorCodigo = new Map(todosLosProductos.map(p => [p.cod_interno, p]));
+    // Pre-normalizar texto de búsqueda (evita recalcular en cada tecleo)
+    indiceBusquedaProductos = todosLosProductos.map(p =>
+      [p.cod_interno, p.titulo, p.marca, p.ean, p.categoria, p.laboratorio, p.principio_activo]
+        .map(v => (v || '')).join(' ').toLowerCase()
+    );
   } catch (error) {
     console.error('Error cargando productos:', error);
   }
@@ -640,12 +643,14 @@ function buscarProducto(termino, focusCantidad) {
   // Búsqueda AND con coma: "10001, enar" → ambos deben coincidir
   const terminos = termino.toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
 
-  const filtrados = todosLosProductos.filter(p => {
-    const campos = [
-      p.cod_interno, p.titulo, p.marca, p.ean,
-      p.categoria, p.laboratorio, p.principio_activo
-    ].map(v => (v || '').toLowerCase()).join(' ');
+  const filtrados = todosLosProductos.filter((p, i) => {
+    const campos = indiceBusquedaProductos[i];
     return terminos.every(t => campos.includes(t));
+  }).sort((a, b) => {
+    const presA = (a.presentacion || '').toLowerCase();
+    const presB = (b.presentacion || '').toLowerCase();
+    if (presA !== presB) return presA.localeCompare(presB);
+    return (obtenerPrecioCliente(a, clienteSeleccionado) || 0) - (obtenerPrecioCliente(b, clienteSeleccionado) || 0);
   }).slice(0, 20);
 
   ultimosFiltrados = filtrados;
@@ -1147,3 +1152,8 @@ window.generarCSVOrden = function(ordenId) {
   URL.revokeObjectURL(url);
   showToast('CSV descargado', 'success');
 };
+
+// ═══════════ CLEANUP AL SALIR DE PÁGINA ═══════════
+window.addEventListener('beforeunload', () => {
+  if (unsubOrdenes) unsubOrdenes();
+});

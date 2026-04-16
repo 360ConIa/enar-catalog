@@ -9,7 +9,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
-  getFirestore, collection, doc, getDoc, getDocs, setDoc, query, where, orderBy
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, query, where, orderBy, limit
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import {
   getAuth, onAuthStateChanged, signOut
@@ -76,7 +76,7 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     const perfil = userDoc.data();
-    const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin';
+    const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin' || perfil.rol === 'gestor';
     esAdminReportes = esAdmin;
     const esVendedor = perfil.rol === 'vendedor';
 
@@ -112,9 +112,9 @@ $('btnLogout').addEventListener('click', async () => {
 async function cargarDatos() {
   try {
     const [ordenesSnap, metricasSnap, productosSnap, vendedoresSnap, comisionDoc, clientesSnap] = await Promise.all([
-      getDocs(query(collection(db, 'ordenes'), orderBy('created_at', 'desc'))),
+      getDocs(query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500))),
       getDocs(collection(db, 'metricas_clientes')),
-      getDocs(collection(db, 'productos')),
+      getDocs(query(collection(db, 'productos'), where('activo', '==', true))),
       getDocs(query(collection(db, 'usuarios'), where('rol', 'in', ['vendedor', 'admin']))),
       getDoc(doc(db, 'configuracion', 'comisiones')),
       getDocs(query(collection(db, 'usuarios'), where('estado', '==', 'aprobado')))

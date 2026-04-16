@@ -87,7 +87,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   const perfil = userDoc.data();
-  const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin';
+  const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin' || perfil.rol === 'gestor';
   const esDespachos = perfil.rol === 'despachos';
 
   if (!esAdmin && !esDespachos) {

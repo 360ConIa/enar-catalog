@@ -63,7 +63,7 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     const perfil = userDoc.data();
-    const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin';
+    const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin' || perfil.rol === 'gestor';
     const esCRM = esAdmin || ['vendedor', 'despachos', 'gestor'].includes(perfil.rol);
 
     if (!esCRM) {
@@ -95,12 +95,13 @@ async function cargarDashboard(user, perfil, esAdmin) {
     // Cargar órdenes según rol
     let ordenesQuery;
     if (esAdmin || perfil.rol === 'despachos') {
-      ordenesQuery = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'));
+      ordenesQuery = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(200));
     } else {
       ordenesQuery = query(
         collection(db, 'ordenes'),
         where('creadaPor', '==', user.uid),
-        orderBy('created_at', 'desc')
+        orderBy('created_at', 'desc'),
+        limit(200)
       );
     }
 

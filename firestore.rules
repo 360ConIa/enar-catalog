@@ -101,7 +101,7 @@ service cloud.firestore {
         isUserManager()
       );
 
-      // Solo admin puede eliminar
+      // Solo admin puede eliminar usuarios
       allow delete: if isAdmin();
 
       // Sedes: subcollection de cada usuario
@@ -110,6 +110,7 @@ service cloud.firestore {
           request.auth.uid == userId || isCRM()
         );
         allow create, update: if isAdmin() || isUserManager();
+        // Solo admin puede eliminar sedes
         allow delete: if isAdmin();
       }
     }
@@ -129,7 +130,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && (
         (isApproved() && request.resource.data.user_id == request.auth.uid) ||
         isAdmin() ||
-        (isVendedor() && request.resource.data.creadaPor == request.auth.uid)
+        ((isVendedor() || isGestor()) && request.resource.data.creadaPor == request.auth.uid)
       );
 
       // Usuarios pueden leer sus propias órdenes, admin/gestores/vendedores/despachos pueden leer
@@ -148,7 +149,7 @@ service cloud.firestore {
         (isVendedor() && resource.data.creadaPor == request.auth.uid) ||
         (isApproved() && resource.data.user_id == request.auth.uid && resource.data.estado == 'pendiente');
 
-      // Solo admin puede eliminar
+      // Solo admin puede eliminar órdenes
       allow delete: if isAdmin();
     }
 
@@ -157,13 +158,13 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
-    // Métricas de clientes CRM: lectura para CRM users, escritura solo admin/functions
+    // Métricas de clientes CRM: lectura para CRM users, escritura solo admin
     match /metricas_clientes/{clienteId} {
       allow read: if isCRM();
       allow write: if isAdmin();
     }
 
-    // Chat de órdenes CRM: lectura/escritura para CRM users
+    // Chat de órdenes CRM: lectura/escritura para CRM users, eliminar solo admin
     match /chat_ordenes/{mensajeId} {
       allow read: if isCRM();
       allow create: if isCRM();
@@ -171,10 +172,10 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Despachos CRM: lectura para CRM users, escritura para admin/despachos
+    // Despachos CRM: lectura para CRM users, escritura para admin/gestor/despachos
     match /despachos/{despachoId} {
       allow read: if isCRM();
-      allow write: if isAdmin() || isDespachos();
+      allow write: if isAdmin() || isGestor() || isDespachos();
     }
   }
 }

@@ -659,6 +659,7 @@ function renderizarFila(producto) {
       <div class="imagen-container" data-id="${producto.id || ''}" data-producto='${productoDataStr}'>
         <img src="${imgOptimizada(imagenUrl, 150)}" alt="${tituloTexto}"
              class="tabla-thumbnail tabla-thumbnail-clickeable"
+             loading="lazy" decoding="async" width="150" height="150"
              referrerpolicy="no-referrer"
              onerror="this.style.display='none';this.parentElement.querySelector('.tabla-placeholder').style.display='flex';var ov=this.parentElement.querySelector('.imagen-hover-overlay');if(ov)ov.style.display='none';var bg=this.parentElement.querySelector('.imagen-badge');if(bg)bg.style.display='none';this.parentElement.style.cursor='default';this.parentElement.onclick=null;">
         <div class="tabla-placeholder" style="display:none;">Sin img</div>
