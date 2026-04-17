@@ -39,8 +39,12 @@ export function obtenerPrecioCliente(producto) {
     case TIPOS_CLIENTE.NEGOCIO:
       return producto.precio_negocio || 0;
     case TIPOS_CLIENTE.PERSONA_NATURAL:
-    default:
       return producto.precio_persona_natural || 0;
+    default: {
+      // Listas personalizadas: buscar campo dinámico precio_[tipoCliente]
+      const campoDinamico = producto['precio_' + usuarioState.tipoCliente];
+      return campoDinamico || producto.precio_persona_natural || 0;
+    }
   }
 }
 

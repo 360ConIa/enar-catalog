@@ -568,6 +568,10 @@ function obtenerPrecioCliente(producto, cliente) {
   const precioTipo = preciosPorTipo[tipoCliente];
   if (precioTipo && precioTipo > 0) return precioTipo;
 
+  // 1b. Listas personalizadas: buscar campo dinámico precio_[tipoCliente]
+  const campoDinamico = producto['precio_' + tipoCliente];
+  if (campoDinamico && campoDinamico > 0) return campoDinamico;
+
   // 2. Fallback: Precio por lista_precios (datos migrados)
   const listaPrecios = cliente?.lista_precios || cliente?.lista_precio || '';
   if (listaPrecios) {

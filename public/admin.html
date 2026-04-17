@@ -112,6 +112,10 @@
       background: white;
       color: #D9232D;
     }
+    .tooltip-formula:hover > span:last-child {
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
     .tab-content {
       display: none;
     }
@@ -782,6 +786,10 @@
           Productos
           <span class="badge" id="productosBadge">0</span>
         </button>
+        <button class="admin-tab" data-tab="listas-precios">
+          Listas de Precios
+          <span class="badge" id="listasBadge">0</span>
+        </button>
       </div>
 
       <!-- Tab: Usuarios -->
@@ -1011,8 +1019,196 @@
         </div>
       </div>
 
+      <!-- Tab: Listas de Precios -->
+      <div class="tab-content" id="tab-listas-precios">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="totalListas">0</div>
+            <div class="stat-label">Total Listas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number success" id="listasActivas">0</div>
+            <div class="stat-label">Activas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="listasPersonalizadas">0</div>
+            <div class="stat-label">Personalizadas</div>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="card-header card-header--rows">
+            <div class="card-header-row">
+              <span style="position:relative;display:inline-block;cursor:pointer;" class="tooltip-formula">
+                <i class="bi bi-info-circle" style="font-size:18px;color:#64748b;"></i>
+                <span style="visibility:hidden;opacity:0;position:absolute;top:130%;left:0;background:#1e293b;color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;white-space:nowrap;z-index:999;transition:opacity 0.2s;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+                  Fórmula: <strong>precio_lista × descuento_base × descuento_extra × (1 + IVA)</strong><br>
+                  Los IDs excepción no aplican descuento extra.
+                  <span style="position:absolute;bottom:100%;left:12px;border:6px solid transparent;border-bottom-color:#1e293b;"></span>
+                </span>
+              </span>
+            </div>
+            <div class="card-header-row">
+              <button class="btn-crear-usuario" onclick="abrirCrearLista()">+ Nueva Lista</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Campo Firestore</th>
+                  <th style="text-align:right;">Desc. Base</th>
+                  <th style="text-align:right;">Desc. Extra</th>
+                  <th style="text-align:right;">IVA</th>
+                  <th style="text-align:center;">IDs Excep.</th>
+                  <th style="text-align:center;">Estado</th>
+                  <th style="text-align:center;">Sistema</th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="listasBody">
+                <tr>
+                  <td colspan="9" class="empty-message">Cargando listas...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
+
+  <!-- Modal Crear/Editar Lista de Precios -->
+  <div class="modal-overlay" id="modalLista">
+    <div class="modal-content" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 id="modalListaTitulo">Nueva Lista de Precios</h3>
+        <button class="modal-close" onclick="cerrarModal('modalLista')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="listaError" style="background:#fee2e2;color:#dc2626;padding:10px;border-radius:6px;margin-bottom:15px;display:none;"></div>
+        <input type="hidden" id="listaEditId" value="">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="listaNombre">Nombre de la lista *</label>
+            <input type="text" id="listaNombre" placeholder="Ej: Distribuidor Premium" required>
+          </div>
+          <div class="form-group">
+            <label for="listaCampo">Campo Firestore *</label>
+            <input type="text" id="listaCampo" placeholder="Ej: precio_distribuidor_premium" required>
+            <small style="color:#64748b;font-size:11px;">Solo letras minúsculas, números y guión bajo. No se puede modificar después.</small>
+          </div>
+        </div>
+
+        <hr style="margin: 15px 0; border-color: #e5e7eb;">
+        <h4 style="font-size: 14px; color: #666; margin-bottom: 12px;">Factores de cálculo</h4>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="listaDescBase">Descuento Base (%) *</label>
+            <input type="number" id="listaDescBase" placeholder="48" min="0" max="100" step="0.01" required>
+            <small style="color:#64748b;font-size:11px;">Ej: 48 = 48% de descuento sobre precio_lista</small>
+          </div>
+          <div class="form-group">
+            <label for="listaDescExtra">Descuento Extra (%)</label>
+            <input type="number" id="listaDescExtra" placeholder="0" min="0" max="100" step="0.01" value="0">
+            <small style="color:#64748b;font-size:11px;">Opcional. No aplica a IDs excepción.</small>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="listaIva">IVA (%) *</label>
+            <input type="number" id="listaIva" placeholder="19" min="0" max="100" step="0.01" value="19" required>
+          </div>
+          <div class="form-group">
+            <label for="listaActiva">Estado</label>
+            <select id="listaActiva">
+              <option value="true">Activa</option>
+              <option value="false">Inactiva</option>
+            </select>
+          </div>
+        </div>
+
+        <hr style="margin: 15px 0; border-color: #e5e7eb;">
+        <h4 style="font-size: 14px; color: #666; margin-bottom: 12px;">IDs Excepción (no aplica descuento extra)</h4>
+
+        <div class="form-group">
+          <label for="listaIdsExcepcion">IDs de productos separados por coma o línea</label>
+          <textarea id="listaIdsExcepcion" rows="4" placeholder="RR, RS, IG201, TG500
+EQ, EX, EG
+-O-G500, -O-G01" style="font-family:monospace;font-size:13px;"></textarea>
+          <small style="color:#64748b;font-size:11px;" id="listaIdsExcepcionCount">0 IDs</small>
+        </div>
+
+        <div id="listaPreview" style="background:#f1f5f9;border-radius:8px;padding:12px;margin-top:12px;font-size:13px;">
+          <strong>Vista previa con precio_lista = $100,000:</strong>
+          <div style="margin-top:6px;font-family:monospace;" id="listaPreviewCalculo">—</div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalLista')">Cancelar</button>
+          <button class="btn-save" id="btnGuardarLista">Guardar Lista</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Aplicar Lista a Productos -->
+  <div class="modal-overlay" id="modalAplicarLista">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>Aplicar Lista a Productos</h3>
+        <button class="modal-close" onclick="cerrarModal('modalAplicarLista')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Se recalculará el campo <strong id="aplicarListaCampo">-</strong> en todos los productos activos usando la fórmula:</p>
+        <div style="background:#f1f5f9;border-radius:8px;padding:12px;margin:10px 0;font-family:monospace;font-size:13px;" id="aplicarListaFormula">—</div>
+        <p style="color:#dc2626;font-size:13px;">
+          <i class="bi bi-exclamation-triangle"></i>
+          Esta acción sobrescribirá los precios existentes en el campo indicado.
+        </p>
+        <div id="aplicarListaProgreso" style="display:none;margin-top:15px;">
+          <div style="background:#e2e8f0;border-radius:4px;height:10px;overflow:hidden;">
+            <div id="aplicarListaBar" style="background:linear-gradient(90deg,#1e3a8a,#3b82f6);height:100%;width:0%;transition:width 0.3s;"></div>
+          </div>
+          <p style="font-size:12px;color:#64748b;margin-top:6px;" id="aplicarListaStatus">Procesando...</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalAplicarLista')">Cancelar</button>
+          <button class="btn-save" id="btnConfirmarAplicarLista">Aplicar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Eliminar Lista -->
+  <div class="modal-overlay" id="modalEliminarLista">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);">
+        <h3>Eliminar Lista</h3>
+        <button class="modal-close" onclick="cerrarModal('modalEliminarLista')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <i class="bi bi-exclamation-triangle" style="font-size: 48px; color: #dc2626;"></i>
+        </div>
+        <p style="text-align: center; margin-bottom: 15px;">
+          ¿Eliminar la lista <strong id="eliminarListaNombre">-</strong>?
+        </p>
+        <p style="text-align: center; color: #666; font-size: 13px;">
+          El campo <code id="eliminarListaCampo">-</code> no se eliminará de los productos existentes.
+        </p>
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalEliminarLista')">Cancelar</button>
+          <button class="btn-save" id="btnConfirmarEliminarLista">Eliminar Lista</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Crear/Editar Producto -->
   <div class="modal-overlay" id="modalProducto">
@@ -1156,11 +1352,9 @@
         <p style="margin-bottom: 15px;">Usuario: <strong id="aprobarNombre">-</strong></p>
 
         <div class="form-group">
-          <label for="aprobarTipo">Tipo de Cliente</label>
+          <label for="aprobarTipo">Tipo de Cliente / Lista de Precios</label>
           <select id="aprobarTipo">
             <option value="persona_natural">Persona Natural</option>
-            <option value="negocio">Negocio</option>
-            <option value="mayorista">Mayorista</option>
           </select>
         </div>
 
@@ -1207,11 +1401,9 @@
             </select>
           </div>
           <div class="form-group">
-            <label for="editarTipoCliente">Tipo de Cliente *</label>
+            <label for="editarTipoCliente">Tipo de Cliente / Lista de Precios *</label>
             <select id="editarTipoCliente">
               <option value="persona_natural">Persona Natural</option>
-              <option value="negocio">Negocio</option>
-              <option value="mayorista">Mayorista</option>
             </select>
           </div>
         </div>
@@ -1615,11 +1807,9 @@
             </select>
           </div>
           <div class="form-group">
-            <label for="nuevoTipoCliente">Tipo de Cliente *</label>
+            <label for="nuevoTipoCliente">Tipo de Cliente / Lista de Precios *</label>
             <select id="nuevoTipoCliente">
               <option value="persona_natural">Persona Natural</option>
-              <option value="negocio">Negocio</option>
-              <option value="mayorista">Mayorista</option>
             </select>
           </div>
         </div>
@@ -1679,7 +1869,7 @@
   <script type="module">
     import { initializeApp, deleteApp, getApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-    import { getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, collection, getDocs, addDoc, query, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, collection, getDocs, addDoc, query, where, writeBatch } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
     import {
       esAdmin,
@@ -3333,6 +3523,430 @@
       }
     });
 
+    // ═══════════ LISTAS DE PRECIOS ═══════════
+    let listasPrecios = [];
+    const LISTAS_DOC_REF = () => doc(db, 'configuracion', 'listas_precios');
+
+    // Listas del sistema que siempre deben existir
+    const LISTAS_SISTEMA_SEED = [
+      {
+        id: 'mayorista',
+        nombre: 'Mayorista',
+        campo_firestore: 'precio_mayorista',
+        descuento_base: 48,
+        descuento_extra: 3,
+        iva: 19,
+        ids_excepcion: [],
+        activa: true,
+        sistema: true
+      },
+      {
+        id: 'negocio',
+        nombre: 'Negocio',
+        campo_firestore: 'precio_negocio',
+        descuento_base: 48,
+        descuento_extra: 3,
+        iva: 19,
+        ids_excepcion: [
+          'RR','RS','RÑ','RD','RZ','RX',
+          'IG201','IG300','IG500','IG100','IG600','IG917','IG400',
+          'EQ','EX','EG','EC',
+          'R-AR','R-AS','R-AÑ','R-AD','R-AZ','R-AX',
+          'TG500','TG01','TG100','TG600','TG300','TG200','TG400','TG201',
+          '-B-G','-Q-X','-Q-G','-Q-C',
+          '-O-G500','-O-G01','-O-G400','-O-G300','-O-G600','-O-G200','-O-G100','-O-G06'
+        ],
+        activa: true,
+        sistema: true
+      },
+      {
+        id: 'persona_natural',
+        nombre: 'Persona Natural',
+        campo_firestore: 'precio_persona_natural',
+        descuento_base: 46,
+        descuento_extra: 0,
+        iva: 19,
+        ids_excepcion: [],
+        activa: true,
+        sistema: true
+      }
+    ];
+
+    async function cargarListas() {
+      try {
+        const snap = await getDoc(LISTAS_DOC_REF());
+        if (!snap.exists()) {
+          // Primer uso: crear doc con las 3 listas del sistema
+          await setDoc(LISTAS_DOC_REF(), { listas: LISTAS_SISTEMA_SEED });
+          listasPrecios = [...LISTAS_SISTEMA_SEED];
+        } else {
+          listasPrecios = snap.data().listas || [];
+          // Asegurar que las 3 listas del sistema existan
+          let cambios = false;
+          LISTAS_SISTEMA_SEED.forEach(seed => {
+            if (!listasPrecios.find(l => l.id === seed.id)) {
+              listasPrecios.push(seed);
+              cambios = true;
+            }
+          });
+          if (cambios) {
+            await setDoc(LISTAS_DOC_REF(), { listas: listasPrecios });
+          }
+        }
+
+        const activas = listasPrecios.filter(l => l.activa).length;
+        const personalizadas = listasPrecios.filter(l => !l.sistema).length;
+        document.getElementById('totalListas').textContent = listasPrecios.length;
+        document.getElementById('listasActivas').textContent = activas;
+        document.getElementById('listasPersonalizadas').textContent = personalizadas;
+        document.getElementById('listasBadge').textContent = listasPrecios.length;
+
+        renderizarListas();
+        poblarSelectsTipoCliente();
+      } catch (error) {
+        console.error('Error cargando listas:', error);
+      }
+    }
+
+    function poblarSelectsTipoCliente() {
+      const selects = ['aprobarTipo', 'editarTipoCliente', 'nuevoTipoCliente'];
+      const activas = listasPrecios.filter(l => l.activa);
+      selects.forEach(id => {
+        const select = document.getElementById(id);
+        if (!select) return;
+        const valorActual = select.value;
+        select.innerHTML = activas.map(l =>
+          `<option value="${l.id}">${l.nombre}</option>`
+        ).join('');
+        if (valorActual) select.value = valorActual;
+      });
+    }
+
+    function calcularPrecioEjemplo(lista, precioLista, esExcepcion = false) {
+      const dBase = (100 - lista.descuento_base) / 100;
+      const dExtra = esExcepcion ? 1 : (100 - lista.descuento_extra) / 100;
+      const iva = 1 + (lista.iva / 100);
+      return Math.round(precioLista * dBase * dExtra * iva);
+    }
+
+    function renderizarListas() {
+      const body = document.getElementById('listasBody');
+      if (listasPrecios.length === 0) {
+        body.innerHTML = '<tr><td colspan="9" class="empty-message">No hay listas</td></tr>';
+        return;
+      }
+
+      body.innerHTML = listasPrecios.map(l => `
+        <tr>
+          <td style="font-weight:500;">${l.nombre}</td>
+          <td><code style="font-size:12px;background:#f1f5f9;padding:2px 6px;border-radius:4px;">${l.campo_firestore}</code></td>
+          <td style="text-align:right;">${l.descuento_base}%</td>
+          <td style="text-align:right;">${l.descuento_extra || 0}%</td>
+          <td style="text-align:right;">${l.iva}%</td>
+          <td style="text-align:center;">${(l.ids_excepcion || []).length}</td>
+          <td style="text-align:center;">
+            <span class="status-badge ${l.activa ? 'status-aprobado' : 'status-rechazado'}">
+              ${l.activa ? 'Activa' : 'Inactiva'}
+            </span>
+          </td>
+          <td style="text-align:center;">
+            ${l.sistema ? '<span class="status-badge status-aprobado">Sí</span>' : '<span class="status-badge">No</span>'}
+          </td>
+          <td class="text-center">
+            <button class="btn-action" onclick="abrirAplicarLista('${l.id}')" title="Aplicar a productos">
+              <i class="bi bi-arrow-repeat"></i>
+            </button>
+            <button class="btn-action" onclick="abrirEditarLista('${l.id}')" title="Editar">
+              <i class="bi bi-pencil"></i>
+            </button>
+            ${!l.sistema ? `
+              <button class="btn-action" onclick="abrirEliminarLista('${l.id}')" title="Eliminar" style="color:#dc2626;">
+                <i class="bi bi-trash"></i>
+              </button>
+            ` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function parseIdsExcepcion(texto) {
+      return texto
+        .split(/[,\n]/)
+        .map(s => s.trim())
+        .filter(Boolean);
+    }
+
+    function actualizarPreviewLista() {
+      const dBase = parseFloat(document.getElementById('listaDescBase').value) || 0;
+      const dExtra = parseFloat(document.getElementById('listaDescExtra').value) || 0;
+      const iva = parseFloat(document.getElementById('listaIva').value) || 0;
+      const ids = parseIdsExcepcion(document.getElementById('listaIdsExcepcion').value);
+
+      document.getElementById('listaIdsExcepcionCount').textContent = ids.length + ' IDs';
+
+      const p = 100000;
+      const pNormal = calcularPrecioEjemplo({ descuento_base: dBase, descuento_extra: dExtra, iva }, p, false);
+      const pExcep = calcularPrecioEjemplo({ descuento_base: dBase, descuento_extra: dExtra, iva }, p, true);
+
+      let html = `precio_lista = $${p.toLocaleString('es-CO')}<br>`;
+      html += `→ Normal: <strong>$${pNormal.toLocaleString('es-CO')}</strong>`;
+      if (dExtra > 0 && ids.length > 0) {
+        html += ` · Excepción (sin ${dExtra}% extra): <strong>$${pExcep.toLocaleString('es-CO')}</strong>`;
+      }
+      document.getElementById('listaPreviewCalculo').innerHTML = html;
+    }
+
+    window.abrirCrearLista = function() {
+      document.getElementById('modalListaTitulo').textContent = 'Nueva Lista de Precios';
+      document.getElementById('listaEditId').value = '';
+      document.getElementById('listaError').style.display = 'none';
+      document.getElementById('listaNombre').value = '';
+      document.getElementById('listaCampo').value = '';
+      document.getElementById('listaCampo').disabled = false;
+      document.getElementById('listaDescBase').value = '';
+      document.getElementById('listaDescExtra').value = '0';
+      document.getElementById('listaIva').value = '19';
+      document.getElementById('listaActiva').value = 'true';
+      document.getElementById('listaIdsExcepcion').value = '';
+      document.getElementById('listaNombre').readOnly = false;
+      actualizarPreviewLista();
+      document.getElementById('modalLista').classList.add('active');
+    };
+
+    window.abrirEditarLista = function(id) {
+      const l = listasPrecios.find(x => x.id === id);
+      if (!l) return;
+
+      document.getElementById('modalListaTitulo').textContent = 'Editar Lista: ' + l.nombre;
+      document.getElementById('listaEditId').value = id;
+      document.getElementById('listaError').style.display = 'none';
+      document.getElementById('listaNombre').value = l.nombre;
+      document.getElementById('listaCampo').value = l.campo_firestore;
+      document.getElementById('listaCampo').disabled = true;
+      document.getElementById('listaNombre').readOnly = !!l.sistema;
+      document.getElementById('listaDescBase').value = l.descuento_base;
+      document.getElementById('listaDescExtra').value = l.descuento_extra || 0;
+      document.getElementById('listaIva').value = l.iva;
+      document.getElementById('listaActiva').value = l.activa ? 'true' : 'false';
+      document.getElementById('listaIdsExcepcion').value = (l.ids_excepcion || []).join(', ');
+      actualizarPreviewLista();
+      document.getElementById('modalLista').classList.add('active');
+    };
+
+    document.getElementById('btnGuardarLista').addEventListener('click', async () => {
+      const errorEl = document.getElementById('listaError');
+      const nombre = document.getElementById('listaNombre').value.trim();
+      const campoInput = document.getElementById('listaCampo').value.trim();
+      const dBase = parseFloat(document.getElementById('listaDescBase').value);
+      const dExtra = parseFloat(document.getElementById('listaDescExtra').value) || 0;
+      const iva = parseFloat(document.getElementById('listaIva').value);
+      const activa = document.getElementById('listaActiva').value === 'true';
+      const idsExcepcion = parseIdsExcepcion(document.getElementById('listaIdsExcepcion').value);
+
+      if (!nombre || !campoInput || isNaN(dBase) || isNaN(iva)) {
+        errorEl.textContent = 'Nombre, Campo Firestore, Descuento Base e IVA son obligatorios.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      // Validar formato del campo: solo letras minúsculas, números y _
+      if (!/^[a-z][a-z0-9_]*$/.test(campoInput)) {
+        errorEl.textContent = 'Campo Firestore solo puede contener letras minúsculas, números y guión bajo (ej: precio_premium).';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const editId = document.getElementById('listaEditId').value;
+      const btn = document.getElementById('btnGuardarLista');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+      errorEl.style.display = 'none';
+
+      try {
+        if (editId) {
+          // Editar existente
+          const idx = listasPrecios.findIndex(l => l.id === editId);
+          if (idx < 0) throw new Error('Lista no encontrada');
+          const existente = listasPrecios[idx];
+          listasPrecios[idx] = {
+            ...existente,
+            nombre: existente.sistema ? existente.nombre : nombre,
+            descuento_base: dBase,
+            descuento_extra: dExtra,
+            iva,
+            ids_excepcion: idsExcepcion,
+            activa
+          };
+        } else {
+          // Crear nueva
+          const nuevoId = campoInput.replace(/^precio_/, '') || campoInput;
+          if (listasPrecios.find(l => l.id === nuevoId || l.campo_firestore === campoInput)) {
+            errorEl.textContent = 'Ya existe una lista con ese ID o campo Firestore.';
+            errorEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Guardar Lista';
+            return;
+          }
+          listasPrecios.push({
+            id: nuevoId,
+            nombre,
+            campo_firestore: campoInput,
+            descuento_base: dBase,
+            descuento_extra: dExtra,
+            iva,
+            ids_excepcion: idsExcepcion,
+            activa,
+            sistema: false
+          });
+        }
+
+        await setDoc(LISTAS_DOC_REF(), { listas: listasPrecios });
+        cerrarModal('modalLista');
+        mostrarMensaje(`Lista "${nombre}" guardada`);
+        await cargarListas();
+      } catch (error) {
+        console.error('Error guardando lista:', error);
+        errorEl.textContent = 'Error: ' + error.message;
+        errorEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar Lista';
+      }
+    });
+
+    // Listeners de preview
+    ['listaDescBase','listaDescExtra','listaIva','listaIdsExcepcion'].forEach(id => {
+      document.addEventListener('input', (e) => {
+        if (e.target.id === id) actualizarPreviewLista();
+      });
+    });
+
+    // Eliminar lista
+    let listaAEliminar = null;
+    window.abrirEliminarLista = function(id) {
+      listaAEliminar = listasPrecios.find(l => l.id === id);
+      if (!listaAEliminar || listaAEliminar.sistema) return;
+      document.getElementById('eliminarListaNombre').textContent = listaAEliminar.nombre;
+      document.getElementById('eliminarListaCampo').textContent = listaAEliminar.campo_firestore;
+      document.getElementById('modalEliminarLista').classList.add('active');
+    };
+
+    document.getElementById('btnConfirmarEliminarLista').addEventListener('click', async () => {
+      if (!listaAEliminar) return;
+      const btn = document.getElementById('btnConfirmarEliminarLista');
+      btn.disabled = true;
+      btn.textContent = 'Eliminando...';
+      try {
+        listasPrecios = listasPrecios.filter(l => l.id !== listaAEliminar.id);
+        await setDoc(LISTAS_DOC_REF(), { listas: listasPrecios });
+        cerrarModal('modalEliminarLista');
+        mostrarMensaje(`Lista "${listaAEliminar.nombre}" eliminada`);
+        await cargarListas();
+      } catch (error) {
+        alert('Error al eliminar: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Eliminar Lista';
+      }
+    });
+
+    // ═══════════ APLICAR LISTA A PRODUCTOS (recálculo masivo) ═══════════
+    let listaAAplicar = null;
+
+    window.abrirAplicarLista = function(id) {
+      listaAAplicar = listasPrecios.find(l => l.id === id);
+      if (!listaAAplicar) return;
+      document.getElementById('aplicarListaCampo').textContent = listaAAplicar.campo_firestore;
+      const dB = (100 - listaAAplicar.descuento_base) / 100;
+      const dE = (100 - listaAAplicar.descuento_extra) / 100;
+      const iva = 1 + listaAAplicar.iva / 100;
+      const idsCount = (listaAAplicar.ids_excepcion || []).length;
+      let formula = `Normal: precio_lista × ${dB.toFixed(4)} × ${dE.toFixed(4)} × ${iva.toFixed(2)}`;
+      if (idsCount > 0) {
+        formula += `<br>Excepción (${idsCount} IDs): precio_lista × ${dB.toFixed(4)} × ${iva.toFixed(2)}`;
+      }
+      document.getElementById('aplicarListaFormula').innerHTML = formula;
+      document.getElementById('aplicarListaProgreso').style.display = 'none';
+      document.getElementById('aplicarListaBar').style.width = '0%';
+      document.getElementById('aplicarListaStatus').textContent = 'Procesando...';
+      document.getElementById('btnConfirmarAplicarLista').disabled = false;
+      document.getElementById('btnConfirmarAplicarLista').textContent = 'Aplicar';
+      document.getElementById('modalAplicarLista').classList.add('active');
+    };
+
+    document.getElementById('btnConfirmarAplicarLista').addEventListener('click', async () => {
+      if (!listaAAplicar) return;
+      const btn = document.getElementById('btnConfirmarAplicarLista');
+      const progreso = document.getElementById('aplicarListaProgreso');
+      const bar = document.getElementById('aplicarListaBar');
+      const status = document.getElementById('aplicarListaStatus');
+
+      btn.disabled = true;
+      btn.textContent = 'Procesando...';
+      progreso.style.display = 'block';
+      status.textContent = 'Leyendo productos activos...';
+
+      try {
+        const snap = await getDocs(query(collection(db, 'productos'), where('activo', '==', true)));
+        const total = snap.size;
+        const idsExcepcion = new Set(listaAAplicar.ids_excepcion || []);
+        const dBase = (100 - listaAAplicar.descuento_base) / 100;
+        const dExtra = (100 - listaAAplicar.descuento_extra) / 100;
+        const iva = 1 + listaAAplicar.iva / 100;
+        const campo = listaAAplicar.campo_firestore;
+
+        const updates = [];
+        snap.forEach(docSnap => {
+          const data = docSnap.data();
+          const pl = data.precio_lista || 0;
+          if (pl === 0) return;
+
+          const esExcep = idsExcepcion.has(docSnap.id);
+          const nuevoPrecio = esExcep
+            ? Math.round(pl * dBase * iva)
+            : Math.round(pl * dBase * dExtra * iva);
+
+          const actual = Math.round(data[campo] || 0);
+          if (actual !== nuevoPrecio) {
+            updates.push({ ref: docSnap.ref, valor: nuevoPrecio });
+          }
+        });
+
+        status.textContent = `Aplicando a ${updates.length} de ${total} productos...`;
+        bar.style.width = '10%';
+
+        // Batch updates de 500
+        const BATCH_SIZE = 500;
+        let procesados = 0;
+        for (let i = 0; i < updates.length; i += BATCH_SIZE) {
+          const batch = writeBatch(db);
+          const chunk = updates.slice(i, i + BATCH_SIZE);
+          chunk.forEach(u => batch.update(u.ref, { [campo]: u.valor }));
+          await batch.commit();
+          procesados += chunk.length;
+          const pct = 10 + Math.round((procesados / Math.max(updates.length, 1)) * 90);
+          bar.style.width = pct + '%';
+          status.textContent = `Procesados ${procesados} de ${updates.length}...`;
+        }
+
+        bar.style.width = '100%';
+        status.textContent = `✅ ${updates.length} productos actualizados`;
+        status.style.color = '#16a34a';
+        btn.textContent = 'Completado';
+        mostrarMensaje(`${updates.length} productos actualizados con lista "${listaAAplicar.nombre}"`);
+
+        // Recargar productos en memoria
+        await cargarProductos();
+        setTimeout(() => cerrarModal('modalAplicarLista'), 2000);
+      } catch (error) {
+        console.error('Error aplicando lista:', error);
+        status.textContent = 'Error: ' + error.message;
+        status.style.color = '#dc2626';
+        btn.disabled = false;
+        btn.textContent = 'Aplicar';
+      }
+    });
+
     // Filtros
     document.getElementById('buscarUsuario').addEventListener('input', renderizarUsuarios);
     document.getElementById('buscarOrden').addEventListener('input', renderizarOrdenes);
@@ -3378,7 +3992,7 @@
       // Limpiar de nuevo tras breve delay (el navegador puede autocompletar después)
       setTimeout(() => { campoBusqueda.value = ''; renderizarUsuarios(); }, 300);
 
-      await Promise.all([cargarUsuarios(), cargarVendedores(), cargarProductos()]);
+      await Promise.all([cargarUsuarios(), cargarVendedores(), cargarProductos(), cargarListas()]);
       await cargarOrdenes();
     });
   </script>

@@ -74,7 +74,7 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   userPerfil = perfil;
 
-  await cargarClientes();
+  await Promise.all([cargarClientes(), cargarListasPreciosParaSelect()]);
   initEventListeners();
 
   $('loadingScreen').style.display = 'none';
@@ -85,6 +85,32 @@ $('btnLogout').addEventListener('click', async () => {
   await signOut(auth);
   window.location.href = 'index.html';
 });
+
+// ═══════════ LISTAS PRECIOS → SELECT TIPO ═══════════
+async function cargarListasPreciosParaSelect() {
+  try {
+    const snap = await getDoc(doc(db, 'configuracion', 'listas_precios'));
+    if (!snap.exists()) return;
+    const listas = (snap.data().listas || []).filter(l => l.activa);
+    const select = $('inputTipo');
+    if (!select) return;
+    // IDs que ya existen como options estáticas
+    const existentes = new Set(Array.from(select.options).map(o => o.value));
+    listas.forEach(l => {
+      if (!existentes.has(l.id)) {
+        const opt = document.createElement('option');
+        opt.value = l.id;
+        opt.textContent = l.nombre;
+        // Insertar antes de "Otro" si existe
+        const otroOpt = Array.from(select.options).find(o => o.value === 'Otro');
+        if (otroOpt) select.insertBefore(opt, otroOpt);
+        else select.appendChild(opt);
+      }
+    });
+  } catch (e) {
+    console.error('Error cargando listas para select:', e);
+  }
+}
 
 // ═══════════ CARGAR CLIENTES ═══════════
 async function cargarClientes() {
