@@ -2131,6 +2131,12 @@ EQ, EX, EG
 
       if (resultado.success || resultado.usuarios) {
         usuarios = resultado.usuarios || [];
+        // Vendedores: solo ver clientes creados por ellos
+        if (!isAdminUser && !isManager && currentUserEmail) {
+          usuarios = usuarios.filter(u =>
+            u.creado_por === currentUserEmail.toLowerCase()
+          );
+        }
         actualizarStatsUsuarios();
         renderizarUsuarios();
       }
@@ -2954,6 +2960,13 @@ EQ, EX, EG
 
       if (resultado.success) {
         ordenes = resultado.ordenes;
+        // Vendedores: solo ver órdenes creadas por ellos
+        if (!isAdminUser && !isManager && currentUserEmail) {
+          const uid = auth.currentUser?.uid;
+          ordenes = ordenes.filter(o =>
+            o.creadaPor === uid || o.creadaPorEmail === currentUserEmail
+          );
+        }
         actualizarStatsOrdenes();
         renderizarOrdenes();
       }
@@ -3964,14 +3977,24 @@ EQ, EX, EG
       isAdminUser = esAdmin(user);
       currentUserEmail = user.email;
 
-      // Obtener datos del usuario para verificar rol gestor
+      // Obtener datos del usuario para verificar rol gestor o vendedor
       const datosUsr = await obtenerDatosUsuario(user.uid);
       const userData = datosUsr.success ? datosUsr.data : null;
       isManager = esUserManager(user, userData);
+      const esVendedor = userData && userData.rol === 'vendedor';
 
-      if (!isAdminUser && !isManager) {
+      if (!isAdminUser && !isManager && !esVendedor) {
         noAccess.style.display = 'block';
         return;
+      }
+
+      // Vendedores: ocultar pestañas Productos y Listas de Precios
+      if (esVendedor) {
+        document.querySelectorAll('.admin-tab').forEach(tab => {
+          if (tab.dataset.tab === 'productos' || tab.dataset.tab === 'listas-precios') {
+            tab.style.display = 'none';
+          }
+        });
       }
 
       adminPanel.style.display = 'block';
@@ -3983,7 +4006,7 @@ EQ, EX, EG
         navUserName.innerHTML = '<i class="bi bi-person-circle"></i> ' + displayName + ' <i class="bi bi-caret-down-fill"></i>';
         localStorage.setItem('enar_user_name', displayName);
         localStorage.setItem('enar_user_rol', userData.rol || 'cliente');
-        localStorage.setItem('enar_user_privileged', (isAdminUser || isManager) ? '1' : '0');
+        localStorage.setItem('enar_user_privileged', (isAdminUser || isManager || esVendedor) ? '1' : '0');
       }
 
       // Limpiar campo de búsqueda (evitar autocomplete del navegador)
@@ -3992,7 +4015,11 @@ EQ, EX, EG
       // Limpiar de nuevo tras breve delay (el navegador puede autocompletar después)
       setTimeout(() => { campoBusqueda.value = ''; renderizarUsuarios(); }, 300);
 
-      await Promise.all([cargarUsuarios(), cargarVendedores(), cargarProductos(), cargarListas()]);
+      const cargaInicial = [cargarUsuarios(), cargarVendedores()];
+      if (isAdminUser || isManager) {
+        cargaInicial.push(cargarProductos(), cargarListas());
+      }
+      await Promise.all(cargaInicial);
       await cargarOrdenes();
     });
   </script>

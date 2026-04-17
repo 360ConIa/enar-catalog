@@ -275,9 +275,79 @@
         <button class="crm-modal-close" onclick="cerrarModal('modalBuscarCliente')">&times;</button>
       </div>
       <div class="crm-modal-body">
-        <input type="text" class="crm-input" id="inputBuscarCliente" placeholder="Buscar por nombre, NIT, email..." style="width:100%;margin-bottom:16px;">
+        <div style="display:flex;gap:10px;margin-bottom:16px;">
+          <input type="text" class="crm-input" id="inputBuscarCliente" placeholder="Buscar por nombre, NIT, email..." style="flex:1;">
+          <button class="crm-btn crm-btn--primary" onclick="abrirCrearClienteB2B()" style="white-space:nowrap;font-size:0.82rem;padding:8px 14px;">
+            <i class="bi bi-person-plus"></i> Nuevo
+          </button>
+        </div>
         <div id="clienteResultados" style="max-height:400px;overflow-y:auto;">
           <div class="crm-empty" style="padding:30px;"><i class="bi bi-people"></i><p>Los resultados aparecerán aquí</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Crear/Editar Cliente -->
+  <div id="modalClienteB2B" class="crm-modal-overlay">
+    <div class="crm-modal" style="max-width:550px;">
+      <div class="crm-modal-header">
+        <h3 id="modalClienteB2BTitulo">Nuevo Cliente</h3>
+        <button class="crm-modal-close" onclick="cerrarModal('modalClienteB2B')">&times;</button>
+      </div>
+      <div class="crm-modal-body">
+        <div id="clienteB2BError" style="background:#fee2e2;color:#dc2626;padding:10px;border-radius:6px;margin-bottom:12px;display:none;"></div>
+        <input type="hidden" id="clienteB2BEditId" value="">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:500;color:#475569;margin-bottom:4px;display:block;">Nombre *</label>
+            <input type="text" class="crm-input" id="clienteB2BNombre" placeholder="Nombre completo" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:500;color:#475569;margin-bottom:4px;display:block;">NIT</label>
+            <input type="text" class="crm-input" id="clienteB2BNit" placeholder="Sin dígito verificación" style="width:100%;">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:500;color:#475569;margin-bottom:4px;display:block;">Email</label>
+            <input type="email" class="crm-input" id="clienteB2BEmail" placeholder="email@ejemplo.com" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:500;color:#475569;margin-bottom:4px;display:block;">Teléfono</label>
+            <input type="tel" class="crm-input" id="clienteB2BTelefono" placeholder="300 123 4567" style="width:100%;">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:500;color:#475569;margin-bottom:4px;display:block;">Ciudad</label>
+            <input type="text" class="crm-input" id="clienteB2BCiudad" placeholder="Ciudad" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:500;color:#475569;margin-bottom:4px;display:block;">Dirección</label>
+            <input type="text" class="crm-input" id="clienteB2BDireccion" placeholder="Dirección de entrega" style="width:100%;">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:500;color:#475569;margin-bottom:4px;display:block;">Razón Social</label>
+            <input type="text" class="crm-input" id="clienteB2BRazonSocial" placeholder="Empresa S.A.S" style="width:100%;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:500;color:#475569;margin-bottom:4px;display:block;">Nombre Comercial</label>
+            <input type="text" class="crm-input" id="clienteB2BNombreComercial" placeholder="Nombre comercial" style="width:100%;">
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px;">
+          <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalClienteB2B')">Cancelar</button>
+          <button class="crm-btn crm-btn--primary" id="btnGuardarClienteB2B">
+            <i class="bi bi-check-lg"></i> Guardar Cliente
+          </button>
         </div>
       </div>
     </div>

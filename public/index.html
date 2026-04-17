@@ -547,7 +547,7 @@
     });
 
     function actualizarNavegacion(user, data) {
-      const esPrivilegiado = user && (ADMIN_EMAILS.includes(user.email) || USER_MANAGER_EMAILS.includes(user.email) || data?.rol === 'gestor');
+      const esPrivilegiado = user && (ADMIN_EMAILS.includes(user.email) || USER_MANAGER_EMAILS.includes(user.email) || data?.rol === 'gestor' || data?.rol === 'vendedor');
 
       if (user && (data?.estado === 'aprobado' || esPrivilegiado)) {
         // Usuario aprobado o con permisos elevados - MOSTRAR CATÁLOGO

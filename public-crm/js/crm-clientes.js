@@ -40,6 +40,7 @@ const auth = getAuth(app);
 // ═══════════ STATE ═══════════
 let currentUser = null;
 let userPerfil = null;
+let esAdminUser = false;
 let todosLosClientes = [];
 let clientesFiltrados = [];
 let metricasMap = {};
@@ -64,6 +65,7 @@ onAuthStateChanged(auth, async (user) => {
   const perfil = userDoc.data();
   const esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin' || perfil.rol === 'gestor';
   const esVendedor = perfil.rol === 'vendedor';
+  esAdminUser = esAdmin;
 
   if (!esAdmin && !esVendedor) {
     $('loadingScreen').style.display = 'none';
@@ -394,6 +396,13 @@ function abrirModalCliente(clienteId) {
     $('inputEstado').value = 'aprobado';
   }
 
+  // Vendedores: deshabilitar campos sensibles
+  const camposSensibles = ['inputEstado', 'inputTipo'];
+  camposSensibles.forEach(id => {
+    const el = $(id);
+    if (el) el.disabled = !esAdminUser;
+  });
+
   $('modalCliente').classList.add('open');
 }
 
@@ -415,11 +424,19 @@ async function guardarCliente() {
     ubicacion: $('inputCiudad').value.trim(),
     ruta: $('inputRuta').value.trim(),
     lista_precios: $('inputListaPrecio').value,
-    tipo_cliente: $('inputTipo').value,
     segmento: $('inputSegmento').value,
-    estado: $('inputEstado').value,
     updated_at: new Date().toISOString()
   };
+
+  // Campos sensibles: solo admin/gestor pueden establecerlos
+  if (esAdminUser) {
+    datos.tipo_cliente = $('inputTipo').value;
+    datos.estado = $('inputEstado').value;
+  } else if (!editandoClienteId) {
+    // Vendedor creando cliente nuevo: defaults
+    datos.tipo_cliente = 'persona_natural';
+    datos.estado = 'pendiente';
+  }
 
   try {
     if (editandoClienteId) {

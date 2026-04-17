@@ -72,11 +72,12 @@ service cloud.firestore {
     // Usuarios: usuarios pueden leer/escribir su propio doc, admin puede todo
     match /usuarios/{userId} {
       // Cualquier autenticado puede crear su propio documento (registro)
-      // Admin y gestores pueden crear documentos de otros usuarios
+      // Admin, gestores y vendedores pueden crear documentos de otros usuarios
       allow create: if isAuthenticated() && (
         request.auth.uid == userId ||
         isAdmin() ||
-        isUserManager()
+        isUserManager() ||
+        isVendedor()
       );
 
       // GET (doc individual): usuario su propio doc, admin/gestor todos,
@@ -94,11 +95,13 @@ service cloud.firestore {
       allow list: if isAuthenticated();
 
       // Usuario puede actualizar su propio doc (datos limitados)
-      // Admin y gestor pueden actualizar cualquier usuario
+      // Admin, gestor y vendedores pueden actualizar cualquier usuario
+      // Vendedores no pueden cambiar campos sensibles (estado, tipo_cliente, etc.)
       allow update: if isAuthenticated() && (
         (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional'])) ||
         isAdmin() ||
-        isUserManager()
+        isUserManager() ||
+        (isVendedor() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional']))
       );
 
       // Solo admin puede eliminar usuarios

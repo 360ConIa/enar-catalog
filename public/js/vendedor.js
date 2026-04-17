@@ -10,7 +10,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
-  getFirestore, collection, doc, getDoc, addDoc, getDocs, updateDoc,
+  getFirestore, collection, doc, getDoc, addDoc, setDoc, getDocs, updateDoc,
   query, where, orderBy, limit, onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import {
@@ -108,7 +108,12 @@ onAuthStateChanged(auth, async (user) => {
     const displayName = (perfil.nombre || user.email).split(' ')[0];
     elNombre.innerHTML = '<i class="bi bi-person-circle"></i> ' + displayName + ' <i class="bi bi-caret-down-fill"></i>';
     localStorage.setItem('enar_user_name', displayName);
+    localStorage.setItem('enar_user_rol', perfil.rol || 'vendedor');
+    localStorage.setItem('enar_user_privileged', '1');
   }
+  // Mostrar menú Admin (pudo haberse ocultado por el script inline antes del auth)
+  const navAdmin = $('navAdmin');
+  if (navAdmin) navAdmin.style.display = '';
 
   await Promise.all([cargarClientes(), cargarProductos()]);
   cargarOrdenes();
@@ -501,20 +506,23 @@ function renderClienteResultados(resultados) {
   }
 
   container.innerHTML = resultados.map(c => `
-    <div class="crm-cliente-card" style="margin-bottom:8px;padding:12px;cursor:pointer;" data-uid="${c.uid}">
-      <div class="crm-cliente-header" style="margin-bottom:0;">
+    <div class="crm-cliente-card" style="margin-bottom:8px;padding:12px;cursor:pointer;display:flex;align-items:center;gap:8px;" data-uid="${c.uid}">
+      <div style="flex:1;display:flex;align-items:center;gap:10px;min-width:0;" class="crm-cliente-seleccionar">
         <div class="crm-cliente-avatar" style="width:36px;height:36px;font-size:0.9rem;">${(c.razon_social || c.nombre || 'C')[0].toUpperCase()}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:600;font-size:0.9rem;">${c.razon_social || c.nombre || c.email}</div>
           <div style="font-size:0.73rem;color:var(--crm-text-light);">NIT: ${c.nit || 'N/A'} · ${c.ubicacion || c.ciudad || '-'} · Lista: ${c.lista_precios || c.lista_precio || 'L1'}</div>
         </div>
       </div>
+      <button class="crm-btn-editar-cliente" data-uid="${c.uid}" onclick="event.stopPropagation();abrirEditarClienteB2B('${c.uid}')" style="background:none;border:1px solid #cbd5e1;border-radius:6px;padding:4px 8px;cursor:pointer;color:#64748b;font-size:0.8rem;" title="Editar cliente">
+        <i class="bi bi-pencil"></i>
+      </button>
     </div>
   `).join('');
 
-  container.querySelectorAll('.crm-cliente-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const uid = card.dataset.uid;
+  container.querySelectorAll('.crm-cliente-seleccionar').forEach(el => {
+    el.addEventListener('click', () => {
+      const uid = el.closest('.crm-cliente-card').dataset.uid;
       const cliente = resultados.find(c => c.uid === uid);
       if (cliente) seleccionarCliente(cliente);
     });
@@ -1156,6 +1164,94 @@ window.generarCSVOrden = function(ordenId) {
   URL.revokeObjectURL(url);
   showToast('CSV descargado', 'success');
 };
+
+// ═══════════ CREAR/EDITAR CLIENTE (B2B) ═══════════
+window.abrirCrearClienteB2B = function() {
+  $('modalClienteB2BTitulo').textContent = 'Nuevo Cliente';
+  $('clienteB2BEditId').value = '';
+  $('clienteB2BError').style.display = 'none';
+  $('clienteB2BNombre').value = '';
+  $('clienteB2BNit').value = '';
+  $('clienteB2BEmail').value = '';
+  $('clienteB2BTelefono').value = '';
+  $('clienteB2BCiudad').value = '';
+  $('clienteB2BDireccion').value = '';
+  $('clienteB2BRazonSocial').value = '';
+  $('clienteB2BNombreComercial').value = '';
+  $('modalClienteB2B').classList.add('open');
+};
+
+window.abrirEditarClienteB2B = function(uid) {
+  const cliente = todosLosClientes.find(c => c.uid === uid);
+  if (!cliente) return;
+  $('modalClienteB2BTitulo').textContent = 'Editar Cliente';
+  $('clienteB2BEditId').value = uid;
+  $('clienteB2BError').style.display = 'none';
+  $('clienteB2BNombre').value = cliente.nombre || cliente.razon_social || '';
+  $('clienteB2BNit').value = cliente.nit || '';
+  $('clienteB2BEmail').value = cliente.email || '';
+  $('clienteB2BTelefono').value = cliente.telefono || '';
+  $('clienteB2BCiudad').value = cliente.ubicacion || cliente.ciudad || '';
+  $('clienteB2BDireccion').value = cliente.direccion || '';
+  $('clienteB2BRazonSocial').value = cliente.razon_social || '';
+  $('clienteB2BNombreComercial').value = cliente.nombre_comercial || '';
+  $('modalClienteB2B').classList.add('open');
+};
+
+$('btnGuardarClienteB2B')?.addEventListener('click', async () => {
+  const errorEl = $('clienteB2BError');
+  const nombre = $('clienteB2BNombre').value.trim();
+  if (!nombre) {
+    errorEl.textContent = 'El nombre es obligatorio.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  const editId = $('clienteB2BEditId').value;
+  const btn = $('btnGuardarClienteB2B');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Guardando...';
+  errorEl.style.display = 'none';
+
+  const datos = {
+    nombre: nombre,
+    nit: $('clienteB2BNit').value.trim(),
+    email: $('clienteB2BEmail').value.trim(),
+    telefono: $('clienteB2BTelefono').value.trim(),
+    ubicacion: $('clienteB2BCiudad').value.trim(),
+    direccion: $('clienteB2BDireccion').value.trim(),
+    razon_social: $('clienteB2BRazonSocial').value.trim(),
+    nombre_comercial: $('clienteB2BNombreComercial').value.trim(),
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    if (editId) {
+      await updateDoc(doc(db, 'usuarios', editId), datos);
+      showToast('Cliente actualizado', 'success');
+    } else {
+      datos.tipo_cliente = 'persona_natural';
+      datos.estado = 'pendiente';
+      datos.rol = 'cliente';
+      datos.created_at = new Date().toISOString();
+      datos.creado_por = currentUser.email.toLowerCase();
+      const docRef = doc(collection(db, 'usuarios'));
+      await setDoc(docRef, datos);
+      showToast('Cliente creado exitosamente', 'success');
+    }
+    cerrarModal('modalClienteB2B');
+    await cargarClientes();
+    // Re-abrir modal de buscar cliente con datos actualizados
+    abrirBuscarCliente();
+  } catch (error) {
+    console.error('Error guardando cliente:', error);
+    errorEl.textContent = 'Error: ' + error.message;
+    errorEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check-lg"></i> Guardar Cliente';
+  }
+});
 
 // ═══════════ CLEANUP AL SALIR DE PÁGINA ═══════════
 window.addEventListener('beforeunload', () => {
