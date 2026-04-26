@@ -13,6 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -991,8 +992,11 @@
             <div class="card-header-row">
               <input type="text" id="buscarProducto" class="header-input header-input--search" placeholder="Buscar por código, nombre o marca...">
             </div>
-            <div class="card-header-row">
+            <div class="card-header-row" style="display:flex;gap:10px;flex-wrap:wrap;">
               <button class="btn-crear-usuario" onclick="abrirCrearProducto()">+ Nuevo Producto</button>
+              <button class="btn-importar-masivo" onclick="abrirActualizacionMasiva()">
+                <i class="bi bi-cloud-upload"></i> Actualización Masiva
+              </button>
             </div>
           </div>
           <div class="card-body">
@@ -1336,6 +1340,118 @@ EQ, EX, EG
         <div class="modal-actions">
           <button class="btn-cancel" onclick="cerrarModal('modalProducto')">Cancelar</button>
           <button class="btn-save" id="btnGuardarProducto">Guardar Producto</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Actualización Masiva de Productos -->
+  <div class="modal-overlay" id="modalActualizacionMasiva">
+    <div class="modal-content" style="max-width: 900px;">
+      <div class="modal-header">
+        <h3><i class="bi bi-cloud-upload"></i> Actualización Masiva de Productos</h3>
+        <button class="modal-close" onclick="cerrarActualizacionMasiva()">&times;</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Paso 1: Subir archivo -->
+        <div id="masivaPaso1">
+          <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px;margin-bottom:16px;">
+            <p style="margin:0 0 8px;font-size:13px;color:#0c4a6e;">
+              <strong>¿Cómo funciona?</strong>
+            </p>
+            <ol style="margin:0;padding-left:20px;font-size:13px;color:#0c4a6e;line-height:1.7;">
+              <li>Descarga la <strong>plantilla</strong> con todos los productos actuales.</li>
+              <li>Edita las columnas <code>cantidad</code> y/o <code>precio_lista</code> en Excel.</li>
+              <li>Sube el archivo (CSV o XLSX) — se hará una vista previa antes de aplicar.</li>
+              <li>Al aplicar, el sistema recalcula automáticamente los precios derivados (mayorista, negocio, persona natural, listas personalizadas) usando la fórmula configurada en <em>Listas de Precios</em>.</li>
+            </ol>
+          </div>
+
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+            <button class="btn-save" style="background:#10b981;" onclick="descargarPlantillaProductos()">
+              <i class="bi bi-download"></i> Descargar Plantilla (XLSX)
+            </button>
+            <button class="btn-save" style="background:#64748b;" onclick="descargarPlantillaProductosCSV()">
+              <i class="bi bi-filetype-csv"></i> Descargar Plantilla (CSV)
+            </button>
+          </div>
+
+          <div style="border:2px dashed #cbd5e1;border-radius:8px;padding:24px;text-align:center;cursor:pointer;" onclick="document.getElementById('masivaFileInput').click()">
+            <i class="bi bi-file-earmark-arrow-up" style="font-size:32px;color:#94a3b8;"></i>
+            <p style="margin:8px 0 4px;font-size:14px;color:#334155;font-weight:500;">Subir archivo actualizado</p>
+            <p style="margin:0;font-size:12px;color:#94a3b8;">CSV o XLSX — columnas requeridas: cod_interno, cantidad, precio_lista</p>
+            <input type="file" id="masivaFileInput" accept=".csv,.xlsx,.xls" style="display:none;" onchange="procesarArchivoMasivo(this)">
+          </div>
+
+          <div id="masivaFileError" style="display:none;margin-top:12px;padding:10px;background:#fee2e2;border:1px solid #fecaca;border-radius:6px;color:#991b1b;font-size:13px;"></div>
+        </div>
+
+        <!-- Paso 2: Vista previa -->
+        <div id="masivaPaso2" style="display:none;">
+          <div class="stats-grid" style="margin-bottom:16px;">
+            <div class="stat-card">
+              <div class="stat-number success" id="masivaEncontrados">0</div>
+              <div class="stat-label">Con cambios</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" id="masivaSinCambios">0</div>
+              <div class="stat-label">Sin cambios</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number warning" id="masivaNoEncontrados">0</div>
+              <div class="stat-label">No encontrados</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" style="color:#dc2626;" id="masivaErrores">0</div>
+              <div class="stat-label">Errores</div>
+            </div>
+          </div>
+
+          <div id="masivaNoEncontradosBox" style="display:none;margin-bottom:12px;padding:10px;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;font-size:12px;color:#78350f;">
+            <strong>Códigos no encontrados (se ignorarán):</strong>
+            <div id="masivaNoEncontradosList" style="margin-top:4px;font-family:monospace;"></div>
+          </div>
+
+          <div id="masivaErroresBox" style="display:none;margin-bottom:12px;padding:10px;background:#fee2e2;border:1px solid #fecaca;border-radius:6px;font-size:12px;color:#991b1b;">
+            <strong>Errores de formato:</strong>
+            <div id="masivaErroresList" style="margin-top:4px;"></div>
+          </div>
+
+          <div style="max-height: 400px; overflow-y: auto; border:1px solid #e5e7eb; border-radius:6px;">
+            <table class="data-table" style="margin:0;">
+              <thead style="position:sticky;top:0;background:#f8fafc;z-index:1;">
+                <tr>
+                  <th>Código</th>
+                  <th>Producto</th>
+                  <th style="text-align:right;">Stock</th>
+                  <th style="text-align:right;">Precio Lista</th>
+                  <th style="text-align:right;">Mayorista</th>
+                  <th style="text-align:right;">Negocio</th>
+                  <th style="text-align:right;">P. Natural</th>
+                </tr>
+              </thead>
+              <tbody id="masivaPreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Paso 3: Progreso -->
+        <div id="masivaPaso3" style="display:none;">
+          <div style="text-align:center;padding:20px 0;">
+            <div style="background:#e2e8f0;border-radius:8px;height:12px;overflow:hidden;margin-bottom:12px;">
+              <div id="masivaProgressBar" style="background:linear-gradient(90deg,#10b981,#0ea5e9);height:100%;width:0%;transition:width 0.3s;"></div>
+            </div>
+            <p id="masivaProgressStatus" style="font-size:14px;color:#334155;margin:0;">Procesando...</p>
+          </div>
+        </div>
+
+        <div class="modal-actions" id="masivaAcciones">
+          <button class="btn-cancel" onclick="cerrarActualizacionMasiva()" id="btnMasivaCancel">Cancelar</button>
+          <button class="btn-save" id="btnMasivaVolver" style="display:none;background:#64748b;" onclick="volverAPaso1Masiva()">← Volver</button>
+          <button class="btn-save" id="btnMasivaAplicar" style="display:none;" onclick="aplicarActualizacionMasiva()">
+            <i class="bi bi-check-circle"></i> Aplicar cambios
+          </button>
         </div>
       </div>
     </div>
@@ -1917,6 +2033,7 @@ EQ, EX, EG
     let currentUserEmail = null;
     let isAdminUser = false;
     let isManager = false;
+    let isVendedor = false;
 
     // Toggle input "Otro" para selects de producto
     window.toggleOtroInput = function(select, inputId) {
@@ -2131,10 +2248,12 @@ EQ, EX, EG
 
       if (resultado.success || resultado.usuarios) {
         usuarios = resultado.usuarios || [];
-        // Vendedores: solo ver clientes creados por ellos
-        if (!isAdminUser && !isManager && currentUserEmail) {
+        // Vendedores: solo ver clientes creados por ellos o asignados por admin
+        if (isVendedor && currentUserEmail) {
+          const vendedorUid = auth.currentUser?.uid;
           usuarios = usuarios.filter(u =>
-            u.creado_por === currentUserEmail.toLowerCase()
+            u.creado_por === currentUserEmail.toLowerCase() ||
+            u.vendedor_asignado === vendedorUid
           );
         }
         actualizarStatsUsuarios();
@@ -2961,7 +3080,7 @@ EQ, EX, EG
       if (resultado.success) {
         ordenes = resultado.ordenes;
         // Vendedores: solo ver órdenes creadas por ellos
-        if (!isAdminUser && !isManager && currentUserEmail) {
+        if (isVendedor && currentUserEmail) {
           const uid = auth.currentUser?.uid;
           ordenes = ordenes.filter(o =>
             o.creadaPor === uid || o.creadaPorEmail === currentUserEmail
@@ -3536,6 +3655,361 @@ EQ, EX, EG
       }
     });
 
+    // ═══════════ ACTUALIZACIÓN MASIVA DE PRODUCTOS ═══════════
+    let masivaCambios = [];   // [{ id, cod_interno, titulo, cantidadNueva, precioListaNuevo, derivados: {campo: valor}, actual: {...} }]
+    let masivaNoEncontrados = [];
+    let masivaErrores = [];
+
+    window.abrirActualizacionMasiva = function() {
+      masivaCambios = [];
+      masivaNoEncontrados = [];
+      masivaErrores = [];
+      document.getElementById('masivaFileInput').value = '';
+      document.getElementById('masivaFileError').style.display = 'none';
+      volverAPaso1Masiva();
+      document.getElementById('modalActualizacionMasiva').classList.add('active');
+    };
+
+    window.cerrarActualizacionMasiva = function() {
+      cerrarModal('modalActualizacionMasiva');
+    };
+
+    window.volverAPaso1Masiva = function() {
+      document.getElementById('masivaPaso1').style.display = 'block';
+      document.getElementById('masivaPaso2').style.display = 'none';
+      document.getElementById('masivaPaso3').style.display = 'none';
+      document.getElementById('btnMasivaVolver').style.display = 'none';
+      document.getElementById('btnMasivaAplicar').style.display = 'none';
+      document.getElementById('btnMasivaCancel').style.display = 'inline-block';
+      document.getElementById('btnMasivaCancel').textContent = 'Cancelar';
+    };
+
+    function buildTemplateRows() {
+      return productosAdmin
+        .filter(p => p.activo !== false)
+        .map(p => ({
+          cod_interno: p.cod_interno || '',
+          titulo: p.titulo || '',
+          cantidad: p.cantidad ?? 0,
+          precio_lista: p.precio_lista || 0
+        }));
+    }
+
+    window.descargarPlantillaProductos = function() {
+      if (typeof XLSX === 'undefined') {
+        alert('La librería de Excel no cargó. Recarga la página.');
+        return;
+      }
+      const rows = buildTemplateRows();
+      const ws = XLSX.utils.json_to_sheet(rows, { header: ['cod_interno', 'titulo', 'cantidad', 'precio_lista'] });
+      ws['!cols'] = [{ wch: 15 }, { wch: 40 }, { wch: 10 }, { wch: 14 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+      const fecha = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `plantilla-productos-${fecha}.xlsx`);
+    };
+
+    window.descargarPlantillaProductosCSV = function() {
+      const rows = buildTemplateRows();
+      const headers = ['cod_interno', 'titulo', 'cantidad', 'precio_lista'];
+      const escape = v => {
+        const s = String(v ?? '');
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      };
+      const csv = [headers.join(',')]
+        .concat(rows.map(r => headers.map(h => escape(r[h])).join(',')))
+        .join('\n');
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const fecha = new Date().toISOString().slice(0, 10);
+      a.download = `plantilla-productos-${fecha}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    function normalizarClaveColumna(k) {
+      return String(k || '').trim().toLowerCase().replace(/\s+/g, '_');
+    }
+
+    function calcularDerivadosProducto(codInterno, docId, precioLista) {
+      const derivados = {};
+      if (!Array.isArray(listasPrecios) || listasPrecios.length === 0) return derivados;
+      for (const lista of listasPrecios) {
+        if (!lista || lista.activa === false || !lista.campo_firestore) continue;
+        const dBase = (100 - (lista.descuento_base || 0)) / 100;
+        const dExtra = (100 - (lista.descuento_extra || 0)) / 100;
+        const iva = 1 + (lista.iva || 0) / 100;
+        const idsExcep = lista.ids_excepcion || [];
+        const esExcep = idsExcep.includes(docId) || idsExcep.includes(codInterno);
+        const nuevo = esExcep
+          ? Math.round(precioLista * dBase * iva)
+          : Math.round(precioLista * dBase * dExtra * iva);
+        derivados[lista.campo_firestore] = nuevo;
+      }
+      return derivados;
+    }
+
+    window.procesarArchivoMasivo = async function(input) {
+      const errorEl = document.getElementById('masivaFileError');
+      errorEl.style.display = 'none';
+
+      const file = input.files && input.files[0];
+      if (!file) return;
+
+      if (typeof XLSX === 'undefined') {
+        errorEl.textContent = 'La librería de Excel no cargó. Recarga la página.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        if (rows.length === 0) {
+          errorEl.textContent = 'El archivo está vacío o no tiene datos.';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        // Normalizar claves
+        const normRows = rows.map(r => {
+          const out = {};
+          for (const k of Object.keys(r)) out[normalizarClaveColumna(k)] = r[k];
+          return out;
+        });
+
+        if (!('cod_interno' in normRows[0])) {
+          errorEl.textContent = 'El archivo debe tener una columna llamada "cod_interno".';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        const tieneCantidad = 'cantidad' in normRows[0];
+        const tienePrecioLista = 'precio_lista' in normRows[0];
+        if (!tieneCantidad && !tienePrecioLista) {
+          errorEl.textContent = 'El archivo debe tener al menos una columna "cantidad" o "precio_lista".';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        // Index productos por cod_interno
+        const indexPorCodigo = new Map();
+        for (const p of productosAdmin) {
+          if (p.cod_interno) indexPorCodigo.set(String(p.cod_interno).trim(), p);
+        }
+
+        masivaCambios = [];
+        masivaNoEncontrados = [];
+        masivaErrores = [];
+
+        normRows.forEach((row, idx) => {
+          const fila = idx + 2; // fila de Excel (1 = header)
+          const cod = String(row.cod_interno || '').trim();
+          if (!cod) return; // fila vacía, ignorar
+
+          // Parse valores
+          let cantidadNueva = null;
+          let precioListaNuevo = null;
+
+          if (tieneCantidad && row.cantidad !== '' && row.cantidad !== null && row.cantidad !== undefined) {
+            const n = Number(row.cantidad);
+            if (!Number.isFinite(n) || n < 0) {
+              masivaErrores.push(`Fila ${fila} (${cod}): cantidad inválida "${row.cantidad}"`);
+              return;
+            }
+            cantidadNueva = Math.round(n);
+          }
+
+          if (tienePrecioLista && row.precio_lista !== '' && row.precio_lista !== null && row.precio_lista !== undefined) {
+            const n = Number(row.precio_lista);
+            if (!Number.isFinite(n) || n < 0) {
+              masivaErrores.push(`Fila ${fila} (${cod}): precio_lista inválido "${row.precio_lista}"`);
+              return;
+            }
+            precioListaNuevo = n;
+          }
+
+          const prod = indexPorCodigo.get(cod);
+          if (!prod) {
+            masivaNoEncontrados.push(cod);
+            return;
+          }
+
+          // Detectar si hay cambio real
+          const cantidadActual = prod.cantidad ?? 0;
+          const precioListaActual = prod.precio_lista || 0;
+          const cambioCantidad = cantidadNueva !== null && cantidadNueva !== cantidadActual;
+          const cambioPrecio = precioListaNuevo !== null && precioListaNuevo !== precioListaActual;
+
+          if (!cambioCantidad && !cambioPrecio) return;
+
+          // Calcular derivados solo si cambió el precio
+          const precioListaFinal = precioListaNuevo !== null ? precioListaNuevo : precioListaActual;
+          const derivados = cambioPrecio
+            ? calcularDerivadosProducto(cod, prod.id, precioListaFinal)
+            : null;
+
+          masivaCambios.push({
+            id: prod.id,
+            cod_interno: cod,
+            titulo: prod.titulo || '',
+            cantidadActual,
+            cantidadNueva: cambioCantidad ? cantidadNueva : null,
+            precioListaActual,
+            precioListaNuevo: cambioPrecio ? precioListaNuevo : null,
+            derivados, // null si no cambió precio
+            precioListaFinal
+          });
+        });
+
+        renderizarPreviewMasivo();
+      } catch (error) {
+        console.error('Error procesando archivo:', error);
+        errorEl.textContent = 'Error al leer el archivo: ' + error.message;
+        errorEl.style.display = 'block';
+      } finally {
+        input.value = '';
+      }
+    };
+
+    function renderizarPreviewMasivo() {
+      const totalConCambios = masivaCambios.length;
+      document.getElementById('masivaEncontrados').textContent = totalConCambios;
+      document.getElementById('masivaNoEncontrados').textContent = masivaNoEncontrados.length;
+      document.getElementById('masivaErrores').textContent = masivaErrores.length;
+      // "Sin cambios" = productos en archivo que matchearon pero no tenían diferencia
+      // Aproximación: total filas procesadas - cambios - no encontrados - errores
+      // Para evitar complejidad, no lo calculamos exacto aquí
+      document.getElementById('masivaSinCambios').textContent = '—';
+
+      // No encontrados
+      const boxNE = document.getElementById('masivaNoEncontradosBox');
+      if (masivaNoEncontrados.length > 0) {
+        boxNE.style.display = 'block';
+        const preview = masivaNoEncontrados.slice(0, 50).join(', ');
+        const extra = masivaNoEncontrados.length > 50 ? ` ... (+${masivaNoEncontrados.length - 50} más)` : '';
+        document.getElementById('masivaNoEncontradosList').textContent = preview + extra;
+      } else {
+        boxNE.style.display = 'none';
+      }
+
+      // Errores
+      const boxErr = document.getElementById('masivaErroresBox');
+      if (masivaErrores.length > 0) {
+        boxErr.style.display = 'block';
+        const preview = masivaErrores.slice(0, 30);
+        const extra = masivaErrores.length > 30 ? `<div>... (+${masivaErrores.length - 30} más)</div>` : '';
+        document.getElementById('masivaErroresList').innerHTML = preview.map(e => `<div>• ${e}</div>`).join('') + extra;
+      } else {
+        boxErr.style.display = 'none';
+      }
+
+      // Tabla preview
+      const body = document.getElementById('masivaPreviewBody');
+      if (totalConCambios === 0) {
+        body.innerHTML = '<tr><td colspan="7" class="empty-message">No hay cambios para aplicar</td></tr>';
+      } else {
+        const fmt = v => v == null ? '—' : formatearPrecio(v);
+        body.innerHTML = masivaCambios.slice(0, 200).map(c => {
+          const cantCell = c.cantidadNueva !== null
+            ? `<span style="color:#94a3b8;text-decoration:line-through;">${c.cantidadActual}</span> → <strong style="color:#0ea5e9;">${c.cantidadNueva}</strong>`
+            : `${c.cantidadActual}`;
+          const plCell = c.precioListaNuevo !== null
+            ? `<span style="color:#94a3b8;text-decoration:line-through;">${fmt(c.precioListaActual)}</span> → <strong style="color:#10b981;">${fmt(c.precioListaNuevo)}</strong>`
+            : fmt(c.precioListaActual);
+          const d = c.derivados || {};
+          return `<tr>
+            <td style="font-weight:500;">${c.cod_interno}</td>
+            <td>${c.titulo}</td>
+            <td style="text-align:right;">${cantCell}</td>
+            <td style="text-align:right;">${plCell}</td>
+            <td style="text-align:right;">${fmt(d.precio_mayorista)}</td>
+            <td style="text-align:right;">${fmt(d.precio_negocio)}</td>
+            <td style="text-align:right;">${fmt(d.precio_persona_natural)}</td>
+          </tr>`;
+        }).join('') + (masivaCambios.length > 200 ? `<tr><td colspan="7" style="text-align:center;color:#64748b;font-style:italic;">... +${masivaCambios.length - 200} cambios adicionales</td></tr>` : '');
+      }
+
+      // Navegación
+      document.getElementById('masivaPaso1').style.display = 'none';
+      document.getElementById('masivaPaso2').style.display = 'block';
+      document.getElementById('masivaPaso3').style.display = 'none';
+      document.getElementById('btnMasivaVolver').style.display = 'inline-block';
+      document.getElementById('btnMasivaAplicar').style.display = totalConCambios > 0 ? 'inline-block' : 'none';
+      document.getElementById('btnMasivaAplicar').textContent = totalConCambios > 0
+        ? `Aplicar ${totalConCambios} cambios`
+        : 'Aplicar cambios';
+    }
+
+    window.aplicarActualizacionMasiva = async function() {
+      if (masivaCambios.length === 0) return;
+
+      document.getElementById('masivaPaso1').style.display = 'none';
+      document.getElementById('masivaPaso2').style.display = 'none';
+      document.getElementById('masivaPaso3').style.display = 'block';
+      document.getElementById('btnMasivaVolver').style.display = 'none';
+      document.getElementById('btnMasivaAplicar').style.display = 'none';
+      document.getElementById('btnMasivaCancel').style.display = 'none';
+
+      const bar = document.getElementById('masivaProgressBar');
+      const status = document.getElementById('masivaProgressStatus');
+      bar.style.width = '5%';
+      status.textContent = `Aplicando ${masivaCambios.length} cambios...`;
+
+      try {
+        const BATCH_SIZE = 500;
+        let procesados = 0;
+        for (let i = 0; i < masivaCambios.length; i += BATCH_SIZE) {
+          const batch = writeBatch(db);
+          const chunk = masivaCambios.slice(i, i + BATCH_SIZE);
+          for (const c of chunk) {
+            const updates = {};
+            if (c.cantidadNueva !== null) updates.cantidad = c.cantidadNueva;
+            if (c.precioListaNuevo !== null) {
+              updates.precio_lista = c.precioListaNuevo;
+              updates.p_real = c.precioListaNuevo;
+              updates.p_corriente = c.precioListaNuevo;
+              if (c.derivados) {
+                for (const [campo, valor] of Object.entries(c.derivados)) {
+                  updates[campo] = valor;
+                }
+              }
+            }
+            batch.update(doc(db, 'productos', c.id), updates);
+          }
+          await batch.commit();
+          procesados += chunk.length;
+          const pct = 5 + Math.round((procesados / masivaCambios.length) * 95);
+          bar.style.width = pct + '%';
+          status.textContent = `Procesados ${procesados} de ${masivaCambios.length}...`;
+        }
+
+        bar.style.width = '100%';
+        status.textContent = `✅ ${masivaCambios.length} productos actualizados`;
+        status.style.color = '#16a34a';
+        mostrarMensaje(`${masivaCambios.length} productos actualizados exitosamente`);
+
+        await cargarProductos();
+        setTimeout(() => {
+          cerrarActualizacionMasiva();
+          status.style.color = '';
+        }, 1800);
+      } catch (error) {
+        console.error('Error aplicando actualización masiva:', error);
+        status.textContent = 'Error: ' + error.message;
+        status.style.color = '#dc2626';
+        document.getElementById('btnMasivaCancel').style.display = 'inline-block';
+        document.getElementById('btnMasivaCancel').textContent = 'Cerrar';
+      }
+    };
+
     // ═══════════ LISTAS DE PRECIOS ═══════════
     let listasPrecios = [];
     const LISTAS_DOC_REF = () => doc(db, 'configuracion', 'listas_precios');
@@ -3981,15 +4455,15 @@ EQ, EX, EG
       const datosUsr = await obtenerDatosUsuario(user.uid);
       const userData = datosUsr.success ? datosUsr.data : null;
       isManager = esUserManager(user, userData);
-      const esVendedor = userData && userData.rol === 'vendedor';
+      isVendedor = userData && userData.rol === 'vendedor';
 
-      if (!isAdminUser && !isManager && !esVendedor) {
+      if (!isAdminUser && !isManager && !isVendedor) {
         noAccess.style.display = 'block';
         return;
       }
 
       // Vendedores: ocultar pestañas Productos y Listas de Precios
-      if (esVendedor) {
+      if (isVendedor) {
         document.querySelectorAll('.admin-tab').forEach(tab => {
           if (tab.dataset.tab === 'productos' || tab.dataset.tab === 'listas-precios') {
             tab.style.display = 'none';
@@ -4006,7 +4480,7 @@ EQ, EX, EG
         navUserName.innerHTML = '<i class="bi bi-person-circle"></i> ' + displayName + ' <i class="bi bi-caret-down-fill"></i>';
         localStorage.setItem('enar_user_name', displayName);
         localStorage.setItem('enar_user_rol', userData.rol || 'cliente');
-        localStorage.setItem('enar_user_privileged', (isAdminUser || isManager || esVendedor) ? '1' : '0');
+        localStorage.setItem('enar_user_privileged', (isAdminUser || isManager || isVendedor) ? '1' : '0');
       }
 
       // Limpiar campo de búsqueda (evitar autocomplete del navegador)

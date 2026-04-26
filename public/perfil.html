@@ -516,11 +516,57 @@
           <button type="submit" class="btn-primary" id="saveBtn">Guardar Cambios</button>
         </div>
       </form>
+
+      <!-- Cambiar Contraseña -->
+      <div class="profile-card" id="passwordCard" style="margin-top: 20px;">
+        <div class="card-header">
+          <h2><i class="bi bi-key"></i> Cambiar Contraseña</h2>
+        </div>
+        <div class="card-body">
+          <div id="passwordMessage" class="message"></div>
+
+          <div id="passwordGoogleNotice" style="display:none; padding: 14px; background:#fef3c7; border:1px solid #fde68a; border-radius:8px; color:#78350f; font-size:14px;">
+            <i class="bi bi-info-circle"></i> Tu sesión inició con Google. Para cambiar tu contraseña, hazlo desde tu cuenta de Google.
+          </div>
+
+          <form id="passwordForm">
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label for="passwordActual">Contraseña Actual</label>
+                <div style="position:relative;">
+                  <input type="password" id="passwordActual" required autocomplete="current-password" minlength="6">
+                  <button type="button" class="password-toggle" data-target="passwordActual" aria-label="Mostrar contraseña" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#64748b;font-size:16px;padding:4px;"><i class="bi bi-eye"></i></button>
+                </div>
+              </div>
+              <div class="form-group full-width">
+                <label for="passwordNueva">Contraseña Nueva</label>
+                <div style="position:relative;">
+                  <input type="password" id="passwordNueva" required autocomplete="new-password" minlength="6">
+                  <button type="button" class="password-toggle" data-target="passwordNueva" aria-label="Mostrar contraseña" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#64748b;font-size:16px;padding:4px;"><i class="bi bi-eye"></i></button>
+                </div>
+                <p class="info-text">Mínimo 6 caracteres.</p>
+              </div>
+              <div class="form-group full-width">
+                <label for="passwordConfirmar">Confirmar Contraseña Nueva</label>
+                <div style="position:relative;">
+                  <input type="password" id="passwordConfirmar" required autocomplete="new-password" minlength="6">
+                  <button type="button" class="password-toggle" data-target="passwordConfirmar" aria-label="Mostrar contraseña" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#64748b;font-size:16px;padding:4px;"><i class="bi bi-eye"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+              <button type="button" class="btn-secondary" id="passwordCancelBtn">Limpiar</button>
+              <button type="submit" class="btn-primary" id="passwordSaveBtn">Actualizar Contraseña</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   </main>
 
   <script type="module">
-    import { onAuthChange, cerrarSesion, obtenerDatosUsuario, ADMIN_EMAILS, USER_MANAGER_EMAILS } from './js/auth.js';
+    import { onAuthChange, cerrarSesion, obtenerDatosUsuario, cambiarPassword, ADMIN_EMAILS, USER_MANAGER_EMAILS } from './js/auth.js';
     import { actualizarPerfil, TIPOS_CLIENTE } from './js/user-manager.js';
 
     // Elementos del DOM
@@ -634,6 +680,71 @@
       saveBtn.textContent = 'Guardar Cambios';
     });
 
+    // ═══════════ CAMBIAR CONTRASEÑA ═══════════
+    const passwordForm = document.getElementById('passwordForm');
+    const passwordSaveBtn = document.getElementById('passwordSaveBtn');
+    const passwordCancelBtn = document.getElementById('passwordCancelBtn');
+    const passwordMessage = document.getElementById('passwordMessage');
+    const passwordGoogleNotice = document.getElementById('passwordGoogleNotice');
+
+    function showPasswordMessage(texto, tipo) {
+      passwordMessage.textContent = texto;
+      passwordMessage.className = `message ${tipo}`;
+    }
+
+    function hidePasswordMessage() {
+      passwordMessage.className = 'message';
+    }
+
+    // Toggle mostrar/ocultar contraseña
+    document.querySelectorAll('.password-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.target);
+        const icon = btn.querySelector('i');
+        if (target.type === 'password') {
+          target.type = 'text';
+          icon.classList.replace('bi-eye', 'bi-eye-slash');
+        } else {
+          target.type = 'password';
+          icon.classList.replace('bi-eye-slash', 'bi-eye');
+        }
+      });
+    });
+
+    passwordCancelBtn.addEventListener('click', () => {
+      passwordForm.reset();
+      hidePasswordMessage();
+    });
+
+    passwordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hidePasswordMessage();
+
+      const actual = document.getElementById('passwordActual').value;
+      const nueva = document.getElementById('passwordNueva').value;
+      const confirmar = document.getElementById('passwordConfirmar').value;
+
+      if (nueva !== confirmar) {
+        showPasswordMessage('La nueva contraseña y su confirmación no coinciden.', 'error');
+        return;
+      }
+
+      passwordSaveBtn.disabled = true;
+      passwordSaveBtn.innerHTML = '<span class="loader"></span>Actualizando...';
+
+      const resultado = await cambiarPassword(actual, nueva);
+
+      if (resultado.success) {
+        showPasswordMessage('Contraseña actualizada exitosamente.', 'success');
+        passwordForm.reset();
+      } else {
+        showPasswordMessage(resultado.error || 'Error al cambiar la contraseña.', 'error');
+      }
+
+      passwordSaveBtn.disabled = false;
+      passwordSaveBtn.textContent = 'Actualizar Contraseña';
+    });
+
     // Cerrar sesión
     logoutLink.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -654,6 +765,13 @@
       currentUser = user;
 
       await cargarPerfil(user);
+
+      // Detectar si el usuario inició sesión con Google → ocultar form, mostrar aviso
+      const tienePassword = (user.providerData || []).some(p => p.providerId === 'password');
+      if (!tienePassword) {
+        document.getElementById('passwordForm').style.display = 'none';
+        document.getElementById('passwordGoogleNotice').style.display = 'block';
+      }
 
       // Mostrar nombre del usuario en link Perfil
       const navUserName = document.getElementById('navUserName');

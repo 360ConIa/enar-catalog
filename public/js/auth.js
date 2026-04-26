@@ -18,7 +18,10 @@ import {
   updateProfile,
   deleteUser,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import {
   getFirestore,
@@ -478,6 +481,54 @@ async function verificarAcceso() {
   };
 }
 
+/**
+ * Cambia la contraseña del usuario autenticado.
+ * Requiere reautenticación con la contraseña actual.
+ * No disponible para sesiones iniciadas con Google.
+ */
+async function cambiarPassword(passwordActual, passwordNueva) {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      return { success: false, error: 'No hay sesión activa.' };
+    }
+
+    const conPassword = (user.providerData || []).some(p => p.providerId === 'password');
+    if (!conPassword) {
+      return { success: false, error: 'Tu sesión es con Google. Cambia tu contraseña desde tu cuenta de Google.' };
+    }
+
+    if (!passwordActual || !passwordNueva) {
+      return { success: false, error: 'Debes ingresar la contraseña actual y la nueva.' };
+    }
+    if (passwordNueva.length < 6) {
+      return { success: false, error: 'La nueva contraseña debe tener al menos 6 caracteres.' };
+    }
+    if (passwordActual === passwordNueva) {
+      return { success: false, error: 'La nueva contraseña debe ser distinta a la actual.' };
+    }
+
+    const credential = EmailAuthProvider.credential(user.email, passwordActual);
+    await reauthenticateWithCredential(user, credential);
+    await updatePassword(user, passwordNueva);
+    return { success: true };
+  } catch (error) {
+    let mensaje = 'Error al cambiar la contraseña.';
+    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      mensaje = 'La contraseña actual es incorrecta.';
+    } else if (error.code === 'auth/weak-password') {
+      mensaje = 'La nueva contraseña es demasiado débil.';
+    } else if (error.code === 'auth/too-many-requests') {
+      mensaje = 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.';
+    } else if (error.code === 'auth/requires-recent-login') {
+      mensaje = 'Por seguridad, vuelve a iniciar sesión y reintenta.';
+    } else if (error.message) {
+      mensaje = error.message;
+    }
+    return { success: false, error: mensaje };
+  }
+}
+
 // Exportaciones
 export {
   auth,
@@ -487,6 +538,7 @@ export {
   registrarUsuario,
   cerrarSesion,
   recuperarPassword,
+  cambiarPassword,
   obtenerUsuarioActual,
   onAuthChange,
   obtenerDatosUsuario,
