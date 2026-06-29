@@ -20,6 +20,7 @@ import {
   $, ESTADOS_ORDEN, ESTADOS_ORDEN_LABELS, ADMIN_EMAIL,
   formatearPrecio, formatearFecha, formatearFechaHora, formatearPeso, formatearNumero,
   tiempoRelativo, badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
+  obtenerReversion, puedeRegresarEstado,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js';
 
@@ -274,6 +275,13 @@ function renderizarOrdenes() {
 
   container.innerHTML = paginadas.map(o => renderCardOrden(o)).join('');
   paginador.renderControles('paginacionDespachos', () => renderizarOrdenes());
+
+  // Auto-expandir dropdown de items para órdenes terminadas/completadas/parciales
+  paginadas.forEach(o => {
+    if (['terminada', 'completada', 'parcial'].includes(o.estado)) {
+      window.toggleDetalle(o.id);
+    }
+  });
 }
 
 function renderCardOrden(orden) {
@@ -392,7 +400,9 @@ function renderAccionesTab(orden) {
     </button>`;
   }
   if (orden.estado === 'terminada' || orden.estado === 'completada' || orden.estado === 'parcial') {
-    return '';
+    return `<button class="crm-despacho-action-btn crm-despacho-action-btn--green" onclick="toggleDetalle('${orden.id}')">
+      <i class="bi bi-list-ul"></i> Ver detalle
+    </button>`;
   }
   return '';
 }
@@ -900,13 +910,69 @@ function renderBotonesEstado(orden) {
     cancelada: 'background:#fee2e2;color:#991b1b;',
     aprobada: 'background:#dbeafe;color:#1e40af;'
   };
-  return transiciones.map(estado => {
+  const botonesAvance = transiciones.map(estado => {
     const estilo = colores[estado] || 'background:var(--crm-primary-light);color:white;';
     return `<button class="crm-btn crm-btn--sm" style="${estilo}" onclick="cambiarEstado('${orden.id}', '${estado}')">
       ${ESTADOS_ORDEN_LABELS[estado]}
     </button>`;
   }).join('');
+
+  const reversion = obtenerReversion(orden.estado);
+  const btnRegresar = (reversion && puedeRegresarEstado(userPerfil?.rol))
+    ? `<button class="crm-btn crm-btn--sm" style="background:#fef3c7;color:#92400e;" onclick="regresarEstado('${orden.id}')" title="Regresar a ${ESTADOS_ORDEN_LABELS[reversion]}">
+        <i class="bi bi-arrow-counterclockwise"></i> Regresar
+      </button>`
+    : '';
+
+  return botonesAvance + btnRegresar;
 }
+
+window.regresarEstado = async function(ordenId) {
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!orden) return;
+  if (!puedeRegresarEstado(userPerfil?.rol)) {
+    showToast('Solo admin/gestor puede regresar estados', 'error');
+    return;
+  }
+  const reversion = obtenerReversion(orden.estado);
+  if (!reversion) {
+    showToast('No hay estado previo al cual regresar', 'error');
+    return;
+  }
+  const motivo = prompt(`Regresar orden ${orden.numero_orden || ordenId} de "${ESTADOS_ORDEN_LABELS[orden.estado]}" a "${ESTADOS_ORDEN_LABELS[reversion]}".\n\nMotivo (obligatorio):`);
+  if (motivo === null) return;
+  const motivoLimpio = motivo.trim();
+  if (!motivoLimpio) {
+    showToast('El motivo es obligatorio para regresar estados', 'error');
+    return;
+  }
+
+  try {
+    const historial = orden.historial || [];
+    historial.push({
+      estado: reversion,
+      fecha: new Date().toISOString(),
+      tipo: 'reversion',
+      nota: `Reversión a ${ESTADOS_ORDEN_LABELS[reversion]} por ${userPerfil.nombre || currentUser.email}. Motivo: ${motivoLimpio}`
+    });
+
+    await updateDoc(doc(db, 'ordenes', ordenId), {
+      estado: reversion,
+      historial: historial,
+      updated_at: new Date().toISOString()
+    });
+
+    orden.estado = reversion;
+    orden.historial = historial;
+
+    actualizarTabCounts();
+    aplicarFiltrosYRender();
+    showToast(`Orden regresada a ${ESTADOS_ORDEN_LABELS[reversion]}`, 'success');
+  } catch (error) {
+    console.error('Error regresando estado:', error);
+    showToast('Error al regresar estado', 'error');
+  }
+};
 
 // ═══════════ PREPARACIÓN ═══════════
 window.marcarPreparado = async function(ordenId, itemIdx, preparado) {

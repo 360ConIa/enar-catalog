@@ -21,6 +21,7 @@ import {
   $, ADMIN_EMAIL, IVA_PORCENTAJE, ESTADOS_ORDEN_LABELS,
   formatearPrecio, formatearFecha, formatearNumero, tiempoRelativo,
   badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
+  obtenerReversion, puedeRegresarEstado,
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js';
@@ -203,15 +204,24 @@ function nitCliente(o) {
 }
 
 // ═══════════ CAMBIO ESTADO INLINE ═══════════
+function renderBtnRegresarEstado(orden) {
+  const reversion = obtenerReversion(orden.estado);
+  if (!reversion || !puedeRegresarEstado(userPerfil?.rol)) return '';
+  return `<button class="crm-btn crm-btn--sm" style="background:#fef3c7;color:#92400e;margin-left:4px;" onclick="event.stopPropagation();regresarEstadoOrden('${orden.id}')" title="Regresar a ${ESTADOS_ORDEN_LABELS[reversion]}">
+    <i class="bi bi-arrow-counterclockwise"></i>
+  </button>`;
+}
+
 function renderBtnCambioEstado(orden) {
   const transiciones = obtenerTransicionesPermitidas(orden.estado);
+  const btnRegresar = renderBtnRegresarEstado(orden);
   if (transiciones.length === 0) {
     if (orden.estado === 'terminada') {
-      return `<button class="crm-btn crm-btn--sm" style="background:#217346;color:white;font-size:0.65rem;font-weight:300;min-width:auto;aspect-ratio:1;padding:5px;display:inline-flex;align-items:center;justify-content:center;" onclick="event.stopPropagation();window.generarCSVOrden('${orden.id}')" title="Descargar CSV">CSV</button>`;
+      return `<button class="crm-btn crm-btn--sm" style="background:#217346;color:white;font-size:0.65rem;font-weight:300;min-width:auto;aspect-ratio:1;padding:5px;display:inline-flex;align-items:center;justify-content:center;" onclick="event.stopPropagation();window.generarCSVOrden('${orden.id}')" title="Descargar CSV">CSV</button>${btnRegresar}`;
     }
     return `<button class="crm-btn crm-btn--primary crm-btn--sm" disabled style="opacity:0.4;cursor:not-allowed;" title="Sin transiciones disponibles">
         <i class="bi bi-arrow-repeat"></i>
-      </button>`;
+      </button>${btnRegresar}`;
   }
   return `
     <div class="crm-estado-dropdown" style="display:inline-block;position:relative;">
@@ -225,8 +235,56 @@ function renderBtnCambioEstado(orden) {
           </button>
         `).join('')}
       </div>
-    </div>`;
+    </div>${btnRegresar}`;
 }
+
+window.regresarEstadoOrden = async function(ordenId) {
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!orden) return;
+  if (!puedeRegresarEstado(userPerfil?.rol)) {
+    showToast('Solo admin/gestor puede regresar estados', 'error');
+    return;
+  }
+  const reversion = obtenerReversion(orden.estado);
+  if (!reversion) {
+    showToast('No hay estado previo al cual regresar', 'error');
+    return;
+  }
+  const motivo = prompt(`Regresar orden ${orden.numero_orden || ordenId} de "${ESTADOS_ORDEN_LABELS[orden.estado]}" a "${ESTADOS_ORDEN_LABELS[reversion]}".\n\nMotivo (obligatorio):`);
+  if (motivo === null) return;
+  const motivoLimpio = motivo.trim();
+  if (!motivoLimpio) {
+    showToast('El motivo es obligatorio para regresar estados', 'error');
+    return;
+  }
+
+  try {
+    const historial = orden.historial || [];
+    historial.push({
+      estado: reversion,
+      fecha: new Date().toISOString(),
+      tipo: 'reversion',
+      nota: `Reversión a ${ESTADOS_ORDEN_LABELS[reversion]} por ${userPerfil.nombre || currentUser.email}. Motivo: ${motivoLimpio}`
+    });
+
+    await updateDoc(doc(db, 'ordenes', ordenId), {
+      estado: reversion,
+      historial: historial,
+      updated_at: new Date().toISOString()
+    });
+
+    orden.estado = reversion;
+    orden.historial = historial;
+
+    cerrarModal('modalDetalle');
+    actualizarKPIs();
+    aplicarFiltros();
+    showToast(`Orden regresada a ${ESTADOS_ORDEN_LABELS[reversion]}`, 'success');
+  } catch (error) {
+    console.error('Error regresando estado:', error);
+    showToast('Error al regresar estado', 'error');
+  }
+};
 
 window.toggleEstadoDropdown = function(event, ordenId) {
   event.stopPropagation();
@@ -372,11 +430,16 @@ window.verDetalleOrden = function(ordenId) {
   // Botones de cambio de estado (completada/parcial/en_espera se gestionan desde Despachos)
   const transiciones = obtenerTransicionesPermitidas(orden.estado)
     .filter(e => !['completada', 'parcial', 'en_espera', 'en_proceso'].includes(e));
+  const reversionModal = obtenerReversion(orden.estado);
+  const btnRegresarModal = (reversionModal && puedeRegresarEstado(userPerfil?.rol))
+    ? `<button class="crm-btn" style="background:#fef3c7;color:#92400e;" onclick="regresarEstadoOrden('${orden.id}')"><i class="bi bi-arrow-counterclockwise"></i> Regresar a ${ESTADOS_ORDEN_LABELS[reversionModal]}</button>`
+    : '';
   $('modalDetalleFooter').innerHTML = `
     <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalDetalle')">Cerrar</button>
     <button class="crm-btn crm-btn--sm" style="background:#217346;color:white;" onclick="window.generarCSVOrden('${orden.id}')">
       CSV
     </button>
+    ${btnRegresarModal}
     ${orden.estado === 'pendiente' ? `<button class="crm-btn crm-btn--primary" onclick="cerrarModal('modalDetalle');editarOrden('${orden.id}')"><i class="bi bi-pencil"></i> Editar</button>` : ''}
     ${transiciones.map(estado => {
       const esCancelada = estado === 'cancelada';

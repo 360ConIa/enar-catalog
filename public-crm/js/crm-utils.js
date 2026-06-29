@@ -182,6 +182,23 @@ export function puedeTransicionar(estadoActual, estadoNuevo) {
   return permitidas.includes(estadoNuevo);
 }
 
+// Reversión a estado anterior (1 paso). Solo admin/gestor.
+const REVERSIONES_ESTADO = {
+  en_proceso: 'pendiente',
+  alistamiento: 'en_proceso',
+  terminada: 'alistamiento',
+  completada: 'alistamiento',
+  parcial: 'alistamiento'
+};
+
+export function obtenerReversion(estadoActual) {
+  return REVERSIONES_ESTADO[estadoActual] || null;
+}
+
+export function puedeRegresarEstado(rol) {
+  return rol === 'admin' || rol === 'gestor';
+}
+
 // ═══════════ BADGES ═══════════
 
 export function badgeEstado(estado) {
