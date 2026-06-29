@@ -57,10 +57,10 @@ service cloud.firestore {
       return isAdmin() || isVendedor() || isDespachos() || isGestor();
     }
 
-    // Productos: lectura pública, escritura solo admin
+    // Productos: lectura pública, escritura admin + gestor (Henrry: ventas@enar.com.co)
     match /productos/{document=**} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isUserManager();
     }
 
     // Configuración: solo admin
@@ -136,20 +136,31 @@ service cloud.firestore {
         ((isVendedor() || isGestor()) && request.resource.data.creadaPor == request.auth.uid)
       );
 
-      // Usuarios pueden leer sus propias órdenes, admin/gestores/vendedores/despachos pueden leer
+      // Usuarios pueden leer sus propias órdenes, admin/gestores/despachos pueden leer todas,
+      // vendedores leen las que crearon + las de clientes con vendedor_asignado == su uid
       allow read: if isAuthenticated() && (
         resource.data.user_id == request.auth.uid ||
         isAdmin() ||
         isUserManager() ||
-        (isVendedor() && resource.data.creadaPor == request.auth.uid) ||
+        (isVendedor() && (
+          resource.data.creadaPor == request.auth.uid ||
+          (resource.data.user_id != null &&
+            exists(/databases/$(database)/documents/usuarios/$(resource.data.user_id)) &&
+            get(/databases/$(database)/documents/usuarios/$(resource.data.user_id)).data.vendedor_asignado == request.auth.uid)
+        )) ||
         isDespachos()
       );
 
       // Admin, gestores y despachos pueden actualizar órdenes
       // Usuarios aprobados pueden actualizar sus propias órdenes pendientes
-      // Vendedores pueden actualizar órdenes que ellos crearon
+      // Vendedores pueden actualizar órdenes que ellos crearon o de sus clientes asignados
       allow update: if isAdmin() || isUserManager() || isDespachos() ||
-        (isVendedor() && resource.data.creadaPor == request.auth.uid) ||
+        (isVendedor() && (
+          resource.data.creadaPor == request.auth.uid ||
+          (resource.data.user_id != null &&
+            exists(/databases/$(database)/documents/usuarios/$(resource.data.user_id)) &&
+            get(/databases/$(database)/documents/usuarios/$(resource.data.user_id)).data.vendedor_asignado == request.auth.uid)
+        )) ||
         (isApproved() && resource.data.user_id == request.auth.uid && resource.data.estado == 'pendiente');
 
       // Solo admin puede eliminar órdenes

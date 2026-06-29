@@ -53,6 +53,7 @@ let sedesClienteActual = [];
 let productosOrden = [];
 let papeleraOrdenPendiente = null;
 let unsubOrdenes = null;
+let unsubOrdenesList = []; // múltiples listeners para vendedor (propias + asignadas)
 let ordenEditandoId = null;
 let productosPorCodigo = new Map(); // cod_interno → producto (O(1) lookup)
 let chatUnsubDetalle = null; // listener del chat del modal detalle
@@ -114,39 +115,86 @@ onAuthStateChanged(auth, async (user) => {
 
 $('btnLogout').addEventListener('click', async () => {
   if (unsubOrdenes) unsubOrdenes();
+  unsubOrdenesList.forEach(u => u());
+  unsubOrdenesList = [];
   await signOut(auth);
   window.location.href = 'index.html';
 });
 
 // ═══════════ CARGAR ÓRDENES (REAL-TIME) ═══════════
 function cargarOrdenes() {
-  if (unsubOrdenes) unsubOrdenes();
+  // Limpiar listeners previos (admin: 1, vendedor: 1+N)
+  if (unsubOrdenes) { unsubOrdenes(); unsubOrdenes = null; }
+  unsubOrdenesList.forEach(u => u());
+  unsubOrdenesList = [];
 
-  let q;
+  const errorHandler = (error) => {
+    console.error('Error en listener órdenes:', error);
+    showToast('Error al cargar órdenes', 'error');
+  };
+
   if (esAdmin) {
-    q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(100));
-  } else {
-    q = query(
+    const q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(100));
+    unsubOrdenes = onSnapshot(q, (snap) => {
+      todasLasOrdenes = [];
+      snap.forEach(d => {
+        const data = d.data();
+        if (!data.eliminado) todasLasOrdenes.push({ id: d.id, ...data });
+      });
+      actualizarKPIs();
+      aplicarFiltros();
+    }, errorHandler);
+    return;
+  }
+
+  // Vendedor: órdenes propias (creadaPor) + órdenes de clientes asignados (user_id ∈ asignados)
+  const ordenesMap = new Map();
+  const rerender = () => {
+    todasLasOrdenes = [...ordenesMap.values()].sort((a, b) => {
+      const da = toDate(a.created_at)?.getTime() || 0;
+      const db = toDate(b.created_at)?.getTime() || 0;
+      return db - da;
+    });
+    actualizarKPIs();
+    aplicarFiltros();
+  };
+
+  const handleSnap = (snap) => {
+    snap.docChanges().forEach(change => {
+      const data = change.doc.data();
+      if (change.type === 'removed' || data.eliminado) {
+        ordenesMap.delete(change.doc.id);
+      } else {
+        ordenesMap.set(change.doc.id, { id: change.doc.id, ...data });
+      }
+    });
+    rerender();
+  };
+
+  // (a) Órdenes creadas por el vendedor desde el panel
+  const qPropias = query(
+    collection(db, 'ordenes'),
+    where('creadaPor', '==', currentUser.uid),
+    orderBy('created_at', 'desc'),
+    limit(100)
+  );
+  unsubOrdenesList.push(onSnapshot(qPropias, handleSnap, errorHandler));
+
+  // (b) Órdenes autónomas de clientes con vendedor_asignado == uid (chunkado por 30, límite de Firestore 'in')
+  const clienteUidsAsignados = todosLosClientes
+    .filter(c => c.vendedor_asignado === currentUser.uid)
+    .map(c => c.uid);
+
+  for (let i = 0; i < clienteUidsAsignados.length; i += 30) {
+    const chunk = clienteUidsAsignados.slice(i, i + 30);
+    const qAsignadas = query(
       collection(db, 'ordenes'),
-      where('creadaPor', '==', currentUser.uid),
+      where('user_id', 'in', chunk),
       orderBy('created_at', 'desc'),
       limit(100)
     );
+    unsubOrdenesList.push(onSnapshot(qAsignadas, handleSnap, errorHandler));
   }
-
-  unsubOrdenes = onSnapshot(q, (snap) => {
-    todasLasOrdenes = [];
-    snap.forEach(d => {
-      const data = d.data();
-      if (!data.eliminado) todasLasOrdenes.push({ id: d.id, ...data });
-    });
-
-    actualizarKPIs();
-    aplicarFiltros();
-  }, (error) => {
-    console.error('Error en listener órdenes:', error);
-    showToast('Error al cargar órdenes', 'error');
-  });
 }
 
 function actualizarKPIs() {
