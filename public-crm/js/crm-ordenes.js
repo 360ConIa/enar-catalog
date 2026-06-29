@@ -204,24 +204,12 @@ function nitCliente(o) {
 }
 
 // ═══════════ CAMBIO ESTADO INLINE ═══════════
-function renderBtnRegresarEstado(orden) {
-  const reversion = obtenerReversion(orden.estado);
-  if (!reversion || !puedeRegresarEstado(userPerfil?.rol)) return '';
-  return `<button class="crm-btn crm-btn--sm" style="background:#fef3c7;color:#92400e;margin-left:4px;" onclick="event.stopPropagation();regresarEstadoOrden('${orden.id}')" title="Regresar a ${ESTADOS_ORDEN_LABELS[reversion]}">
-    <i class="bi bi-arrow-counterclockwise"></i>
-  </button>`;
-}
-
 function renderBtnCambioEstado(orden) {
   const transiciones = obtenerTransicionesPermitidas(orden.estado);
-  const btnRegresar = renderBtnRegresarEstado(orden);
   if (transiciones.length === 0) {
-    if (orden.estado === 'terminada') {
-      return `<button class="crm-btn crm-btn--sm" style="background:#217346;color:white;font-size:0.65rem;font-weight:300;min-width:auto;aspect-ratio:1;padding:5px;display:inline-flex;align-items:center;justify-content:center;" onclick="event.stopPropagation();window.generarCSVOrden('${orden.id}')" title="Descargar CSV">CSV</button>${btnRegresar}`;
-    }
     return `<button class="crm-btn crm-btn--primary crm-btn--sm" disabled style="opacity:0.4;cursor:not-allowed;" title="Sin transiciones disponibles">
         <i class="bi bi-arrow-repeat"></i>
-      </button>${btnRegresar}`;
+      </button>`;
   }
   return `
     <div class="crm-estado-dropdown" style="display:inline-block;position:relative;">
@@ -235,8 +223,56 @@ function renderBtnCambioEstado(orden) {
           </button>
         `).join('')}
       </div>
-    </div>${btnRegresar}`;
+    </div>`;
 }
+
+function renderMenuAccionesMas(orden) {
+  const items = [];
+
+  if (orden.estado === 'pendiente') {
+    items.push(`<button class="crm-estado-opcion" onclick="window.cerrarMenuMas();editarOrden('${orden.id}')">
+      <i class="bi bi-pencil"></i> Editar
+    </button>`);
+  }
+
+  items.push(`<button class="crm-estado-opcion" onclick="window.cerrarMenuMas();window.generarCSVOrden('${orden.id}')">
+    <i class="bi bi-file-earmark-spreadsheet"></i> CSV
+  </button>`);
+
+  const reversion = obtenerReversion(orden.estado);
+  if (reversion && puedeRegresarEstado(userPerfil?.rol)) {
+    items.push(`<button class="crm-estado-opcion" style="color:#92400e;" onclick="window.cerrarMenuMas();regresarEstadoOrden('${orden.id}')">
+      <i class="bi bi-arrow-counterclockwise"></i> Regresar a ${ESTADOS_ORDEN_LABELS[reversion]}
+    </button>`);
+  }
+
+  items.push(`<button class="crm-estado-opcion" style="color:#991b1b;" onclick="window.cerrarMenuMas();enviarAPapelera('${orden.id}')">
+    <i class="bi bi-trash3"></i> Papelera
+  </button>`);
+
+  return `
+    <div class="crm-estado-dropdown" style="display:inline-block;position:relative;">
+      <button class="crm-btn crm-btn--sm" style="background:#D9232D;color:white;border:none;" onclick="toggleMasMenu(event, '${orden.id}')" title="Más acciones">
+        <i class="bi bi-plus-lg"></i>
+      </button>
+      <div class="crm-estado-menu" id="masMenu_${orden.id}" style="min-width:200px;">
+        ${items.join('')}
+      </div>
+    </div>`;
+}
+
+window.toggleMasMenu = function(event, ordenId) {
+  event.stopPropagation();
+  document.querySelectorAll('.crm-estado-menu.open').forEach(m => {
+    if (m.id !== `masMenu_${ordenId}`) m.classList.remove('open');
+  });
+  const menu = $(`masMenu_${ordenId}`);
+  if (menu) menu.classList.toggle('open');
+};
+
+window.cerrarMenuMas = function() {
+  document.querySelectorAll('.crm-estado-menu.open').forEach(m => m.classList.remove('open'));
+};
 
 window.regresarEstadoOrden = async function(ordenId) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
@@ -352,14 +388,12 @@ function renderizarOrdenes() {
       <td style="text-align:center;">${o.cantidad_productos || (o.items || o.productos || []).length}</td>
       <td style="text-align:right;font-weight:600;">${formatearPrecio(o.total || 0)}</td>
       <td>${badgeEstado(o.estado)}</td>
-      <td style="text-align:left;white-space:nowrap;">
-        <button class="crm-btn crm-btn--sm" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">
+      <td style="text-align:center;white-space:nowrap;">
+        <button class="crm-btn crm-btn--sm" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;" onclick="verDetalleOrden('${o.id}')" title="Detalles">
           <i class="bi bi-eye"></i>
         </button>
         ${renderBtnCambioEstado(o)}
-        <button class="crm-btn crm-btn--danger crm-btn--sm" onclick="enviarAPapelera('${o.id}')" title="Enviar a papelera">
-          <i class="bi bi-trash3"></i>
-        </button>
+        ${renderMenuAccionesMas(o)}
       </td>
     </tr>
   `).join('');
