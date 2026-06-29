@@ -19,7 +19,7 @@ import {
 
 import {
   $, ADMIN_EMAIL, IVA_PORCENTAJE, ESTADOS_ORDEN_LABELS,
-  formatearPrecio, formatearFecha, formatearNumero,
+  formatearPrecio, formatearFecha, formatearNumero, tiempoRelativo,
   badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio
@@ -54,6 +54,7 @@ let papeleraOrdenPendiente = null;
 let unsubOrdenes = null;
 let ordenEditandoId = null;
 let productosPorCodigo = new Map(); // cod_interno → producto (O(1) lookup)
+let chatUnsubDetalle = null; // listener del chat del modal detalle
 const paginador = new Paginador(25);
 const ROLES_EXCLUIDOS = ['vendedor', 'despachos', 'admin', 'gestor', 'administrador'];
 
@@ -355,6 +356,17 @@ window.verDetalleOrden = function(ordenId) {
       <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:4px;"><span>IVA (19%)</span><span>${formatearPrecio(orden.iva || 0)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:700;border-top:2px solid var(--crm-border);padding-top:8px;"><span>Total</span><span>${formatearPrecio(orden.total || 0)}</span></div>
     </div>
+    <div class="crm-chat" style="margin-top:16px;">
+      <div class="crm-chat-header"><span><i class="bi bi-chat-dots"></i> Mensajes internos</span></div>
+      <div class="crm-chat-messages" id="chatMessages-detalle">
+        <p style="color:var(--crm-text-light);font-size:0.82rem;padding:12px;">Cargando...</p>
+      </div>
+      <div class="crm-chat-input">
+        <input type="text" placeholder="Escribir mensaje..." id="chatInput-detalle"
+          onkeydown="if(event.key==='Enter')enviarMensajeDetalle('${orden.id}')">
+        <button onclick="enviarMensajeDetalle('${orden.id}')"><i class="bi bi-send"></i></button>
+      </div>
+    </div>
   `;
 
   // Botones de cambio de estado (completada/parcial/en_espera se gestionan desde Despachos)
@@ -376,6 +388,76 @@ window.verDetalleOrden = function(ordenId) {
   `;
 
   $('modalDetalle').classList.add('open');
+  iniciarChatDetalle(orden.id);
+};
+
+// ═══════════ CHAT MENSAJES INTERNOS (modal detalle) ═══════════
+function iniciarChatDetalle(ordenId) {
+  if (chatUnsubDetalle) { chatUnsubDetalle(); chatUnsubDetalle = null; }
+
+  const q = query(
+    collection(db, 'chat_ordenes'),
+    where('orden_id', '==', ordenId),
+    orderBy('created_at', 'asc')
+  );
+
+  chatUnsubDetalle = onSnapshot(q, (snap) => {
+    const mensajes = [];
+    snap.forEach(d => mensajes.push({ id: d.id, ...d.data() }));
+    renderMensajesDetalle(mensajes);
+  }, (error) => {
+    console.error('Error en chat listener:', error);
+    const container = $('chatMessages-detalle');
+    if (container) container.innerHTML = '<p style="color:var(--crm-text-light);font-size:0.82rem;padding:12px;">No hay mensajes aún</p>';
+  });
+}
+
+function renderMensajesDetalle(mensajes) {
+  const container = $('chatMessages-detalle');
+  if (!container) return;
+
+  if (mensajes.length === 0) {
+    container.innerHTML = '<p style="color:var(--crm-text-light);font-size:0.82rem;padding:12px;">No hay mensajes aún</p>';
+    return;
+  }
+
+  container.innerHTML = mensajes.map(m => {
+    const esPropio = m.usuario === currentUser.email || m.usuario_id === currentUser.uid;
+    return `
+      <div class="crm-chat-msg ${esPropio ? 'crm-chat-msg--own' : 'crm-chat-msg--other'}">
+        <div class="crm-chat-msg-user">${m.usuario_nombre || m.usuario || 'Sistema'}</div>
+        <div>${m.mensaje}</div>
+        <div class="crm-chat-msg-time">${tiempoRelativo(m.created_at)}</div>
+      </div>
+    `;
+  }).join('');
+
+  container.scrollTop = container.scrollHeight;
+}
+
+window.enviarMensajeDetalle = async function(ordenId) {
+  const input = $('chatInput-detalle');
+  if (!input) return;
+  const mensaje = input.value.trim();
+  if (!mensaje) return;
+
+  input.value = '';
+
+  try {
+    await addDoc(collection(db, 'chat_ordenes'), {
+      orden_id: ordenId,
+      usuario: currentUser.email,
+      usuario_id: currentUser.uid,
+      usuario_nombre: userPerfil.nombre || currentUser.email,
+      mensaje: mensaje,
+      tipo_usuario: userPerfil.rol === 'despachos' ? 'Logística' : userPerfil.rol === 'vendedor' ? 'Ventas' : 'Admin',
+      tipo: 'Chat',
+      created_at: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error enviando mensaje:', error);
+    showToast('Error al enviar mensaje', 'error');
+  }
 };
 
 // ═══════════ CAMBIAR ESTADO ═══════════
@@ -596,10 +678,11 @@ let indiceBusquedaProductos = []; // Texto pre-normalizado para búsqueda rápid
 
 async function cargarProductos() {
   try {
-    const snap = await getDocs(query(collection(db, 'productos'), where('activo', '==', true)));
+    const snap = await getDocs(collection(db, 'productos'));
     todosLosProductos = [];
     snap.forEach(d => {
       const data = d.data();
+      if (data.activo === false) return;
       if (data.cod_interno && data.cod_interno !== 'COD_INTERNO' && data.titulo !== 'TITULO') {
         todosLosProductos.push({ id: d.id, ...data });
       }
@@ -657,7 +740,7 @@ function buscarProducto(termino, focusCantidad) {
           <div style="font-size:0.73rem;color:var(--crm-text-light);">${p.cod_interno} · ${p.marca || ''}</div>
         </div>
         <div style="font-weight:600;min-width:80px;text-align:right;">${formatearPrecio(precio)}</div>
-        <input type="number" value="1" min="1" class="prod-qty" style="width:50px;padding:4px;border:1px solid var(--crm-border);border-radius:4px;text-align:center;font-size:0.82rem;" data-cod="${p.cod_interno}" data-idx="${i}" ${yaEnOrden ? 'disabled' : ''}>
+        <input type="number" value="" min="1" placeholder="Cant." class="prod-qty" style="width:60px;padding:4px;border:1px solid var(--crm-border);border-radius:4px;text-align:center;font-size:0.82rem;" data-cod="${p.cod_interno}" data-idx="${i}" ${yaEnOrden ? 'disabled' : ''}>
       </div>
     `;
   }).join('');
@@ -670,7 +753,12 @@ function buscarProducto(termino, focusCantidad) {
         if (input.disabled) return;
         const cod = input.dataset.cod;
         const prod = ultimosFiltrados.find(p => p.cod_interno === cod);
-        const cantidad = parseInt(input.value) || 1;
+        const cantidad = parseInt(input.value, 10);
+        if (!cantidad || cantidad < 1) {
+          showToast('Digita la cantidad antes de agregar', 'error');
+          input.focus();
+          return;
+        }
         if (prod) {
           agregarProducto(prod, cantidad);
           // Marcar fila como agregada
@@ -1044,6 +1132,10 @@ window.cerrarModal = function(id) {
   const el = $(id);
   if (el) el.classList.remove('open');
   if (id === 'modalProductos') resetModalProductos();
+  if (id === 'modalDetalle' && chatUnsubDetalle) {
+    chatUnsubDetalle();
+    chatUnsubDetalle = null;
+  }
 };
 
 document.querySelectorAll('.crm-modal-overlay').forEach(overlay => {
