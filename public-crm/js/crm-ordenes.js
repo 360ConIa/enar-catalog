@@ -54,6 +54,9 @@ let productosOrden = [];
 let papeleraOrdenPendiente = null;
 let unsubOrdenes = null;
 let unsubOrdenesList = []; // múltiples listeners para vendedor (propias + asignadas)
+let unsubChatNotif = null;
+let mensajesPorOrden = new Map(); // ordenId -> [{id, created_at, usuario_id}]
+let chatLecturas = new Map(); // ordenId -> lastReadIso
 let ordenEditandoId = null;
 let productosPorCodigo = new Map(); // cod_interno → producto (O(1) lookup)
 let chatUnsubDetalle = null; // listener del chat del modal detalle
@@ -93,7 +96,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   const perfil = userDoc.data();
-  esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin' || perfil.rol === 'gestor';
+  esAdmin = user.email === ADMIN_EMAIL || perfil.rol === 'admin' || perfil.rol === 'gestor' || perfil.comercial_lider === true;
   const esVendedor = perfil.rol === 'vendedor';
 
   if (!esAdmin && !esVendedor) {
@@ -107,6 +110,7 @@ onAuthStateChanged(auth, async (user) => {
 
   await Promise.all([cargarClientes(), cargarProductos()]);
   cargarOrdenes();
+  iniciarChatNotifListener(perfil);
   initEventListeners();
 
   $('loadingScreen').style.display = 'none';
@@ -117,6 +121,7 @@ $('btnLogout').addEventListener('click', async () => {
   if (unsubOrdenes) unsubOrdenes();
   unsubOrdenesList.forEach(u => u());
   unsubOrdenesList = [];
+  if (unsubChatNotif) unsubChatNotif();
   await signOut(auth);
   window.location.href = 'index.html';
 });
@@ -194,6 +199,87 @@ function cargarOrdenes() {
       limit(100)
     );
     unsubOrdenesList.push(onSnapshot(qAsignadas, handleSnap, errorHandler));
+  }
+}
+
+// ═══════════ NOTIFICACIONES DE CHAT ═══════════
+function iniciarChatNotifListener(perfil) {
+  // Cargar lecturas previas desde el perfil
+  const lecturasIniciales = perfil?.chat_lecturas || {};
+  chatLecturas = new Map(Object.entries(lecturasIniciales));
+
+  if (unsubChatNotif) unsubChatNotif();
+
+  const q = query(
+    collection(db, 'chat_ordenes'),
+    orderBy('created_at', 'desc'),
+    limit(500)
+  );
+
+  unsubChatNotif = onSnapshot(q, (snap) => {
+    // Reagrupar mensajes por orden_id
+    mensajesPorOrden = new Map();
+    snap.forEach(d => {
+      const data = d.data();
+      if (!data.orden_id) return;
+      const arr = mensajesPorOrden.get(data.orden_id) || [];
+      arr.push({
+        id: d.id,
+        created_at: data.created_at,
+        usuario_id: data.usuario_id
+      });
+      mensajesPorOrden.set(data.orden_id, arr);
+    });
+    actualizarBadgeGlobalChat();
+    aplicarFiltros(); // re-render tabla con badges actualizados
+  }, (error) => {
+    console.error('Error listener chat notif:', error);
+  });
+}
+
+function contarMensajesNoLeidos(ordenId) {
+  const mensajes = mensajesPorOrden.get(ordenId);
+  if (!mensajes || mensajes.length === 0) return 0;
+  const lastRead = chatLecturas.get(ordenId) || '';
+  return mensajes.filter(m =>
+    m.usuario_id !== currentUser.uid &&
+    (m.created_at || '') > lastRead
+  ).length;
+}
+
+function actualizarBadgeGlobalChat() {
+  const badge = $('navChatBadge');
+  if (!badge) return;
+  let total = 0;
+  for (const ordenId of mensajesPorOrden.keys()) {
+    if (contarMensajesNoLeidos(ordenId) > 0) total++;
+  }
+  if (total > 0) {
+    badge.textContent = total > 99 ? '99+' : total;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderBadgeChatNoLeidos(ordenId) {
+  const count = contarMensajesNoLeidos(ordenId);
+  if (count <= 0) return '';
+  const label = count > 9 ? '9+' : count;
+  return `<span style="position:absolute;top:-6px;right:-6px;background:#D9232D;color:white;border-radius:10px;padding:0 5px;font-size:0.62rem;font-weight:700;min-width:16px;text-align:center;line-height:14px;pointer-events:none;">${label}</span>`;
+}
+
+async function marcarOrdenLeida(ordenId) {
+  const ahoraIso = new Date().toISOString();
+  chatLecturas.set(ordenId, ahoraIso);
+  actualizarBadgeGlobalChat();
+  aplicarFiltros();
+  try {
+    await updateDoc(doc(db, 'usuarios', currentUser.uid), {
+      [`chat_lecturas.${ordenId}`]: ahoraIso
+    });
+  } catch (error) {
+    console.error('Error marcando orden leída:', error);
   }
 }
 
@@ -437,9 +523,12 @@ function renderizarOrdenes() {
       <td style="text-align:right;font-weight:600;">${formatearPrecio(o.total || 0)}</td>
       <td>${badgeEstado(o.estado)}</td>
       <td style="text-align:center;white-space:nowrap;">
-        <button class="crm-btn crm-btn--sm" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;" onclick="verDetalleOrden('${o.id}')" title="Detalles">
-          <i class="bi bi-eye"></i>
-        </button>
+        <span style="position:relative;display:inline-block;">
+          <button class="crm-btn crm-btn--sm" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;" onclick="verDetalleOrden('${o.id}')" title="Detalles">
+            <i class="bi bi-eye"></i>
+          </button>
+          ${renderBadgeChatNoLeidos(o.id)}
+        </span>
         ${renderBtnCambioEstado(o)}
         ${renderMenuAccionesMas(o)}
       </td>
@@ -534,6 +623,7 @@ window.verDetalleOrden = function(ordenId) {
 
   $('modalDetalle').classList.add('open');
   iniciarChatDetalle(orden.id);
+  marcarOrdenLeida(orden.id);
 };
 
 // ═══════════ CHAT MENSAJES INTERNOS (modal detalle) ═══════════
@@ -550,6 +640,8 @@ function iniciarChatDetalle(ordenId) {
     const mensajes = [];
     snap.forEach(d => mensajes.push({ id: d.id, ...d.data() }));
     renderMensajesDetalle(mensajes);
+    // Mientras el modal está abierto, cualquier mensaje nuevo se considera leído
+    marcarOrdenLeida(ordenId);
   }, (error) => {
     console.error('Error en chat listener:', error);
     const container = $('chatMessages-detalle');
@@ -855,16 +947,38 @@ function buscarProducto(termino, focusCantidad) {
 
   // Búsqueda AND con coma: "10001, enar" → ambos deben coincidir
   const terminos = termino.toLowerCase().split(',').map(t => t.trim()).filter(Boolean);
+  const primerTermino = terminos[0] || '';
+
+  // Score de relevancia: menor es mejor
+  //   0 = cod_interno exacto
+  //   1 = cod_interno startsWith
+  //   2 = ean exacto
+  //   3 = cod_interno contiene
+  //   4 = ean contiene
+  //   5 = match solo en otros campos (título/marca/etc.)
+  const scoreProducto = (p) => {
+    const cod = (p.cod_interno || '').toLowerCase();
+    const ean = (p.ean || '').toLowerCase();
+    if (cod === primerTermino) return 0;
+    if (cod.startsWith(primerTermino)) return 1;
+    if (ean === primerTermino) return 2;
+    if (cod.includes(primerTermino)) return 3;
+    if (ean.includes(primerTermino)) return 4;
+    return 5;
+  };
 
   const filtrados = todosLosProductos.filter((p, i) => {
     const campos = indiceBusquedaProductos[i];
     return terminos.every(t => campos.includes(t));
   }).sort((a, b) => {
+    const sa = scoreProducto(a);
+    const sb = scoreProducto(b);
+    if (sa !== sb) return sa - sb;
     const presA = (a.presentacion || '').toLowerCase();
     const presB = (b.presentacion || '').toLowerCase();
     if (presA !== presB) return presA.localeCompare(presB);
     return (obtenerPrecioCliente(a, clienteSeleccionado) || 0) - (obtenerPrecioCliente(b, clienteSeleccionado) || 0);
-  }).slice(0, 20);
+  }).slice(0, 30);
 
   ultimosFiltrados = filtrados;
 

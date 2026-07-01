@@ -52,6 +52,13 @@ service cloud.firestore {
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'gestor';
     }
 
+    // Helper: Comercial Líder (vendedor con visibilidad total, flag en su user doc)
+    function esComercialLider() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.comercial_lider == true;
+    }
+
     // Helper: CRM user (admin, vendedor, despachos o gestor)
     function isCRM() {
       return isAdmin() || isVendedor() || isDespachos() || isGestor();
@@ -136,12 +143,13 @@ service cloud.firestore {
         ((isVendedor() || isGestor()) && request.resource.data.creadaPor == request.auth.uid)
       );
 
-      // Usuarios pueden leer sus propias órdenes, admin/gestores/despachos pueden leer todas,
+      // Usuarios pueden leer sus propias órdenes, admin/gestores/despachos/comercial_lider leen todas,
       // vendedores leen las que crearon + las de clientes con vendedor_asignado == su uid
       allow read: if isAuthenticated() && (
         resource.data.user_id == request.auth.uid ||
         isAdmin() ||
         isUserManager() ||
+        esComercialLider() ||
         (isVendedor() && (
           resource.data.creadaPor == request.auth.uid ||
           (resource.data.user_id != null &&
@@ -151,10 +159,10 @@ service cloud.firestore {
         isDespachos()
       );
 
-      // Admin, gestores y despachos pueden actualizar órdenes
+      // Admin, gestores, despachos y comercial_lider pueden actualizar órdenes
       // Usuarios aprobados pueden actualizar sus propias órdenes pendientes
       // Vendedores pueden actualizar órdenes que ellos crearon o de sus clientes asignados
-      allow update: if isAdmin() || isUserManager() || isDespachos() ||
+      allow update: if isAdmin() || isUserManager() || isDespachos() || esComercialLider() ||
         (isVendedor() && (
           resource.data.creadaPor == request.auth.uid ||
           (resource.data.user_id != null &&

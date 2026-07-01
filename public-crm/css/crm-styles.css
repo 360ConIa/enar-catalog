@@ -791,6 +791,13 @@
   border-top: 1px solid var(--crm-border);
 }
 
+/* En tablet/mobile no capamos altura, para mostrar todos los items sin corte */
+@media (max-width: 991px) {
+  .crm-despacho-dropdown.open {
+    max-height: none;
+  }
+}
+
 /* ═══════════ ALISTAMIENTO — BOTONES ESTADO ITEM ═══════════ */
 
 .alist-estado-btn {

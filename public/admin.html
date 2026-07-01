@@ -2034,6 +2034,7 @@ EQ, EX, EG
     let isAdminUser = false;
     let isManager = false;
     let isVendedor = false;
+    let isComercialLider = false;
 
     // Toggle input "Otro" para selects de producto
     window.toggleOtroInput = function(select, inputId) {
@@ -3079,8 +3080,8 @@ EQ, EX, EG
 
       if (resultado.success) {
         ordenes = resultado.ordenes;
-        // Vendedores: solo ver órdenes creadas por ellos
-        if (isVendedor && currentUserEmail) {
+        // Vendedores: solo ver órdenes creadas por ellos (excepto comercial_lider que ve todas)
+        if (isVendedor && currentUserEmail && !isComercialLider) {
           const uid = auth.currentUser?.uid;
           ordenes = ordenes.filter(o =>
             o.creadaPor === uid || o.creadaPorEmail === currentUserEmail
@@ -4456,6 +4457,7 @@ EQ, EX, EG
       const userData = datosUsr.success ? datosUsr.data : null;
       isManager = esUserManager(user, userData);
       isVendedor = userData && userData.rol === 'vendedor';
+      isComercialLider = userData && userData.comercial_lider === true;
 
       if (!isAdminUser && !isManager && !isVendedor) {
         noAccess.style.display = 'block';
