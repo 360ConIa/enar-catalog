@@ -27,8 +27,8 @@
     <nav class="crm-header-nav">
       <a style="opacity:0.4;pointer-events:none;cursor:not-allowed;" title="Próximamente">Dashboard</a>
       <a style="opacity:0.4;pointer-events:none;cursor:not-allowed;" title="Próximamente">Clientes</a>
-      <a href="crm-ordenes.html">Órdenes</a>
-      <a href="crm-despachos.html" style="background:#D9232D;color:white;">Despachos</a>
+      <a href="crm-ordenes.html" style="position:relative;">Órdenes<span id="navChatBadgeOrdenes" style="display:none;position:absolute;top:-6px;right:-8px;background:#D9232D;color:white;border-radius:10px;padding:0 5px;font-size:0.65rem;font-weight:700;min-width:16px;text-align:center;line-height:14px;cursor:pointer;" title="Marcar todas como leídas" onclick="event.preventDefault();event.stopPropagation();marcarTodasLasVisiblesLeidas();">0</span></a>
+      <a href="crm-despachos.html" style="background:#D9232D;color:white;position:relative;">Despachos<span id="navChatBadgeDespachos" style="display:none;position:absolute;top:-6px;right:-8px;background:white;color:#D9232D;border:1.5px solid #D9232D;border-radius:10px;padding:0 5px;font-size:0.65rem;font-weight:700;min-width:16px;text-align:center;line-height:14px;cursor:pointer;" title="Marcar todas como leídas" onclick="event.preventDefault();event.stopPropagation();marcarTodasLasVisiblesLeidas();">0</span></a>
       <a style="opacity:0.4;pointer-events:none;cursor:not-allowed;" title="Próximamente">Reportes</a>
       <a href="index.html" title="Portal"><i class="bi bi-grid"></i></a>
       <button id="btnLogout" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>

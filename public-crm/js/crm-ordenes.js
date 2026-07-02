@@ -248,18 +248,24 @@ function contarMensajesNoLeidos(ordenId) {
 }
 
 function actualizarBadgeGlobalChat() {
-  const badge = $('navChatBadge');
-  if (!badge) return;
+  // Solo contar órdenes que existen en la vista actual del usuario
+  const idsVisibles = new Set(todasLasOrdenes.map(o => o.id));
   let total = 0;
   for (const ordenId of mensajesPorOrden.keys()) {
+    if (!idsVisibles.has(ordenId)) continue;
     if (contarMensajesNoLeidos(ordenId) > 0) total++;
   }
-  if (total > 0) {
-    badge.textContent = total > 99 ? '99+' : total;
-    badge.style.display = 'inline-block';
-  } else {
-    badge.style.display = 'none';
-  }
+  const label = total > 99 ? '99+' : String(total);
+  ['navChatBadgeOrdenes', 'navChatBadgeDespachos'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    if (total > 0) {
+      el.textContent = label;
+      el.style.display = 'inline-block';
+    } else {
+      el.style.display = 'none';
+    }
+  });
 }
 
 function renderBadgeChatNoLeidos(ordenId) {
@@ -268,6 +274,28 @@ function renderBadgeChatNoLeidos(ordenId) {
   const label = count > 9 ? '9+' : count;
   return `<span style="position:absolute;top:-6px;right:-6px;background:#D9232D;color:white;border-radius:10px;padding:0 5px;font-size:0.62rem;font-weight:700;min-width:16px;text-align:center;line-height:14px;pointer-events:none;">${label}</span>`;
 }
+
+window.marcarTodasLasVisiblesLeidas = async function() {
+  const idsVisibles = new Set(todasLasOrdenes.map(o => o.id));
+  const ahoraIso = new Date().toISOString();
+  const updates = {};
+  for (const ordenId of mensajesPorOrden.keys()) {
+    if (!idsVisibles.has(ordenId)) continue;
+    if (contarMensajesNoLeidos(ordenId) <= 0) continue;
+    chatLecturas.set(ordenId, ahoraIso);
+    updates[`chat_lecturas.${ordenId}`] = ahoraIso;
+  }
+  actualizarBadgeGlobalChat();
+  aplicarFiltros();
+  if (Object.keys(updates).length === 0) return;
+  try {
+    await updateDoc(doc(db, 'usuarios', currentUser.uid), updates);
+    showToast('Mensajes marcados como leídos', 'success');
+  } catch (error) {
+    console.error('Error marcando todas como leídas:', error);
+    showToast('Error al marcar como leídas', 'error');
+  }
+};
 
 async function marcarOrdenLeida(ordenId) {
   const ahoraIso = new Date().toISOString();

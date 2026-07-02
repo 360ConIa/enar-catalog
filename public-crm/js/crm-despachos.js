@@ -45,6 +45,9 @@ let ordenesFiltradas = [];
 let tabActual = 'proceso';
 let chatUnsubscribers = {};
 let unsubOrdenes = null;
+let unsubChatNotif = null;
+let mensajesPorOrden = new Map(); // ordenId → [{id, created_at, usuario_id}]
+let chatLecturas = new Map(); // ordenId → lastReadIso
 let productosCache = {}; // SKU/cod_interno → { Peso_Kg, nombre, ... }
 let usuariosCache = {}; // uid → { telefono, ubicacion, ruta, direccion }
 const paginador = new Paginador(15);
@@ -100,19 +103,162 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   userPerfil = perfil;
 
+  // Deshabilitar link "Órdenes" en el nav si el usuario no tiene acceso a ese módulo
+  if (!esAdmin && esDespachos) {
+    const navOrdenes = document.querySelector('.crm-header-nav a[href="crm-ordenes.html"]');
+    if (navOrdenes) {
+      navOrdenes.style.opacity = '0.4';
+      navOrdenes.style.pointerEvents = 'none';
+      navOrdenes.style.cursor = 'not-allowed';
+      navOrdenes.title = 'Sin acceso';
+      const badgeOrdenes = $('navChatBadgeOrdenes');
+      if (badgeOrdenes) badgeOrdenes.remove();
+    }
+  }
+
   $('loadingScreen').style.display = 'none';
   $('mainContent').style.display = 'block';
 
   await cargarOrdenes();
+  iniciarChatNotifListener(perfil);
   initEventListeners();
 });
 
 $('btnLogout').addEventListener('click', async () => {
   if (unsubOrdenes) unsubOrdenes();
   Object.values(chatUnsubscribers).forEach(unsub => unsub());
+  if (unsubChatNotif) unsubChatNotif();
   await signOut(auth);
   window.location.href = 'index.html';
 });
+
+// ═══════════ NOTIFICACIONES DE CHAT ═══════════
+function iniciarChatNotifListener(perfil) {
+  const lecturasIniciales = perfil?.chat_lecturas || {};
+  chatLecturas = new Map(Object.entries(lecturasIniciales));
+
+  if (unsubChatNotif) unsubChatNotif();
+
+  const q = query(
+    collection(db, 'chat_ordenes'),
+    orderBy('created_at', 'desc'),
+    fbLimit(500)
+  );
+
+  unsubChatNotif = onSnapshot(q, (snap) => {
+    mensajesPorOrden = new Map();
+    snap.forEach(d => {
+      const data = d.data();
+      if (!data.orden_id) return;
+      const arr = mensajesPorOrden.get(data.orden_id) || [];
+      arr.push({
+        id: d.id,
+        created_at: data.created_at,
+        usuario_id: data.usuario_id
+      });
+      mensajesPorOrden.set(data.orden_id, arr);
+    });
+    actualizarBadgeGlobalChat();
+    // Actualizar badges por card sin re-cargar toda la data
+    actualizarBadgesEnCards();
+  }, (error) => {
+    console.error('Error listener chat notif:', error);
+  });
+}
+
+function contarMensajesNoLeidos(ordenId) {
+  const mensajes = mensajesPorOrden.get(ordenId);
+  if (!mensajes || mensajes.length === 0) return 0;
+  const lastRead = chatLecturas.get(ordenId) || '';
+  return mensajes.filter(m =>
+    m.usuario_id !== currentUser.uid &&
+    (m.created_at || '') > lastRead
+  ).length;
+}
+
+function actualizarBadgeGlobalChat() {
+  // Solo contar órdenes que aparecen como tarjeta en algún tab de Despachos
+  const estadosVisibles = new Set(Object.values(TAB_ESTADOS).flat());
+  const idsVisibles = new Set(
+    todasLasOrdenes.filter(o => estadosVisibles.has(o.estado)).map(o => o.id)
+  );
+  let total = 0;
+  for (const ordenId of mensajesPorOrden.keys()) {
+    if (!idsVisibles.has(ordenId)) continue;
+    if (contarMensajesNoLeidos(ordenId) > 0) total++;
+  }
+  const label = total > 99 ? '99+' : String(total);
+  ['navChatBadgeOrdenes', 'navChatBadgeDespachos'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    if (total > 0) {
+      el.textContent = label;
+      el.style.display = 'inline-block';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
+function actualizarBadgesEnCards() {
+  todasLasOrdenes.forEach(o => {
+    const badge = $(`chatBadge-${o.id}`);
+    if (!badge) return;
+    const count = contarMensajesNoLeidos(o.id);
+    if (count > 0) {
+      badge.textContent = count > 9 ? '9+' : count;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  });
+}
+
+function renderBadgeChatNoLeidos(ordenId) {
+  const count = contarMensajesNoLeidos(ordenId);
+  const oculto = count <= 0;
+  const label = count > 9 ? '9+' : count;
+  return `<span id="chatBadge-${ordenId}" style="${oculto ? 'display:none;' : 'display:inline-block;'}position:absolute;top:-6px;right:-6px;background:#D9232D;color:white;border-radius:10px;padding:0 5px;font-size:0.62rem;font-weight:700;min-width:16px;text-align:center;line-height:14px;pointer-events:none;">${oculto ? 0 : label}</span>`;
+}
+
+window.marcarTodasLasVisiblesLeidas = async function() {
+  const estadosVisibles = new Set(Object.values(TAB_ESTADOS).flat());
+  const idsVisibles = new Set(
+    todasLasOrdenes.filter(o => estadosVisibles.has(o.estado)).map(o => o.id)
+  );
+  const ahoraIso = new Date().toISOString();
+  const updates = {};
+  for (const ordenId of mensajesPorOrden.keys()) {
+    if (!idsVisibles.has(ordenId)) continue;
+    if (contarMensajesNoLeidos(ordenId) <= 0) continue;
+    chatLecturas.set(ordenId, ahoraIso);
+    updates[`chat_lecturas.${ordenId}`] = ahoraIso;
+  }
+  actualizarBadgeGlobalChat();
+  actualizarBadgesEnCards();
+  if (Object.keys(updates).length === 0) return;
+  try {
+    await updateDoc(doc(db, 'usuarios', currentUser.uid), updates);
+    showToast('Mensajes marcados como leídos', 'success');
+  } catch (error) {
+    console.error('Error marcando todas como leídas:', error);
+    showToast('Error al marcar como leídas', 'error');
+  }
+};
+
+async function marcarOrdenLeida(ordenId) {
+  const ahoraIso = new Date().toISOString();
+  chatLecturas.set(ordenId, ahoraIso);
+  actualizarBadgeGlobalChat();
+  actualizarBadgesEnCards();
+  try {
+    await updateDoc(doc(db, 'usuarios', currentUser.uid), {
+      [`chat_lecturas.${ordenId}`]: ahoraIso
+    });
+  } catch (error) {
+    console.error('Error marcando orden leída:', error);
+  }
+}
 
 // ═══════════ CARGAR ÓRDENES (REAL-TIME) ═══════════
 async function cargarOrdenes() {
@@ -282,6 +428,9 @@ function renderizarOrdenes() {
       window.toggleDetalle(o.id);
     }
   });
+
+  // Recomputar badges de chat con los IDs actualmente visibles
+  actualizarBadgeGlobalChat();
 }
 
 function renderCardOrden(orden) {
@@ -335,9 +484,12 @@ function renderCardOrden(orden) {
         </div>
         <div class="crm-despacho-body-right">
           ${renderAccionesTab(orden)}
-          <button class="crm-despacho-action-btn crm-despacho-action-btn--green" onclick="toggleChat('${orden.id}', this)">
-            <i class="bi bi-chat-dots"></i> Chat
-          </button>
+          <span style="position:relative;display:inline-block;">
+            <button class="crm-despacho-action-btn crm-despacho-action-btn--green" onclick="toggleChat('${orden.id}', this)">
+              <i class="bi bi-chat-dots"></i> Chat
+            </button>
+            ${renderBadgeChatNoLeidos(orden.id)}
+          </span>
         </div>
       </div>
 
@@ -889,6 +1041,7 @@ window.toggleChat = function(ordenId, btn) {
 
   if (isOpen) {
     iniciarChatListener(ordenId);
+    marcarOrdenLeida(ordenId);
   } else {
     // Stop listener when chat is closed
     if (chatUnsubscribers[ordenId]) {
@@ -1085,6 +1238,8 @@ function iniciarChatListener(ordenId) {
     const mensajes = [];
     snap.forEach(d => mensajes.push({ id: d.id, ...d.data() }));
     renderMensajes(ordenId, mensajes);
+    // Mientras el chat está abierto, cualquier mensaje entrante se marca leído
+    marcarOrdenLeida(ordenId);
   }, (error) => {
     console.error('Error en chat listener:', error);
     const container = $(`chatMessages-${ordenId}`);
