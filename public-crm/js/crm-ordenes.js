@@ -585,6 +585,7 @@ function renderizarOrdenes() {
         <div style="font-weight:500;">${nombreCliente(o)}</div>
         <div style="font-size:0.73rem;color:var(--crm-text-light);">NIT: ${nitCliente(o)}</div>
       </td>
+      <td style="font-size:0.82rem;">${o.creadaPorNombre || o.creadaPorEmail || (o.user_id && !o.creadaPor ? 'Cliente (B2B)' : '-')}</td>
       <td style="white-space:nowrap;">${formatearFecha(o.created_at)}</td>
       <td style="text-align:center;">${o.cantidad_productos || (o.items || o.productos || []).length}</td>
       <td style="text-align:right;font-weight:600;">${formatearPrecio(o.total || 0)}</td>
