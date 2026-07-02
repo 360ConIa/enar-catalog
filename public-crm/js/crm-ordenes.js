@@ -203,10 +203,33 @@ function cargarOrdenes() {
 }
 
 // ═══════════ NOTIFICACIONES DE CHAT ═══════════
+function reproducirTonoNotificacion() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523, 784].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const t0 = ctx.currentTime + i * 0.13;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+      osc.start(t0);
+      osc.stop(t0 + 0.23);
+    });
+  } catch (e) { /* audio no disponible o bloqueado */ }
+}
+
+let chatNotifPrimerSnapshot = true;
+
 function iniciarChatNotifListener(perfil) {
   // Cargar lecturas previas desde el perfil
   const lecturasIniciales = perfil?.chat_lecturas || {};
   chatLecturas = new Map(Object.entries(lecturasIniciales));
+  chatNotifPrimerSnapshot = true;
 
   if (unsubChatNotif) unsubChatNotif();
 
@@ -217,6 +240,17 @@ function iniciarChatNotifListener(perfil) {
   );
 
   unsubChatNotif = onSnapshot(q, (snap) => {
+    // Detectar mensajes nuevos de otros usuarios en órdenes visibles
+    const idsVisibles = new Set(todasLasOrdenes.map(o => o.id));
+    let hayMensajesNuevosEnScope = false;
+    snap.docChanges().forEach(change => {
+      if (change.type !== 'added') return;
+      const data = change.doc.data();
+      if (!data.orden_id || !idsVisibles.has(data.orden_id)) return;
+      if (data.usuario_id === currentUser.uid) return;
+      hayMensajesNuevosEnScope = true;
+    });
+
     // Reagrupar mensajes por orden_id
     mensajesPorOrden = new Map();
     snap.forEach(d => {
@@ -231,7 +265,12 @@ function iniciarChatNotifListener(perfil) {
       mensajesPorOrden.set(data.orden_id, arr);
     });
     actualizarBadgeGlobalChat();
-    aplicarFiltros(); // re-render tabla con badges actualizados
+    aplicarFiltros();
+
+    if (!chatNotifPrimerSnapshot && hayMensajesNuevosEnScope) {
+      reproducirTonoNotificacion();
+    }
+    chatNotifPrimerSnapshot = false;
   }, (error) => {
     console.error('Error listener chat notif:', error);
   });
