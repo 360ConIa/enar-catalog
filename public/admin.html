@@ -1046,8 +1046,8 @@
               <span style="position:relative;display:inline-block;cursor:pointer;" class="tooltip-formula">
                 <i class="bi bi-info-circle" style="font-size:18px;color:#64748b;"></i>
                 <span style="visibility:hidden;opacity:0;position:absolute;top:130%;left:0;background:#1e293b;color:#fff;padding:10px 14px;border-radius:8px;font-size:12px;white-space:nowrap;z-index:999;transition:opacity 0.2s;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
-                  Fórmula: <strong>precio_lista × descuento_base × descuento_extra × (1 + IVA)</strong><br>
-                  Los IDs excepción no aplican descuento extra.
+                  Fórmula: <strong>precio_base × (1 + incremento/100)</strong><br>
+                  Los SKUs excepción usan un incremento fijo.
                   <span style="position:absolute;bottom:100%;left:12px;border:6px solid transparent;border-bottom-color:#1e293b;"></span>
                 </span>
               </span>
@@ -1062,18 +1062,16 @@
                 <tr>
                   <th>Nombre</th>
                   <th>Campo Firestore</th>
-                  <th style="text-align:right;">Desc. Base</th>
-                  <th style="text-align:right;">Desc. Extra</th>
-                  <th style="text-align:right;">IVA</th>
-                  <th style="text-align:center;">IDs Excep.</th>
+                  <th style="text-align:right;">Incremento %</th>
+                  <th style="text-align:center;">SKUs Excep.</th>
+                  <th style="text-align:center;">Inc. Excep. %</th>
                   <th style="text-align:center;">Estado</th>
-                  <th style="text-align:center;">Sistema</th>
                   <th class="text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody id="listasBody">
                 <tr>
-                  <td colspan="9" class="empty-message">Cargando listas...</td>
+                  <td colspan="7" class="empty-message">Cargando listas...</td>
                 </tr>
               </tbody>
             </table>
@@ -1112,22 +1110,17 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="listaDescBase">Descuento Base (%) *</label>
-            <input type="number" id="listaDescBase" placeholder="48" min="0" max="100" step="0.01" required>
-            <small style="color:#64748b;font-size:11px;">Ej: 48 = 48% de descuento sobre precio_lista</small>
+            <label for="listaIncremento">Incremento (%) *</label>
+            <input type="number" id="listaIncremento" placeholder="30" min="0" max="1000" step="0.01" required>
+            <small style="color:#64748b;font-size:11px;">Ej: 30 = precio_base × 1.30</small>
           </div>
           <div class="form-group">
-            <label for="listaDescExtra">Descuento Extra (%)</label>
-            <input type="number" id="listaDescExtra" placeholder="0" min="0" max="100" step="0.01" value="0">
-            <small style="color:#64748b;font-size:11px;">Opcional. No aplica a IDs excepción.</small>
+            <label for="listaIva">IVA (%) *</label>
+            <input type="number" id="listaIva" placeholder="0" min="0" max="100" step="0.01" value="0" required>
           </div>
         </div>
 
         <div class="form-row">
-          <div class="form-group">
-            <label for="listaIva">IVA (%) *</label>
-            <input type="number" id="listaIva" placeholder="19" min="0" max="100" step="0.01" value="19" required>
-          </div>
           <div class="form-group">
             <label for="listaActiva">Estado</label>
             <select id="listaActiva">
@@ -1138,14 +1131,19 @@
         </div>
 
         <hr style="margin: 15px 0; border-color: #e5e7eb;">
-        <h4 style="font-size: 14px; color: #666; margin-bottom: 12px;">IDs Excepción (no aplica descuento extra)</h4>
+        <h4 style="font-size: 14px; color: #666; margin-bottom: 12px;">SKUs Excepción (usan incremento fijo)</h4>
 
-        <div class="form-group">
-          <label for="listaIdsExcepcion">IDs de productos separados por coma o línea</label>
-          <textarea id="listaIdsExcepcion" rows="4" placeholder="RR, RS, IG201, TG500
-EQ, EX, EG
--O-G500, -O-G01" style="font-family:monospace;font-size:13px;"></textarea>
-          <small style="color:#64748b;font-size:11px;" id="listaIdsExcepcionCount">0 IDs</small>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="listaSkusExcepcion">Sufijos de SKU separados por coma o línea</label>
+            <textarea id="listaSkusExcepcion" rows="3" placeholder="--KQ" style="font-family:monospace;font-size:13px;"></textarea>
+            <small style="color:#64748b;font-size:11px;" id="listaSkusExcepcionCount">0 sufijos</small>
+          </div>
+          <div class="form-group">
+            <label for="listaIncExcepcion">Incremento Excepción (%)</label>
+            <input type="number" id="listaIncExcepcion" placeholder="30" min="0" max="1000" step="0.01" value="30">
+            <small style="color:#64748b;font-size:11px;">Incremento fijo para SKUs que coincidan con los sufijos.</small>
+          </div>
         </div>
 
         <div id="listaPreview" style="background:#f1f5f9;border-radius:8px;padding:12px;margin-top:12px;font-size:13px;">
@@ -1429,6 +1427,7 @@ EQ, EX, EG
                   <th style="text-align:right;">Mayorista</th>
                   <th style="text-align:right;">Negocio</th>
                   <th style="text-align:right;">P. Natural</th>
+                  <th style="text-align:right;">Nuevos</th>
                 </tr>
               </thead>
               <tbody id="masivaPreviewBody"></tbody>
@@ -3741,14 +3740,13 @@ EQ, EX, EG
       if (!Array.isArray(listasPrecios) || listasPrecios.length === 0) return derivados;
       for (const lista of listasPrecios) {
         if (!lista || lista.activa === false || !lista.campo_firestore) continue;
-        const dBase = (100 - (lista.descuento_base || 0)) / 100;
-        const dExtra = (100 - (lista.descuento_extra || 0)) / 100;
+        const skusExcep = lista.skus_excepcion || [];
+        const esExcep = skusExcep.length > 0 && skusExcep.some(suffix => codInterno.endsWith(suffix));
+        const incremento = esExcep
+          ? (lista.incremento_excepcion || lista.incremento || 0)
+          : (lista.incremento || 0);
         const iva = 1 + (lista.iva || 0) / 100;
-        const idsExcep = lista.ids_excepcion || [];
-        const esExcep = idsExcep.includes(docId) || idsExcep.includes(codInterno);
-        const nuevo = esExcep
-          ? Math.round(precioLista * dBase * iva)
-          : Math.round(precioLista * dBase * dExtra * iva);
+        const nuevo = Math.round(precioLista * (1 + incremento / 100) * iva);
         derivados[lista.campo_firestore] = nuevo;
       }
       return derivados;
@@ -3915,7 +3913,7 @@ EQ, EX, EG
       // Tabla preview
       const body = document.getElementById('masivaPreviewBody');
       if (totalConCambios === 0) {
-        body.innerHTML = '<tr><td colspan="7" class="empty-message">No hay cambios para aplicar</td></tr>';
+        body.innerHTML = '<tr><td colspan="8" class="empty-message">No hay cambios para aplicar</td></tr>';
       } else {
         const fmt = v => v == null ? '—' : formatearPrecio(v);
         body.innerHTML = masivaCambios.slice(0, 200).map(c => {
@@ -3934,8 +3932,9 @@ EQ, EX, EG
             <td style="text-align:right;">${fmt(d.precio_mayorista)}</td>
             <td style="text-align:right;">${fmt(d.precio_negocio)}</td>
             <td style="text-align:right;">${fmt(d.precio_persona_natural)}</td>
+            <td style="text-align:right;">${fmt(d.precio_nuevos)}</td>
           </tr>`;
-        }).join('') + (masivaCambios.length > 200 ? `<tr><td colspan="7" style="text-align:center;color:#64748b;font-style:italic;">... +${masivaCambios.length - 200} cambios adicionales</td></tr>` : '');
+        }).join('') + (masivaCambios.length > 200 ? `<tr><td colspan="8" style="text-align:center;color:#64748b;font-style:italic;">... +${masivaCambios.length - 200} cambios adicionales</td></tr>` : '');
       }
 
       // Navegación
@@ -4021,10 +4020,10 @@ EQ, EX, EG
         id: 'mayorista',
         nombre: 'Mayorista',
         campo_firestore: 'precio_mayorista',
-        descuento_base: 48,
-        descuento_extra: 3,
-        iva: 19,
-        ids_excepcion: [],
+        incremento: 30,
+        iva: 0,
+        skus_excepcion: ['--KQ'],
+        incremento_excepcion: 30,
         activa: true,
         sistema: true
       },
@@ -4032,18 +4031,10 @@ EQ, EX, EG
         id: 'negocio',
         nombre: 'Negocio',
         campo_firestore: 'precio_negocio',
-        descuento_base: 48,
-        descuento_extra: 3,
-        iva: 19,
-        ids_excepcion: [
-          'RR','RS','RÑ','RD','RZ','RX',
-          'IG201','IG300','IG500','IG100','IG600','IG917','IG400',
-          'EQ','EX','EG','EC',
-          'R-AR','R-AS','R-AÑ','R-AD','R-AZ','R-AX',
-          'TG500','TG01','TG100','TG600','TG300','TG200','TG400','TG201',
-          '-B-G','-Q-X','-Q-G','-Q-C',
-          '-O-G500','-O-G01','-O-G400','-O-G300','-O-G600','-O-G200','-O-G100','-O-G06'
-        ],
+        incremento: 35,
+        iva: 0,
+        skus_excepcion: ['--KQ'],
+        incremento_excepcion: 30,
         activa: true,
         sistema: true
       },
@@ -4051,10 +4042,21 @@ EQ, EX, EG
         id: 'persona_natural',
         nombre: 'Persona Natural',
         campo_firestore: 'precio_persona_natural',
-        descuento_base: 46,
-        descuento_extra: 0,
-        iva: 19,
-        ids_excepcion: [],
+        incremento: 40,
+        iva: 0,
+        skus_excepcion: ['--KQ'],
+        incremento_excepcion: 30,
+        activa: true,
+        sistema: true
+      },
+      {
+        id: 'nuevos',
+        nombre: 'Nuevos',
+        campo_firestore: 'precio_nuevos',
+        incremento: 45,
+        iva: 0,
+        skus_excepcion: ['--KQ'],
+        incremento_excepcion: 30,
         activa: true,
         sistema: true
       }
@@ -4064,13 +4066,23 @@ EQ, EX, EG
       try {
         const snap = await getDoc(LISTAS_DOC_REF());
         if (!snap.exists()) {
-          // Primer uso: crear doc con las 3 listas del sistema
+          // Primer uso: crear doc con las 4 listas del sistema
           await setDoc(LISTAS_DOC_REF(), { listas: LISTAS_SISTEMA_SEED });
           listasPrecios = [...LISTAS_SISTEMA_SEED];
         } else {
           listasPrecios = snap.data().listas || [];
-          // Asegurar que las 3 listas del sistema existan
           let cambios = false;
+          // Migrar listas del sistema antiguo (descuento) al nuevo modelo (incremento)
+          listasPrecios.forEach((l, idx) => {
+            if (l.sistema && l.descuento_base !== undefined && l.incremento === undefined) {
+              const seed = LISTAS_SISTEMA_SEED.find(s => s.id === l.id);
+              if (seed) {
+                listasPrecios[idx] = { ...seed };
+                cambios = true;
+              }
+            }
+          });
+          // Asegurar que las 4 listas del sistema existan
           LISTAS_SISTEMA_SEED.forEach(seed => {
             if (!listasPrecios.find(l => l.id === seed.id)) {
               listasPrecios.push(seed);
@@ -4111,16 +4123,17 @@ EQ, EX, EG
     }
 
     function calcularPrecioEjemplo(lista, precioLista, esExcepcion = false) {
-      const dBase = (100 - lista.descuento_base) / 100;
-      const dExtra = esExcepcion ? 1 : (100 - lista.descuento_extra) / 100;
-      const iva = 1 + (lista.iva / 100);
-      return Math.round(precioLista * dBase * dExtra * iva);
+      const incremento = esExcepcion
+        ? (lista.incremento_excepcion || lista.incremento || 0)
+        : (lista.incremento || 0);
+      const iva = 1 + ((lista.iva || 0) / 100);
+      return Math.round(precioLista * (1 + incremento / 100) * iva);
     }
 
     function renderizarListas() {
       const body = document.getElementById('listasBody');
       if (listasPrecios.length === 0) {
-        body.innerHTML = '<tr><td colspan="9" class="empty-message">No hay listas</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" class="empty-message">No hay listas</td></tr>';
         return;
       }
 
@@ -4128,17 +4141,13 @@ EQ, EX, EG
         <tr>
           <td style="font-weight:500;">${l.nombre}</td>
           <td><code style="font-size:12px;background:#f1f5f9;padding:2px 6px;border-radius:4px;">${l.campo_firestore}</code></td>
-          <td style="text-align:right;">${l.descuento_base}%</td>
-          <td style="text-align:right;">${l.descuento_extra || 0}%</td>
-          <td style="text-align:right;">${l.iva}%</td>
-          <td style="text-align:center;">${(l.ids_excepcion || []).length}</td>
+          <td style="text-align:right;">${l.incremento || 0}%</td>
+          <td style="text-align:center;">${(l.skus_excepcion || []).length}</td>
+          <td style="text-align:center;">${l.incremento_excepcion != null ? l.incremento_excepcion + '%' : '—'}</td>
           <td style="text-align:center;">
             <span class="status-badge ${l.activa ? 'status-aprobado' : 'status-rechazado'}">
               ${l.activa ? 'Activa' : 'Inactiva'}
             </span>
-          </td>
-          <td style="text-align:center;">
-            ${l.sistema ? '<span class="status-badge status-aprobado">Sí</span>' : '<span class="status-badge">No</span>'}
           </td>
           <td class="text-center">
             <button class="btn-action" onclick="abrirAplicarLista('${l.id}')" title="Aplicar a productos">
@@ -4165,21 +4174,21 @@ EQ, EX, EG
     }
 
     function actualizarPreviewLista() {
-      const dBase = parseFloat(document.getElementById('listaDescBase').value) || 0;
-      const dExtra = parseFloat(document.getElementById('listaDescExtra').value) || 0;
+      const incremento = parseFloat(document.getElementById('listaIncremento').value) || 0;
       const iva = parseFloat(document.getElementById('listaIva').value) || 0;
-      const ids = parseIdsExcepcion(document.getElementById('listaIdsExcepcion').value);
+      const skus = parseIdsExcepcion(document.getElementById('listaSkusExcepcion').value);
+      const incExcep = parseFloat(document.getElementById('listaIncExcepcion').value) || 0;
 
-      document.getElementById('listaIdsExcepcionCount').textContent = ids.length + ' IDs';
+      document.getElementById('listaSkusExcepcionCount').textContent = skus.length + ' sufijos';
 
       const p = 100000;
-      const pNormal = calcularPrecioEjemplo({ descuento_base: dBase, descuento_extra: dExtra, iva }, p, false);
-      const pExcep = calcularPrecioEjemplo({ descuento_base: dBase, descuento_extra: dExtra, iva }, p, true);
+      const pNormal = calcularPrecioEjemplo({ incremento, iva }, p, false);
+      const pExcep = calcularPrecioEjemplo({ incremento, incremento_excepcion: incExcep, iva }, p, true);
 
-      let html = `precio_lista = $${p.toLocaleString('es-CO')}<br>`;
-      html += `→ Normal: <strong>$${pNormal.toLocaleString('es-CO')}</strong>`;
-      if (dExtra > 0 && ids.length > 0) {
-        html += ` · Excepción (sin ${dExtra}% extra): <strong>$${pExcep.toLocaleString('es-CO')}</strong>`;
+      let html = `precio_base = $${p.toLocaleString('es-CO')}<br>`;
+      html += `→ Normal (+${incremento}%): <strong>$${pNormal.toLocaleString('es-CO')}</strong>`;
+      if (skus.length > 0) {
+        html += ` · Excepción (+${incExcep}%): <strong>$${pExcep.toLocaleString('es-CO')}</strong>`;
       }
       document.getElementById('listaPreviewCalculo').innerHTML = html;
     }
@@ -4191,11 +4200,11 @@ EQ, EX, EG
       document.getElementById('listaNombre').value = '';
       document.getElementById('listaCampo').value = '';
       document.getElementById('listaCampo').disabled = false;
-      document.getElementById('listaDescBase').value = '';
-      document.getElementById('listaDescExtra').value = '0';
-      document.getElementById('listaIva').value = '19';
+      document.getElementById('listaIncremento').value = '';
+      document.getElementById('listaIva').value = '0';
       document.getElementById('listaActiva').value = 'true';
-      document.getElementById('listaIdsExcepcion').value = '';
+      document.getElementById('listaSkusExcepcion').value = '';
+      document.getElementById('listaIncExcepcion').value = '30';
       document.getElementById('listaNombre').readOnly = false;
       actualizarPreviewLista();
       document.getElementById('modalLista').classList.add('active');
@@ -4212,11 +4221,11 @@ EQ, EX, EG
       document.getElementById('listaCampo').value = l.campo_firestore;
       document.getElementById('listaCampo').disabled = true;
       document.getElementById('listaNombre').readOnly = !!l.sistema;
-      document.getElementById('listaDescBase').value = l.descuento_base;
-      document.getElementById('listaDescExtra').value = l.descuento_extra || 0;
-      document.getElementById('listaIva').value = l.iva;
+      document.getElementById('listaIncremento').value = l.incremento || l.descuento_base || 0;
+      document.getElementById('listaIva').value = l.iva || 0;
       document.getElementById('listaActiva').value = l.activa ? 'true' : 'false';
-      document.getElementById('listaIdsExcepcion').value = (l.ids_excepcion || []).join(', ');
+      document.getElementById('listaSkusExcepcion').value = (l.skus_excepcion || []).join(', ');
+      document.getElementById('listaIncExcepcion').value = l.incremento_excepcion || 30;
       actualizarPreviewLista();
       document.getElementById('modalLista').classList.add('active');
     };
@@ -4225,14 +4234,14 @@ EQ, EX, EG
       const errorEl = document.getElementById('listaError');
       const nombre = document.getElementById('listaNombre').value.trim();
       const campoInput = document.getElementById('listaCampo').value.trim();
-      const dBase = parseFloat(document.getElementById('listaDescBase').value);
-      const dExtra = parseFloat(document.getElementById('listaDescExtra').value) || 0;
-      const iva = parseFloat(document.getElementById('listaIva').value);
+      const incremento = parseFloat(document.getElementById('listaIncremento').value);
+      const iva = parseFloat(document.getElementById('listaIva').value) || 0;
       const activa = document.getElementById('listaActiva').value === 'true';
-      const idsExcepcion = parseIdsExcepcion(document.getElementById('listaIdsExcepcion').value);
+      const skusExcepcion = parseIdsExcepcion(document.getElementById('listaSkusExcepcion').value);
+      const incExcepcion = parseFloat(document.getElementById('listaIncExcepcion').value) || 0;
 
-      if (!nombre || !campoInput || isNaN(dBase) || isNaN(iva)) {
-        errorEl.textContent = 'Nombre, Campo Firestore, Descuento Base e IVA son obligatorios.';
+      if (!nombre || !campoInput || isNaN(incremento)) {
+        errorEl.textContent = 'Nombre, Campo Firestore e Incremento son obligatorios.';
         errorEl.style.display = 'block';
         return;
       }
@@ -4259,10 +4268,10 @@ EQ, EX, EG
           listasPrecios[idx] = {
             ...existente,
             nombre: existente.sistema ? existente.nombre : nombre,
-            descuento_base: dBase,
-            descuento_extra: dExtra,
+            incremento,
             iva,
-            ids_excepcion: idsExcepcion,
+            skus_excepcion: skusExcepcion,
+            incremento_excepcion: incExcepcion,
             activa
           };
         } else {
@@ -4279,10 +4288,10 @@ EQ, EX, EG
             id: nuevoId,
             nombre,
             campo_firestore: campoInput,
-            descuento_base: dBase,
-            descuento_extra: dExtra,
+            incremento,
             iva,
-            ids_excepcion: idsExcepcion,
+            skus_excepcion: skusExcepcion,
+            incremento_excepcion: incExcepcion,
             activa,
             sistema: false
           });
@@ -4303,7 +4312,7 @@ EQ, EX, EG
     });
 
     // Listeners de preview
-    ['listaDescBase','listaDescExtra','listaIva','listaIdsExcepcion'].forEach(id => {
+    ['listaIncremento','listaIva','listaSkusExcepcion','listaIncExcepcion'].forEach(id => {
       document.addEventListener('input', (e) => {
         if (e.target.id === id) actualizarPreviewLista();
       });
@@ -4345,13 +4354,15 @@ EQ, EX, EG
       listaAAplicar = listasPrecios.find(l => l.id === id);
       if (!listaAAplicar) return;
       document.getElementById('aplicarListaCampo').textContent = listaAAplicar.campo_firestore;
-      const dB = (100 - listaAAplicar.descuento_base) / 100;
-      const dE = (100 - listaAAplicar.descuento_extra) / 100;
-      const iva = 1 + listaAAplicar.iva / 100;
-      const idsCount = (listaAAplicar.ids_excepcion || []).length;
-      let formula = `Normal: precio_lista × ${dB.toFixed(4)} × ${dE.toFixed(4)} × ${iva.toFixed(2)}`;
-      if (idsCount > 0) {
-        formula += `<br>Excepción (${idsCount} IDs): precio_lista × ${dB.toFixed(4)} × ${iva.toFixed(2)}`;
+      const inc = listaAAplicar.incremento || 0;
+      const iva = 1 + (listaAAplicar.iva || 0) / 100;
+      const skusCount = (listaAAplicar.skus_excepcion || []).length;
+      const incExcep = listaAAplicar.incremento_excepcion || inc;
+      let formula = `Normal: precio_base × ${(1 + inc / 100).toFixed(4)}`;
+      if (iva !== 1) formula += ` × ${iva.toFixed(2)}`;
+      if (skusCount > 0) {
+        formula += `<br>Excepción (${skusCount} sufijos): precio_base × ${(1 + incExcep / 100).toFixed(4)}`;
+        if (iva !== 1) formula += ` × ${iva.toFixed(2)}`;
       }
       document.getElementById('aplicarListaFormula').innerHTML = formula;
       document.getElementById('aplicarListaProgreso').style.display = 'none';
@@ -4377,10 +4388,10 @@ EQ, EX, EG
       try {
         const snap = await getDocs(query(collection(db, 'productos'), where('activo', '==', true)));
         const total = snap.size;
-        const idsExcepcion = new Set(listaAAplicar.ids_excepcion || []);
-        const dBase = (100 - listaAAplicar.descuento_base) / 100;
-        const dExtra = (100 - listaAAplicar.descuento_extra) / 100;
-        const iva = 1 + listaAAplicar.iva / 100;
+        const skusExcepcion = listaAAplicar.skus_excepcion || [];
+        const incremento = listaAAplicar.incremento || 0;
+        const incExcepcion = listaAAplicar.incremento_excepcion || incremento;
+        const iva = 1 + (listaAAplicar.iva || 0) / 100;
         const campo = listaAAplicar.campo_firestore;
 
         const updates = [];
@@ -4389,10 +4400,10 @@ EQ, EX, EG
           const pl = data.precio_lista || 0;
           if (pl === 0) return;
 
-          const esExcep = idsExcepcion.has(docSnap.id);
-          const nuevoPrecio = esExcep
-            ? Math.round(pl * dBase * iva)
-            : Math.round(pl * dBase * dExtra * iva);
+          const codInterno = data.cod_interno || docSnap.id;
+          const esExcep = skusExcepcion.length > 0 && skusExcepcion.some(s => codInterno.endsWith(s));
+          const inc = esExcep ? incExcepcion : incremento;
+          const nuevoPrecio = Math.round(pl * (1 + inc / 100) * iva);
 
           const actual = Math.round(data[campo] || 0);
           if (actual !== nuevoPrecio) {

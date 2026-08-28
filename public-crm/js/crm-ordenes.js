@@ -950,7 +950,8 @@ function obtenerPrecioCliente(producto, cliente) {
   const preciosPorTipo = {
     'mayorista': producto.precio_mayorista,
     'negocio': producto.precio_negocio,
-    'persona_natural': producto.precio_persona_natural
+    'persona_natural': producto.precio_persona_natural,
+    'nuevos': producto.precio_nuevos
   };
   const precioTipo = preciosPorTipo[tipoCliente];
   if (precioTipo && precioTipo > 0) return precioTipo;

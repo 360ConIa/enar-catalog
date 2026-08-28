@@ -590,7 +590,8 @@ function obtenerPrecioCliente(producto, cliente) {
   const preciosPorTipo = {
     'mayorista': producto.precio_mayorista,
     'negocio': producto.precio_negocio,
-    'persona_natural': producto.precio_persona_natural
+    'persona_natural': producto.precio_persona_natural,
+    'nuevos': producto.precio_nuevos
   };
   const precioTipo = preciosPorTipo[tipoCliente];
   if (precioTipo && precioTipo > 0) return precioTipo;
@@ -677,38 +678,74 @@ function buscarProducto(termino, focusCantidad) {
     const yaEnOrden = productosOrden.some(po => po.cod_interno === p.cod_interno);
     const imgSrc = p.imagen_principal || '';
     return `
-      <div class="prod-row${yaEnOrden ? ' prod-row--added' : ''}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--crm-border);font-size:0.82rem;${yaEnOrden ? 'opacity:0.5;' : ''}" data-cod="${p.cod_interno}" data-idx="${i}">
+      <div class="prod-row${yaEnOrden ? ' prod-row--added' : ''}" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:8px 12px;border-bottom:1px solid var(--crm-border);font-size:0.82rem;${yaEnOrden ? 'opacity:0.5;' : ''}" data-cod="${p.cod_interno}" data-idx="${i}">
         ${imgSrc ? `<img src="${imgSrc}" alt="" style="width:36px;height:36px;border-radius:4px;object-fit:cover;" onerror="this.style.display='none'">` : '<div style="width:36px;height:36px;border-radius:4px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#94a3b8;">N/A</div>'}
-        <div style="flex:1;min-width:0;">
+        <div style="flex:1;min-width:120px;">
           <div style="font-weight:500;">${p.titulo}</div>
           <div style="font-size:0.73rem;color:var(--crm-text-light);">${p.cod_interno} · ${p.marca || ''}</div>
         </div>
         <div style="font-weight:600;min-width:80px;text-align:right;">${formatearPrecio(precio)}</div>
-        <input type="number" value="1" min="1" class="prod-qty" style="width:50px;padding:4px;border:1px solid var(--crm-border);border-radius:4px;text-align:center;font-size:0.82rem;" data-cod="${p.cod_interno}" data-idx="${i}" ${yaEnOrden ? 'disabled' : ''}>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+          <input type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="send" value="1" class="prod-qty" style="width:50px;padding:6px 4px;border:1px solid var(--crm-border);border-radius:4px;text-align:center;font-size:0.85rem;" data-cod="${p.cod_interno}" data-idx="${i}" ${yaEnOrden ? 'disabled' : ''}>
+          <button type="button" class="prod-add-btn" style="padding:6px 10px;border:none;background:var(--crm-primary);color:#fff;border-radius:4px;font-size:0.82rem;font-weight:500;cursor:pointer;white-space:nowrap;${yaEnOrden ? 'opacity:0.4;pointer-events:none;background:#94a3b8;' : ''}" data-cod="${p.cod_interno}" data-idx="${i}" ${yaEnOrden ? 'disabled' : ''}>+ Agregar</button>
+        </div>
       </div>
     `;
   }).join('');
 
+  // Función auxiliar para agregar producto desde una fila
+  function agregarDesdeRow(cod, qtyInput) {
+    if (qtyInput.disabled) return;
+    const prod = ultimosFiltrados.find(p => p.cod_interno === cod);
+    const cantidad = parseInt(qtyInput.value) || 1;
+    if (prod) {
+      agregarProducto(prod, cantidad);
+      const row = qtyInput.closest('.prod-row');
+      if (row) { row.style.opacity = '0.5'; row.classList.add('prod-row--added'); }
+      qtyInput.disabled = true;
+      const addBtn = row?.querySelector('.prod-add-btn');
+      if (addBtn) { addBtn.disabled = true; addBtn.style.opacity = '0.4'; addBtn.style.pointerEvents = 'none'; }
+      $('inputBuscarProducto').focus();
+      $('inputBuscarProducto').select();
+    }
+  }
+
   // Enter en campo cantidad → agregar producto y volver al buscador
   container.querySelectorAll('.prod-qty').forEach(input => {
+    // keydown + stopImmediatePropagation para evitar que el navegador mueva foco
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' || e.keyCode === 13) {
         e.preventDefault();
-        if (input.disabled) return;
-        const cod = input.dataset.cod;
-        const prod = ultimosFiltrados.find(p => p.cod_interno === cod);
-        const cantidad = parseInt(input.value) || 1;
-        if (prod) {
-          agregarProducto(prod, cantidad);
-          // Marcar fila como agregada
-          const row = input.closest('.prod-row');
-          if (row) { row.style.opacity = '0.5'; row.classList.add('prod-row--added'); }
-          input.disabled = true;
-          // Volver foco al buscador
-          $('inputBuscarProducto').focus();
-          $('inputBuscarProducto').select();
-        }
+        e.stopImmediatePropagation();
+        agregarDesdeRow(input.dataset.cod, input);
       }
+    }, true);
+    // keypress como fallback (algunos teclados virtuales lo disparan en vez de keydown)
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' || e.keyCode === 13) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        agregarDesdeRow(input.dataset.cod, input);
+      }
+    }, true);
+    // Tablet "Next/Siguiente": no dispara keydown, solo mueve foco → capturar con blur
+    input.addEventListener('blur', () => {
+      if (input.disabled) return;
+      // Si el input fue tocado y tiene valor, agregar automáticamente
+      if (input.dataset.touched === '1') {
+        agregarDesdeRow(input.dataset.cod, input);
+      }
+    });
+    // Marcar que el usuario interactuó con este campo
+    input.addEventListener('focus', () => { input.dataset.touched = '1'; });
+  });
+
+  // Botón "+ Agregar" como alternativa táctil (tablets)
+  container.querySelectorAll('.prod-add-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = btn.closest('.prod-row');
+      const qtyInput = row?.querySelector('.prod-qty');
+      if (qtyInput) agregarDesdeRow(btn.dataset.cod, qtyInput);
     });
   });
 
@@ -1106,7 +1143,7 @@ function initEventListeners() {
   }, 300));
 
   $('inputBuscarProducto')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' || e.keyCode === 13) {
       e.preventDefault();
       const t = e.target.value.trim();
       if (t) buscarProducto(t, true);

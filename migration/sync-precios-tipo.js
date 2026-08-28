@@ -1,15 +1,15 @@
 /**
  * ENAR - Sync precios por tipo de cliente
- * Calcula precio_mayorista, precio_negocio y precio_persona_natural
- * a partir de precio_lista.
+ * Calcula precio_mayorista, precio_negocio, precio_persona_natural y precio_nuevos
+ * a partir de precio_lista (precio base).
  *
- * Fórmulas:
- *   Mayorista:       precio_lista × (1 - 48%) × (1 - 3%) × 1.19 IVA
- *                    = precio_lista × 0.52 × 0.97 × 1.19
- *   Negocio:         = Mayorista (con 3%), excepto IDs específicos que van sin 3%
- *                    General: precio_lista × 0.52 × 0.97 × 1.19
- *                    Excepción: precio_lista × 0.52 × 1.19
- *   Persona Natural: precio_lista × 60% × 1.19 IVA
+ * Fórmulas (incremento sobre precio base, sin IVA):
+ *   Mayorista:        precio_lista × 1.30  (+30%)
+ *   Negocio:          precio_lista × 1.35  (+35%)
+ *   Persona Natural:  precio_lista × 1.40  (+40%)
+ *   Nuevos:           precio_lista × 1.45  (+45%)
+ *
+ * Excepción: SKUs que terminan en --KQ → 30% fijo en las 4 listas
  *
  * Uso:
  *   node sync-precios-tipo.js --test       (dry-run)
@@ -24,26 +24,14 @@ const chalk = require('chalk');
 // CONFIGURACIÓN DE FACTORES
 // ============================================
 
-// Fórmulas:
-// Mayorista:        (P.Lista × 0.52 × 0.97) × 1.19
-// Negocio caso 1:   (P.Lista × 0.52 × 0.97) × 1.19  (igual a mayorista)
-// Negocio caso 2:   (P.Lista × 0.52) × 1.19          (sin descuento 3%, para IDs específicos)
-// Persona Natural:  (P.Lista × 0.60) × 1.19
-const DESCUENTO_BASE = 0.52;       // 100% - 48%
-const DESCUENTO_EXTRA = 0.97;      // 100% - 3%
-const FACTOR_PERSONA_NATURAL = 0.54;
-const IVA = 1.19;
+const FACTOR_MAYORISTA = 1.30;       // +30%
+const FACTOR_NEGOCIO = 1.35;         // +35%
+const FACTOR_PERSONA_NATURAL = 1.40; // +40%
+const FACTOR_NUEVOS = 1.45;          // +45%
+const FACTOR_EXCEPCION = 1.30;       // +30% fijo para excepciones
 
-// IDs que NO llevan el descuento extra del 3% en precio negocio (caso 2)
-const IDS_NEGOCIO_SIN_3 = new Set([
-  'RR','RS','RÑ','RD','RZ','RX',
-  'IG201','IG300','IG500','IG100','IG600','IG917','IG400',
-  'EQ','EX','EG','EC',
-  'R-AR','R-AS','R-AÑ','R-AD','R-AZ','R-AX',
-  'TG500','TG01','TG100','TG600','TG300','TG200','TG400','TG201',
-  '-B-G','-Q-X','-Q-G','-Q-C',
-  '-O-G500','-O-G01','-O-G400','-O-G300','-O-G600','-O-G200','-O-G100','-O-G06'
-]);
+// Sufijos de SKU que usan el incremento de excepción (30% fijo en todas las listas)
+const SUFIJOS_EXCEPCION = ['--KQ'];
 
 const BATCH_SIZE = 500;
 
@@ -56,10 +44,11 @@ if (!MODE_TEST && !MODE_EJECUTAR) {
 }
 
 console.log(chalk.blue.bold('\n💰 ENAR - Sync Precios por Tipo de Cliente\n'));
-console.log(chalk.gray('   Mayorista:       (P.Lista × 52% × 97%) × 1.19'));
-console.log(chalk.gray('   Negocio caso 1:  (P.Lista × 52% × 97%) × 1.19 (igual mayorista)'));
-console.log(chalk.gray('   Negocio caso 2:  (P.Lista × 52%) × 1.19 (sin 3%, ' + IDS_NEGOCIO_SIN_3.size + ' IDs)'));
-console.log(chalk.gray('   Persona Natural: (P.Lista × 54%) × 1.19\n'));
+console.log(chalk.gray('   Mayorista:        precio_base × 1.30 (+30%)'));
+console.log(chalk.gray('   Negocio:          precio_base × 1.35 (+35%)'));
+console.log(chalk.gray('   Persona Natural:  precio_base × 1.40 (+40%)'));
+console.log(chalk.gray('   Nuevos:           precio_base × 1.45 (+45%)'));
+console.log(chalk.gray('   Excepción (--KQ): precio_base × 1.30 (+30% fijo en todas)\n'));
 
 if (MODE_TEST) {
   console.log(chalk.yellow('⚠️  MODO TEST (dry-run)\n'));
@@ -88,6 +77,10 @@ const db = admin.firestore();
 // MAIN
 // ============================================
 
+function esExcepcion(codInterno) {
+  return SUFIJOS_EXCEPCION.some(suffix => codInterno.endsWith(suffix));
+}
+
 async function main() {
   const startTime = Date.now();
 
@@ -109,39 +102,41 @@ async function main() {
       return;
     }
 
-    const esSin3 = IDS_NEGOCIO_SIN_3.has(docSnap.id);
+    const codInterno = data.cod_interno || docSnap.id;
+    const esExcep = esExcepcion(codInterno);
 
-    // Mayorista: siempre con descuento base + extra 3%
-    const nuevoMay = Math.round(pl * DESCUENTO_BASE * DESCUENTO_EXTRA * IVA);
-    // Negocio: caso 2 (sin 3%) o caso 1 (con 3%, igual a mayorista)
-    const nuevoNeg = esSin3
-      ? Math.round(pl * DESCUENTO_BASE * IVA)
-      : Math.round(pl * DESCUENTO_BASE * DESCUENTO_EXTRA * IVA);
-    const nuevoNat = Math.round(pl * FACTOR_PERSONA_NATURAL * IVA);
+    const nuevoMay = Math.round(pl * (esExcep ? FACTOR_EXCEPCION : FACTOR_MAYORISTA));
+    const nuevoNeg = Math.round(pl * (esExcep ? FACTOR_EXCEPCION : FACTOR_NEGOCIO));
+    const nuevoNat = Math.round(pl * (esExcep ? FACTOR_EXCEPCION : FACTOR_PERSONA_NATURAL));
+    const nuevoNuevos = Math.round(pl * (esExcep ? FACTOR_EXCEPCION : FACTOR_NUEVOS));
 
     const actualMay = Math.round(data.precio_mayorista || 0);
     const actualNeg = Math.round(data.precio_negocio || 0);
     const actualNat = Math.round(data.precio_persona_natural || 0);
+    const actualNuevos = Math.round(data.precio_nuevos || 0);
 
-    if (actualMay === nuevoMay && actualNeg === nuevoNeg && actualNat === nuevoNat) {
+    if (actualMay === nuevoMay && actualNeg === nuevoNeg && actualNat === nuevoNat && actualNuevos === nuevoNuevos) {
       sinCambio++;
       return;
     }
 
     cambios.push({
       id: docSnap.id,
+      cod_interno: codInterno,
       titulo: data.titulo || docSnap.id,
       precio_lista: pl,
-      esSin3,
+      esExcep,
       updates: {
         precio_mayorista: nuevoMay,
         precio_negocio: nuevoNeg,
-        precio_persona_natural: nuevoNat
+        precio_persona_natural: nuevoNat,
+        precio_nuevos: nuevoNuevos
       },
       antes: {
         precio_mayorista: actualMay,
         precio_negocio: actualNeg,
-        precio_persona_natural: actualNat
+        precio_persona_natural: actualNat,
+        precio_nuevos: actualNuevos
       }
     });
   });
@@ -154,22 +149,22 @@ async function main() {
   console.log('');
 
   // Mostrar muestra
-  const sin3Products = cambios.filter(c => c.esSin3);
-  const normalProducts = cambios.filter(c => !c.esSin3);
+  const excepProducts = cambios.filter(c => c.esExcep);
+  const normalProducts = cambios.filter(c => !c.esExcep);
 
-  if (sin3Products.length > 0) {
-    console.log(chalk.cyan.bold('IDs negocio sin 3% (' + sin3Products.length + '):'));
-    sin3Products.forEach(c => {
-      console.log(chalk.cyan('   ' + c.id + ' | lista: ' + c.precio_lista + ' → may: ' + c.updates.precio_mayorista + ' | neg: ' + c.updates.precio_negocio + ' (sin 3%) | nat: ' + c.updates.precio_persona_natural));
+  if (excepProducts.length > 0) {
+    console.log(chalk.cyan.bold('SKUs excepción --KQ (' + excepProducts.length + '):'));
+    excepProducts.forEach(c => {
+      console.log(chalk.cyan('   ' + c.cod_interno + ' | base: ' + c.precio_lista + ' → may: ' + c.updates.precio_mayorista + ' | neg: ' + c.updates.precio_negocio + ' | nat: ' + c.updates.precio_persona_natural + ' | nuev: ' + c.updates.precio_nuevos + ' (30% fijo)'));
     });
     console.log('');
   }
 
   if (normalProducts.length > 0) {
     const mostrar = MODE_TEST ? normalProducts.slice(0, 15) : normalProducts.slice(0, 5);
-    console.log(chalk.cyan.bold('Productos con neg=may (' + normalProducts.length + '):'));
+    console.log(chalk.cyan.bold('Productos normales (' + normalProducts.length + '):'));
     mostrar.forEach(c => {
-      console.log(chalk.cyan('   ' + c.id + ' | lista: ' + c.precio_lista + ' → may: ' + c.updates.precio_mayorista + ' | neg: ' + c.updates.precio_negocio + ' | nat: ' + c.updates.precio_persona_natural));
+      console.log(chalk.cyan('   ' + c.cod_interno + ' | base: ' + c.precio_lista + ' → may: ' + c.updates.precio_mayorista + ' | neg: ' + c.updates.precio_negocio + ' | nat: ' + c.updates.precio_persona_natural + ' | nuev: ' + c.updates.precio_nuevos));
     });
     if (normalProducts.length > mostrar.length) {
       console.log(chalk.gray('   ... y ' + (normalProducts.length - mostrar.length) + ' más'));
