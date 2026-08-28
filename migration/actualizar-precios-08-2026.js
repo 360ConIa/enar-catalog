@@ -193,7 +193,7 @@ function leerArchivo() {
 
     productos.push({
       referencia: ref,
-      precio_base: Math.round(precioRaw)
+      precio_base: precioRaw
     });
   }
 
