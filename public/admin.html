@@ -1147,7 +1147,7 @@
         </div>
 
         <div id="listaPreview" style="background:#f1f5f9;border-radius:8px;padding:12px;margin-top:12px;font-size:13px;">
-          <strong>Vista previa con precio_lista = $100,000:</strong>
+          <strong>Vista previa con precio_base = $100,000:</strong>
           <div style="margin-top:6px;font-family:monospace;" id="listaPreviewCalculo">—</div>
         </div>
 
@@ -1360,7 +1360,7 @@
             </p>
             <ol style="margin:0;padding-left:20px;font-size:13px;color:#0c4a6e;line-height:1.7;">
               <li>Descarga la <strong>plantilla</strong> con todos los productos actuales.</li>
-              <li>Edita las columnas <code>cantidad</code> y/o <code>precio_lista</code> en Excel.</li>
+              <li>Edita las columnas <code>cantidad</code> y/o <code>precio_base</code> en Excel.</li>
               <li>Sube el archivo (CSV o XLSX) — se hará una vista previa antes de aplicar.</li>
               <li>Al aplicar, el sistema recalcula automáticamente los precios derivados (mayorista, negocio, persona natural, listas personalizadas) usando la fórmula configurada en <em>Listas de Precios</em>.</li>
             </ol>
@@ -1378,7 +1378,7 @@
           <div style="border:2px dashed #cbd5e1;border-radius:8px;padding:24px;text-align:center;cursor:pointer;" onclick="document.getElementById('masivaFileInput').click()">
             <i class="bi bi-file-earmark-arrow-up" style="font-size:32px;color:#94a3b8;"></i>
             <p style="margin:8px 0 4px;font-size:14px;color:#334155;font-weight:500;">Subir archivo actualizado</p>
-            <p style="margin:0;font-size:12px;color:#94a3b8;">CSV o XLSX — columnas requeridas: cod_interno, cantidad, precio_lista</p>
+            <p style="margin:0;font-size:12px;color:#94a3b8;">CSV o XLSX — columnas requeridas: cod_interno, cantidad, precio_base</p>
             <input type="file" id="masivaFileInput" accept=".csv,.xlsx,.xls" style="display:none;" onchange="procesarArchivoMasivo(this)">
           </div>
 
@@ -3691,7 +3691,7 @@
           cod_interno: p.cod_interno || '',
           titulo: p.titulo || '',
           cantidad: p.cantidad ?? 0,
-          precio_lista: p.precio_lista || 0
+          precio_base: p.precio_lista || 0
         }));
     }
 
@@ -3701,7 +3701,7 @@
         return;
       }
       const rows = buildTemplateRows();
-      const ws = XLSX.utils.json_to_sheet(rows, { header: ['cod_interno', 'titulo', 'cantidad', 'precio_lista'] });
+      const ws = XLSX.utils.json_to_sheet(rows, { header: ['cod_interno', 'titulo', 'cantidad', 'precio_base'] });
       ws['!cols'] = [{ wch: 15 }, { wch: 40 }, { wch: 10 }, { wch: 14 }];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Productos');
@@ -3711,7 +3711,7 @@
 
     window.descargarPlantillaProductosCSV = function() {
       const rows = buildTemplateRows();
-      const headers = ['cod_interno', 'titulo', 'cantidad', 'precio_lista'];
+      const headers = ['cod_interno', 'titulo', 'cantidad', 'precio_base'];
       const escape = v => {
         const s = String(v ?? '');
         return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
@@ -3731,8 +3731,19 @@
       URL.revokeObjectURL(url);
     };
 
+    const ALIAS_COLUMNAS = {
+      'precio_base': 'precio_lista',
+      'precio': 'precio_lista',
+      'referencia': 'cod_interno',
+      'ref': 'cod_interno',
+      'codigo': 'cod_interno',
+      'código': 'cod_interno',
+      'sku': 'cod_interno',
+      'stock': 'cantidad'
+    };
     function normalizarClaveColumna(k) {
-      return String(k || '').trim().toLowerCase().replace(/\s+/g, '_');
+      const norm = String(k || '').trim().toLowerCase().replace(/\s+/g, '_');
+      return ALIAS_COLUMNAS[norm] || norm;
     }
 
     function calcularDerivadosProducto(codInterno, docId, precioLista) {
@@ -3793,7 +3804,7 @@
         const tieneCantidad = 'cantidad' in normRows[0];
         const tienePrecioLista = 'precio_lista' in normRows[0];
         if (!tieneCantidad && !tienePrecioLista) {
-          errorEl.textContent = 'El archivo debe tener al menos una columna "cantidad" o "precio_lista".';
+          errorEl.textContent = 'El archivo debe tener al menos una columna "cantidad" o "precio_base" (o "precio_lista").';
           errorEl.style.display = 'block';
           return;
         }
