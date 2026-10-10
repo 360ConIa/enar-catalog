@@ -289,7 +289,7 @@ Se descartó **4b** (hacerlos leer `configuracion/listas_precios`) porque mantie
 
 ---
 
-## Paso 5 — Aplicar `iva: 19` y recalcular
+## Paso 5 — Aplicar `iva: 19` y recalcular → **APLICADO 2026-10-10**
 
 **Orden de operaciones:**
 
@@ -429,3 +429,64 @@ Una función que reaccione a cambios de `precio_lista` y recalcule ese producto.
 |---|---|
 | `c8e3cf9` | `fix:` el catálogo B2B deja de mostrar `precio_lista` al cliente (era el costo de ENAR expuesto como "P. Lista") y se elimina la lógica de descuento tachado, que era código muerto. Desplegado en `hosting:b2b` |
 | *(este commit)* | Paso 4a: `migration/sync-precios-tipo.js` y `migration/actualizar-precios-08-2026.js` marcados obsoletos, abortan con `exit 1` |
+
+---
+
+## Registro de la aplicación del IVA — 2026-10-10
+
+Ejecutado en producción con la app en modo pruebas, en este orden:
+
+| # | Acción | Resultado |
+|---|---|---|
+| 0 | Respaldo previo | `backups/respaldo-precios-pre-iva.json` — 1.743 productos + configuración con `iva: 0` |
+| 1 | `migration/normalizar-pvp-proveedor.js --test` | 16 productos validados, sin escrituras |
+| 1 | `migration/normalizar-pvp-proveedor.js --ejecutar` | **16/16 normalizados** con ✓. `precio_pvp_proveedor` guardado, `precio_lista = round(PVP × 0,388)`. `UT`: 2.061.856 → 800.000 |
+| 2 | `migration/set-iva-listas.js 19` | Las 4 listas en `iva: 19`. Las 10 claves de cada lista intactas (`incremento`, `incremento_excepcion`, `campo_firestore`, `codigo_erp`, `skus_excepcion`, `activa`, `sistema`, `nombre`, `id`) |
+| 3 | `migration/recalcular-precios-listas.js --ejecutar` | **1.741 productos actualizados** (367 activos + 1.374 no activos) en 4 lotes. `updated_at` sellado |
+| 4 | Verificación independiente | **367/367 activos y 1.741/1.741 de la colección cuadran** con `round(precio_lista × (1+inc/100) × 1,19)`, en las cuatro listas. 0 discrepancias, 0 ausentes |
+| 4 | Idempotencia | Segundo dry-run del recálculo: **0 cambios**, 1.741 ya correctos |
+| 5 | Respaldo posterior | `backups/respaldo-precios-post-iva.json` |
+
+Quedan fuera **2 productos sin `precio_lista`**, ambos inactivos: `194` ("Tapa 28 Mm Polly Guard Gris") y `320` ("Tapa 28 Mm Polly Guard Verde Manzana"). Tienen `precio_lista = 0`, así que la fórmula no aplica; el recálculo los salta igual que lo hace el panel.
+
+### Testigos
+
+| Producto | `precio_lista` | mayorista | negocio | p. natural | nuevos |
+|---|---|---|---|---|---|
+| `-B-G` | 48.800 (sin cambio) | 63.440 → 75.494 **+19,00%** | 65.880 → 78.397 +19,00% | 68.320 → 81.301 +19,00% | 70.760 → 84.204 +19,00% |
+| `-C-G` | 53.846 (sin cambio) | 70.000 → 83.300 **+19,00%** | 72.692 → 86.504 +19,00% | 75.384 → 89.707 +19,00% | 78.077 → 92.911 +19,00% |
+| `--KQ` (excepción) | 2.387 (sin cambio) | 3.103 → 3.693 **+19,01%** | 3.103 → 3.693 +19,01% | 3.103 → 3.693 +19,01% | 3.103 → 3.693 +19,01% |
+| `UT` (PVP normalizado) | 2.061.856 → **800.000** | 1.237.600 → 1.237.600 **+0,00%** | 1.237.600 → 1.285.200 +3,85% | 1.324.949 → 1.332.800 +0,59% | ausente → 1.380.400 |
+
+`--KQ` confirma que la excepción funciona: las cuatro listas colapsan en 3.693 porque todas usan `incremento_excepcion: 30`. `UT` confirma la normalización: su `precio_mayorista` no se movió, tal como predecía el análisis del paso 3.
+
+### Herramientas persistidas
+
+Ambas leen `configuracion/listas_precios` y **no tienen factores propios**, a diferencia de los scripts obsoletados en el paso 4a:
+
+- `migration/set-iva-listas.js <0|19>` — transaccional, solo toca `iva`, aborta si cambiaría cualquier otro campo.
+- `migration/recalcular-precios-listas.js [--ejecutar]` — misma fórmula del panel, dry-run por defecto, lotes de 500, sella `updated_at`.
+
+### Reversa concreta
+
+**Opción 6a — recalcular con `iva: 0`** (la normal; reproduce exactamente los precios previos porque `precio_lista` no se tocó):
+
+```
+cd migration
+node set-iva-listas.js 0
+node recalcular-precios-listas.js            # dry-run: revisar
+node recalcular-precios-listas.js --ejecutar
+```
+
+Salvedad: los 16 productos normalizados **no** volverían a sus precios de antes, porque su `precio_lista` cambió. Para esos, usar 6b.
+
+**Opción 6b — restaurar desde el respaldo** (cubre también la normalización):
+
+```
+# restaura precio_lista, precio_pvp_proveedor y los 4 precios por lista
+# desde backups/respaldo-precios-pre-iva.json
+```
+
+El script de restauración no está escrito; se puede generar desde el JSON cuando haga falta. El respaldo contiene, por producto: `precio_lista`, `precio_pvp_proveedor`, los cuatro precios por lista, `activo` y `cod_interno`, más la configuración completa de listas con `iva: 0`.
+
+**Deshacer solo la normalización** de los 16: poner `precio_lista = precio_pvp_proveedor`, borrar `precio_pvp_proveedor` y `normalizado_pvp_en`, y recalcular. El PVP original quedó guardado precisamente para esto.
