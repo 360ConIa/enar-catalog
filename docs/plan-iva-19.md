@@ -26,6 +26,58 @@ El paso 6 (reversa) está disponible en cualquier momento. El 4 es independiente
 
 ---
 
+## Fuente vigente del precio base (`precio_lista`)
+
+Verificado por lectura de producción el 2026-10-10, tras cumplirse el punto de control 1.
+
+### Veredicto
+
+**La fuente vigente es el archivo de precios de agosto 2026, aplicado con `migration/actualizar-precios-08-2026.js --ejecutar`.** No es la hoja de cálculo.
+
+Pruebas:
+
+| Comprobación | Resultado |
+|---|---|
+| `precio_lista` de hoy vs `precio_base_archivo` del CSV de auditoría | **1.727 de 1.727 coinciden, 0 difieren** (109 filas del CSV corresponden a productos que no están en Firestore) |
+| ¿El script llegó a correr con `--ejecutar`? | **Sí.** En las 243 filas donde `precio_mayorista_old != _new`, el valor de hoy en Firestore es **`_new` en 243 de 243**, y `_old` en ninguna |
+| Última escritura comprobable de la hoja (`sync_at`) | **2026-03-12T20:45:32**, idéntico en los 1.733 productos — hace siete meses |
+
+**Por qué `updated_at` sigue en marzo aunque el script corrió en agosto:** `actualizar-precios-08-2026.js` **no sella `updated_at`** (cero ocurrencias en el archivo). Escribe `precio_lista` y los cuatro precios por lista sin dejar rastro temporal. Lo mismo ocurre con la carga masiva del panel y con `sync-presentacion.js`. Por eso los sellos de tiempo no sirven para fechar estas escrituras y hubo que recurrir a la comparación de valores.
+
+### Todas las vías que pueden escribir `precio_lista`
+
+| Vía | Archivo y líneas | ¿Escribe `precio_lista`? | Estado | Última escritura comprobable |
+|---|---|---|---|---|
+| Sync de la hoja (Apps Script) | `Sincronizacion.gs:785, 852` · `FirestoreAPI.gs:98` · `SheetReader.gs:20, 128` (columna G) | **Sí** — se conservó a propósito en el paso 1 | **Inactiva.** El trigger de 5 min no está corriendo: los 1.733 productos comparten el mismo `sync_at` | 2026-03-12T20:45:32 |
+| Script de precios de agosto | `migration/actualizar-precios-08-2026.js:263` (`updates.precio_lista = pl`) | **Sí** | **Obsoletado en el paso 4a** — aborta con `exit 1` | Agosto 2026 (sin sello; probado por comparación de valores) |
+| Carga masiva de productos del panel | `public/admin.html:3986-3989` (`precio_lista`, `p_real`, `p_corriente`) y `:3735-3736` (acepta columnas `precio_base` / `precio` / `precio_lista`) | **Sí** | **Activa.** Es la vía recomendada de aquí en adelante | **Sin huella.** Su firma sería `p_real == precio_lista`, y eso no ocurre en ningún activo: 361 de 367 no tienen `p_real` y los 6 que lo tienen difieren. Probablemente nunca se usó con columna de precio |
+| `sync-presentacion.js` | `migration/sync-presentacion.js:144` | **Sí**, cuando difiere de la hoja | Manual, sin obsoletar | Sin sello. Corrió en algún momento: 363 de 367 activos tienen el campo `presentacion` que escribe |
+| `fix-missing-productos.js` | `migration/fix-missing-productos.js:50, 101, 122` | **Sí**, al reponer productos faltantes | Manual, sin obsoletar | Sin sello. 10 productos tienen `created_at` (más reciente 2026-03-13) |
+| `sync-precios-tipo.js` | `migration/sync-precios-tipo.js` | **No** — solo los 4 precios por lista | **Obsoletado en el paso 4a** | — |
+| Cloud Function `syncProductos` | `functions-sync/index.js:52-74` | **No** — escribe `p_real`, `p_corriente`, `impuesto`, stock y metadatos | Desplegada y activa (la invoca `TriggerFunction.gs`) | Sella `sync_at` con `serverTimestamp()` |
+
+### Consecuencia del paso 4a que hay que resolver
+
+El paso 4a obsoletó `actualizar-precios-08-2026.js`, que **era precisamente la vía por la que se estaban actualizando los precios**. Eso fue correcto —tenía factores cableados sin IVA—, pero deja un hueco: hoy no queda ninguna vía activa y probada para cargar un archivo de precios nuevo.
+
+**La sustituta correcta es la carga masiva de productos del panel admin.** Acepta un archivo con columna `precio_base` (o `precio` / `precio_lista`), escribe `precio_lista` y recalcula los derivados con `calcularDerivadosProducto()` (`admin.html:3757-3771`), que **lee `configuracion/listas_precios`** y por tanto respetará el `iva: 19`. Es la única vía que combina carga de base y recálculo consistente con la configuración.
+
+Pendiente antes de usarla en serio: **nunca se ha probado con una columna de precio** (no hay huella `p_real == precio_lista` en ningún producto). Conviene ensayarla con un archivo de 2-3 productos antes de confiarle el catálogo completo.
+
+### Riesgo latente: la hoja puede retroceder `precio_lista` siete meses
+
+Tras el paso 1 la hoja **sigue escribiendo `precio_lista`** (columna G), por diseño. Pero su última sincronización es de marzo 2026, mientras que los valores vigentes en Firestore son de agosto 2026. **No se sabe si la columna G de la hoja fue actualizada con los precios de agosto.** Si no lo fue, reactivar el trigger o lanzar un sync completo **revertiría el precio base de los 1.733 productos a los valores de marzo**, y el recálculo del paso 5 propagaría ese retroceso a los cuatro precios por lista.
+
+Mitigación antes de reactivar cualquier sincronización de la hoja:
+
+1. Comparar la columna G de la hoja contra el `precio_lista` actual de Firestore en una muestra. Si difieren, actualizar la hoja primero.
+2. Probar con `sincronizarProductoIndividual(cod)` (`Sincronizacion.gs:150`), nunca con `sincronizarTodosLosProductos()`.
+3. Alternativa más limpia: quitar también `precio_lista` de `CAMPOS_DESDE_SHEET` y dejar la carga masiva del panel como única vía de la base. Eso haría del panel la fuente única de los cinco campos de precio, no solo de los cuatro derivados.
+
+El archivo `Datos Lista precios-08-2026.numbers` que usó el script **no está en el repositorio ni en el directorio padre** (`migration/actualizar-precios-08-2026.js:32` lo espera en `../`), así que el insumo original tampoco está disponible aquí para contrastarlo.
+
+---
+
 ## Paso 1 — Apps Script: dejar de escribir los precios por lista
 
 **Lo despliega el usuario.** Dos archivos, cuatro bloques.
