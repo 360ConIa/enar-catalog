@@ -548,15 +548,43 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
     // tipo_cliente es la lista de precios: se valida contra las listas activas
     // de configuracion/listas_precios, no contra una lista hardcodeada.
     let VALID_TIPOS = ['mayorista', 'negocio', 'persona_natural', 'nuevos'];
+    // Índice para resolver la columna tipo_cliente: acepta el id de la lista o
+    // su codigo_erp, y siempre devuelve el id, que es lo que se guarda.
+    let INDICE_TIPOS = {};
+    let ETIQUETAS_TIPOS = [];
+
+    function construirIndiceTipos(listas) {
+      INDICE_TIPOS = {};
+      ETIQUETAS_TIPOS = [];
+      for (const l of listas) {
+        INDICE_TIPOS[String(l.id).toLowerCase()] = l.id;
+        if (l.codigo_erp != null && l.codigo_erp !== '') {
+          INDICE_TIPOS[String(l.codigo_erp).toLowerCase()] = l.id;
+          ETIQUETAS_TIPOS.push(`${l.codigo_erp} o ${l.id}`);
+        } else {
+          ETIQUETAS_TIPOS.push(String(l.id));
+        }
+      }
+    }
+
+    /** Resuelve un valor de la columna tipo_cliente al id de la lista. */
+    function resolverTipo(valor) {
+      return INDICE_TIPOS[String(valor || '').toLowerCase().trim()] || '';
+    }
+
+    construirIndiceTipos(VALID_TIPOS.map(id => ({ id })));
     (async () => {
       try {
         const activas = await listasActivas();
-        if (activas.length > 0) VALID_TIPOS = activas.map(l => l.id);
+        if (activas.length > 0) {
+          VALID_TIPOS = activas.map(l => l.id);
+          construirIndiceTipos(activas);
+        }
       } catch (e) {
         console.warn('No se pudieron cargar las listas activas, usando valores de sistema:', e);
       }
       const el = document.getElementById('tiposValidosTexto');
-      if (el) el.textContent = VALID_TIPOS.join(', ');
+      if (el) el.textContent = ETIQUETAS_TIPOS.join(', ');
     })();
 
     // Parse CSV/TSV data (Google Sheets copies as TSV)
@@ -625,8 +653,8 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
         errors.push('Password muy corto (min 6)');
       }
 
-      if (row.tipo_cliente && !VALID_TIPOS.includes(row.tipo_cliente.toLowerCase())) {
-        errors.push(`Tipo inválido (válidos: ${VALID_TIPOS.join(', ')})`);
+      if (row.tipo_cliente && !resolverTipo(row.tipo_cliente)) {
+        errors.push(`Tipo inválido (válidos, por código ERP o id: ${ETIQUETAS_TIPOS.join(', ')})`);
       }
 
       return errors;
@@ -730,7 +758,8 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
             email: user.email,
             nombre: user.nombre,
             telefono: user.telefono || '',
-            tipo_cliente: (user.tipo_cliente || 'persona_natural').toLowerCase(),
+            // Se guarda siempre el id de la lista, aunque el archivo traiga el codigo_erp
+            tipo_cliente: resolverTipo(user.tipo_cliente) || 'persona_natural',
             estado: 'aprobado',
             rol: 'cliente',
             razon_social: user.razon_social || '',
