@@ -181,16 +181,37 @@ Sobre los 1.743 documentos de `productos`:
 
 `precio_lista` en estos 9 **no es el costo base**: es el PVP del proveedor. Dos salidas:
 
-- **Opción A — normalizar `precio_lista` al costo base.** Dividir por `0,97 × 0,40 = 0,388` (o `0,40` para persona natural, lo que obliga a elegir una sola cadena). Deja los 9 en el mismo esquema que los otros 1.718 y el recálculo del paso 5 les da precios coherentes. Hay que decidir qué cadena manda, porque las tres listas usan descuentos distintos.
+- **Opción A — normalizar `precio_lista` al costo base.** **Multiplicar** por `0,97 × 0,40 = 0,388`, que es el tramo de descuentos de la cadena. Deja los 16 en el mismo esquema que los otros 1.718 y el recálculo del paso 5 les da precios coherentes.
 - **Opción B — excluirlos del recálculo** y tratarlos como catálogo especial. Requiere marcar los 16 productos y que el "Aplicar" del panel los salte, lo que hoy no soporta.
 
-Recomendación: **Opción A** con la cadena de mayorista (`0,388`), porque es la que usan 8 de las 9 en dos de las tres listas, y verificar después contra la hoja los pocos casos donde el 3% no aplicaba. También hay que decidir qué pasa con los 7 inactivos del mismo esquema, por si se reactivan.
+**Recomendación: Opción A**, y la comprobación es contundente: tras normalizar, la fórmula estándar con `iva: 19` **reproduce el `precio_mayorista` de hoy al peso**. No es coincidencia — es la misma cadena reagrupada:
+
+```
+hoy:        PVP × 0,97 × 0,40 × 1,19 × 1,30
+normalizado: (PVP × 0,388) × 1,30 × 1,19     ← idéntico
+```
+
+Ejemplo: `UT` tiene PVP 2.061.856; `2.061.856 × 0,388 = 800.000`; `round(800.000 × 1,30 × 1,19) = 1.237.600`, que es exactamente su `precio_mayorista` actual.
+
+Las otras listas sí se mueven, pero poco, porque la cadena antigua usaba márgenes distintos a los de la configuración:
+
+| Lista | Variación tras normalizar | Por qué |
+|---|---|---|
+| `precio_mayorista` | **0,00%** (±0,003% por redondeo) | misma cadena reagrupada |
+| `precio_negocio` | **+3,85%** | hoy usa margen 1,30; la configuración usa 1,35 |
+| `precio_persona_natural` | **+0,59%** en los 9 activos | hoy `× 0,40 × 1,35` (sin el 3%); la configuración `× 0,388 × 1,40` |
+| `precio_nuevos` | **nuevo** | ausente en los 16 |
+
+**Dos casos particulares:**
+
+- **`-O-G06`** — su `precio_negocio` sube solo **+0,73%** en vez de +3,85%, porque es el único cuya cadena de negocio no llevaba el descuento del 3%. Queda alineado con el resto sin tratamiento especial.
+- **Los 7 inactivos** usan margen **1,375** para persona natural en vez de 1,35, así que ese campo les **baja** ~1,24% en lugar de subir. Verificado exacto: `-YX01` PVP 61.948,93 × 0,40 × 1,19 × 1,375 = 40.545,57, su valor actual. Además tienen `precio_lista` y precios con decimales (`37.183,97999…`), que la normalización deja en enteros. `P1` es el caso extremo por magnitud: PVP 145,44 → base 56, donde el redondeo mueve los porcentajes hasta ±2,3%.
 
 | | |
 |---|---|
 | **Archivos** | Ninguno. Es corrección de datos |
 | **Riesgo** | **Alto si se omite.** Con `precio_lista` tal como está, el recálculo del paso 5 les sube el precio ~2,17× sin IVA y ~2,58× con IVA. `JT300` pasaría de 2.737.076 a 7.054.320 |
-| **Verificación** | Contrastar los 9 contra la hoja. Si se toma la Opción A, corregir `precio_lista` **antes** del paso 5 con script transaccional, y volver a verificar que los 367 cuadran |
+| **Verificación** | Contrastar los 16 contra la hoja. Si se toma la Opción A, correr `migration/normalizar-pvp-proveedor.js --ejecutar` **antes** del paso 5, y comprobar que tras el paso 5 el `precio_mayorista` de los 9 activos no cambió respecto al de hoy |
 
 ---
 
