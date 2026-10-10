@@ -55,12 +55,65 @@ const auth = getAuth(app);
 const COLECCION_PRODUCTOS = 'productos';
 const COLECCION_USUARIOS = 'usuarios';
 
-// Tipos de cliente válidos
+const COLECCION_CONFIGURACION = 'configuracion';
+
+// ═══════════ LISTAS DE PRECIOS ═══════════
+// Única fuente de la lista de precios de un cliente: usuarios.tipo_cliente
+// contra configuracion/listas_precios. El sistema legacy L1…L10 fue retirado.
+
+// Listas del sistema. Solo se usan como respaldo si no se puede leer la
+// configuración; la fuente real son las listas activas de Firestore.
 const TIPOS_CLIENTE = {
   MAYORISTA: 'mayorista',
   NEGOCIO: 'negocio',
-  PERSONA_NATURAL: 'persona_natural'
+  PERSONA_NATURAL: 'persona_natural',
+  NUEVOS: 'nuevos'
 };
+
+let _listasPrecios = null;
+
+/**
+ * Carga y cachea las listas de precios configuradas.
+ * @returns {Promise<Array>} listas tal como están en Firestore
+ */
+async function cargarListasPrecios() {
+  if (_listasPrecios) return _listasPrecios;
+  try {
+    const snap = await getDoc(doc(db, COLECCION_CONFIGURACION, 'listas_precios'));
+    _listasPrecios = snap.exists() ? (snap.data().listas || []) : [];
+  } catch (error) {
+    console.error('Error cargando listas de precios:', error);
+    _listasPrecios = [];
+  }
+  return _listasPrecios;
+}
+
+/**
+ * Listas activas. Si no hay configuración legible, devuelve las del sistema.
+ */
+async function listasActivas() {
+  const listas = (await cargarListasPrecios()).filter(l => l.activa);
+  if (listas.length > 0) return listas;
+  return Object.values(TIPOS_CLIENTE).map(id => ({ id, nombre: id, activa: true }));
+}
+
+/**
+ * Valida un tipo_cliente contra las listas activas configuradas.
+ */
+async function esTipoClienteValido(tipoCliente) {
+  if (!tipoCliente) return false;
+  return (await listasActivas()).some(l => l.id === tipoCliente);
+}
+
+/**
+ * Nombre legible de la lista. Si el valor no corresponde a ninguna lista
+ * configurada se devuelve tal cual, para no ocultar los datos heredados.
+ */
+async function nombreLista(tipoCliente) {
+  if (!tipoCliente) return '—';
+  const lista = (await cargarListasPrecios()).find(l => l.id === tipoCliente);
+  return lista ? lista.nombre : tipoCliente;
+}
 
 // Exportar para usar en otros módulos
 export {
@@ -69,7 +122,12 @@ export {
   auth,
   COLECCION_PRODUCTOS,
   COLECCION_USUARIOS,
+  COLECCION_CONFIGURACION,
   TIPOS_CLIENTE,
+  cargarListasPrecios,
+  listasActivas,
+  esTipoClienteValido,
+  nombreLista,
   collection,
   doc,
   getDoc,

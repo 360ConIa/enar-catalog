@@ -420,3 +420,41 @@ export function mostrarVacio(containerId, mensaje = 'No se encontraron resultado
       <p>${mensaje}</p>
     </div>`;
 }
+
+// ═══════════ LISTAS DE PRECIOS ═══════════
+// Fuente única: configuracion/listas_precios. El sistema legacy L1…L10 fue retirado.
+let _listasPrecios = [];
+
+/**
+ * Carga y cachea las listas de precios. Recibe las refs de Firestore porque
+ * este módulo no inicializa Firebase (cada módulo lo hace inline).
+ */
+export async function cargarListasPrecios(db, doc, getDoc) {
+  try {
+    const snap = await getDoc(doc(db, 'configuracion', 'listas_precios'));
+    _listasPrecios = snap.exists() ? (snap.data().listas || []) : [];
+  } catch (e) {
+    console.error('Error cargando listas de precios:', e);
+    _listasPrecios = [];
+  }
+  return _listasPrecios;
+}
+
+export function listasActivas() {
+  return _listasPrecios.filter(l => l.activa);
+}
+
+/**
+ * Nombre legible de la lista de un cliente según su tipo_cliente.
+ * Si el valor no corresponde a una lista configurada, se devuelve tal cual
+ * para no ocultar los datos heredados.
+ */
+export function nombreLista(tipoCliente) {
+  if (!tipoCliente) return '—';
+  const lista = _listasPrecios.find(l => l.id === tipoCliente);
+  return lista ? lista.nombre : tipoCliente;
+}
+
+export function esListaValida(tipoCliente) {
+  return listasActivas().some(l => l.id === tipoCliente);
+}

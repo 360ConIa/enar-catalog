@@ -34,6 +34,7 @@ import {
   getDocs,
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { TIPOS_CLIENTE } from './firebase-config.js';
 
 // Configuración Firebase
 const firebaseConfig = {
@@ -69,12 +70,7 @@ const ESTADOS_USUARIO = {
   SUSPENDIDO: 'suspendido'
 };
 
-// Tipos de cliente
-const TIPOS_CLIENTE = {
-  MAYORISTA: 'mayorista',
-  NEGOCIO: 'negocio',
-  PERSONA_NATURAL: 'persona_natural'
-};
+// Tipos de cliente: definición única en firebase-config.js (ver import arriba)
 
 /**
  * Inicia sesión con email y contraseña

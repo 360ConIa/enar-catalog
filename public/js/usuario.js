@@ -12,6 +12,7 @@ import {
   auth,
   COLECCION_USUARIOS,
   TIPOS_CLIENTE,
+  esTipoClienteValido,
   doc,
   getDoc,
   setDoc,
@@ -134,8 +135,8 @@ async function crearPerfilUsuario(uid) {
 export async function actualizarTipoCliente(nuevoTipo) {
   if (!usuarioState.user) return;
 
-  if (!Object.values(TIPOS_CLIENTE).includes(nuevoTipo)) {
-    console.error('Tipo de cliente inválido:', nuevoTipo);
+  if (!await esTipoClienteValido(nuevoTipo)) {
+    console.error('Tipo de cliente inválido (no es una lista activa):', nuevoTipo);
     return;
   }
 

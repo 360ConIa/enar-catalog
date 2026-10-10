@@ -21,7 +21,8 @@ import {
   $, ADMIN_EMAIL,
   formatearPrecio, formatearFecha, formatearNumero, tiempoRelativo,
   badgeEstado, badgeSalud, badgeABC, badgeRiesgo, badgeTendencia,
-  Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
+  Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio,
+  cargarListasPrecios, listasActivas, nombreLista, esListaValida
 } from './crm-utils.js';
 
 // ═══════════ FIREBASE INIT ═══════════
@@ -88,30 +89,30 @@ $('btnLogout').addEventListener('click', async () => {
   window.location.href = 'index.html';
 });
 
-// ═══════════ LISTAS PRECIOS → SELECT TIPO ═══════════
+// ═══════════ LISTAS PRECIOS → SELECT LISTA DE PRECIOS ═══════════
+// El select escribe usuarios.tipo_cliente, única fuente de la lista del cliente.
 async function cargarListasPreciosParaSelect() {
-  try {
-    const snap = await getDoc(doc(db, 'configuracion', 'listas_precios'));
-    if (!snap.exists()) return;
-    const listas = (snap.data().listas || []).filter(l => l.activa);
-    const select = $('inputTipo');
-    if (!select) return;
-    // IDs que ya existen como options estáticas
-    const existentes = new Set(Array.from(select.options).map(o => o.value));
-    listas.forEach(l => {
-      if (!existentes.has(l.id)) {
-        const opt = document.createElement('option');
-        opt.value = l.id;
-        opt.textContent = l.nombre;
-        // Insertar antes de "Otro" si existe
-        const otroOpt = Array.from(select.options).find(o => o.value === 'Otro');
-        if (otroOpt) select.insertBefore(opt, otroOpt);
-        else select.appendChild(opt);
-      }
-    });
-  } catch (e) {
-    console.error('Error cargando listas para select:', e);
-  }
+  await cargarListasPrecios(db, doc, getDoc);
+  const select = $('inputTipo');
+  if (!select) return;
+  select.innerHTML = '<option value="">Seleccionar</option>' +
+    listasActivas().map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
+}
+
+/**
+ * Preserva el tipo_cliente heredado que no corresponde a ninguna lista activa:
+ * lo añade como opción marcada para que no se pierda ni se cambie por accidente.
+ */
+function asegurarOpcionTipo(tipoCliente) {
+  const select = $('inputTipo');
+  if (!select) return;
+  select.querySelectorAll('option[data-sin-lista]').forEach(o => o.remove());
+  if (!tipoCliente || esListaValida(tipoCliente)) return;
+  const opt = document.createElement('option');
+  opt.value = tipoCliente;
+  opt.textContent = `${tipoCliente} (sin lista válida)`;
+  opt.dataset.sinLista = '1';
+  select.appendChild(opt);
 }
 
 // ═══════════ CARGAR CLIENTES ═══════════
@@ -287,9 +288,8 @@ window.verDetalle = async function(clienteId) {
             <div><strong>Ubicación:</strong> ${cliente.ubicacion || cliente.ciudad || '-'}</div>
             <div><strong>Dirección:</strong> ${cliente.direccion || '-'}</div>
             <div><strong>Ruta:</strong> ${cliente.ruta || '-'}</div>
-            <div><strong>Tipo:</strong> ${cliente.tipo_cliente || cliente.tipo || '-'}</div>
             <div><strong>Segmento:</strong> ${cliente.segmento || '-'}</div>
-            <div><strong>Lista Precio:</strong> ${cliente.lista_precios || cliente.lista_precio || '-'}</div>
+            <div><strong>Lista de Precios:</strong> ${nombreLista(cliente.tipo_cliente)}</div>
           </div>
         </div>
         <div>
@@ -377,7 +377,7 @@ function abrirModalCliente(clienteId) {
     $('inputTelefono').value = cliente.telefono || '';
     $('inputCiudad').value = cliente.ubicacion || cliente.ciudad || '';
     $('inputRuta').value = cliente.ruta || '';
-    $('inputListaPrecio').value = cliente.lista_precios || cliente.lista_precio || '';
+    asegurarOpcionTipo(cliente.tipo_cliente || cliente.tipo || '');
     $('inputTipo').value = cliente.tipo_cliente || cliente.tipo || '';
     $('inputSegmento').value = cliente.segmento || '';
     $('inputEstado').value = cliente.estado || 'aprobado';
@@ -390,7 +390,7 @@ function abrirModalCliente(clienteId) {
     $('inputTelefono').value = '';
     $('inputCiudad').value = '';
     $('inputRuta').value = '';
-    $('inputListaPrecio').value = '';
+    asegurarOpcionTipo('');
     $('inputTipo').value = '';
     $('inputSegmento').value = '';
     $('inputEstado').value = 'aprobado';
@@ -423,7 +423,6 @@ async function guardarCliente() {
     telefono: $('inputTelefono').value.trim(),
     ubicacion: $('inputCiudad').value.trim(),
     ruta: $('inputRuta').value.trim(),
-    lista_precios: $('inputListaPrecio').value,
     segmento: $('inputSegmento').value,
     updated_at: new Date().toISOString()
   };

@@ -26,6 +26,7 @@ import {
   getAuth,
   onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { TIPOS_CLIENTE } from './firebase-config.js';
 
 // Configuración Firebase
 const firebaseConfig = {
@@ -60,11 +61,8 @@ const ESTADOS_USUARIO = {
   SUSPENDIDO: 'suspendido'
 };
 
-const TIPOS_CLIENTE = {
-  MAYORISTA: 'mayorista',
-  NEGOCIO: 'negocio',
-  PERSONA_NATURAL: 'persona_natural'
-};
+// TIPOS_CLIENTE: definición única en firebase-config.js (ver import arriba).
+// Se re-exporta al final para los módulos que ya lo consumen desde aquí.
 
 /**
  * Verifica si el usuario actual es administrador

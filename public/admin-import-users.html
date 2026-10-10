@@ -409,11 +409,11 @@
             <div class="column-item"><span class="col-name">ubicacion</span></div>
             <div class="column-item"><span class="col-name">ciudad</span></div>
             <div class="column-item"><span class="col-name">departamento</span></div>
-            <div class="column-item"><span class="col-name">lista_precios</span></div>
             <div class="column-item"><span class="col-name">creado_por</span></div>
           </div>
           <p style="margin-top: 10px; font-size: 12px; color: #92400e;">
-            * Campos obligatorios. <strong>tipo_cliente</strong> puede ser: mayorista, negocio, persona_natural
+            * Campos obligatorios. <strong>tipo_cliente</strong> es la lista de precios del cliente;
+            valores válidos: <span id="tiposValidosTexto">cargando...</span>
           </p>
         </div>
 
@@ -508,6 +508,7 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
       getDoc
     } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import { esAdmin } from './js/user-manager.js';
+    import { listasActivas } from './js/firebase-config.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyCMPflYHuPnAWaUhv90wi3uBOhP9AoA8e0",
@@ -543,7 +544,20 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
 
     // Required fields
     const REQUIRED_FIELDS = ['email', 'nombre', 'password'];
-    const VALID_TIPOS = ['mayorista', 'negocio', 'persona_natural', 'persona natural', 'regimen común', 'regimen simplificado', 'regimen comun'];
+
+    // tipo_cliente es la lista de precios: se valida contra las listas activas
+    // de configuracion/listas_precios, no contra una lista hardcodeada.
+    let VALID_TIPOS = ['mayorista', 'negocio', 'persona_natural', 'nuevos'];
+    (async () => {
+      try {
+        const activas = await listasActivas();
+        if (activas.length > 0) VALID_TIPOS = activas.map(l => l.id);
+      } catch (e) {
+        console.warn('No se pudieron cargar las listas activas, usando valores de sistema:', e);
+      }
+      const el = document.getElementById('tiposValidosTexto');
+      if (el) el.textContent = VALID_TIPOS.join(', ');
+    })();
 
     // Parse CSV/TSV data (Google Sheets copies as TSV)
     function parseData(text) {
@@ -612,7 +626,7 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
       }
 
       if (row.tipo_cliente && !VALID_TIPOS.includes(row.tipo_cliente.toLowerCase())) {
-        errors.push('Tipo inválido');
+        errors.push(`Tipo inválido (válidos: ${VALID_TIPOS.join(', ')})`);
       }
 
       return errors;
@@ -716,7 +730,7 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
             email: user.email,
             nombre: user.nombre,
             telefono: user.telefono || '',
-            tipo_cliente: user.tipo_cliente || 'Persona Natural',
+            tipo_cliente: (user.tipo_cliente || 'persona_natural').toLowerCase(),
             estado: 'aprobado',
             rol: 'cliente',
             razon_social: user.razon_social || '',
@@ -725,7 +739,6 @@ cliente2@email.com	María López	pass456	3109876543	mayorista	Distribuidora XYZ"
             ubicacion: user.ubicacion || user.ciudad || '',
             ciudad: user.ciudad || '',
             departamento: user.departamento || '',
-            lista_precios: user.lista_precios || '',
             creado_por: user.creado_por || 'import-masivo',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),

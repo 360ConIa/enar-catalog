@@ -22,7 +22,8 @@ import {
   formatearPrecio, formatearFecha, formatearNumero,
   badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   generarIdOrden, Paginador, buscarMultiCampo,
-  showToast, debounce, mostrarLoader, mostrarVacio
+  showToast, debounce, mostrarLoader, mostrarVacio,
+  cargarListasPrecios, nombreLista
 } from './crm-utils.js';
 
 // ═══════════ FIREBASE INIT ═══════════
@@ -115,7 +116,11 @@ onAuthStateChanged(auth, async (user) => {
   const navAdmin = $('navAdmin');
   if (navAdmin) navAdmin.style.display = '';
 
-  await Promise.all([cargarClientes(), cargarProductos()]);
+  await Promise.all([
+    cargarClientes(),
+    cargarProductos(),
+    cargarListasPrecios(db, doc, getDoc)
+  ]);
   cargarOrdenes();
   initEventListeners();
 
@@ -511,7 +516,7 @@ function renderClienteResultados(resultados) {
         <div class="crm-cliente-avatar" style="width:36px;height:36px;font-size:0.9rem;">${(c.razon_social || c.nombre || 'C')[0].toUpperCase()}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:600;font-size:0.9rem;">${c.razon_social || c.nombre || c.email}</div>
-          <div style="font-size:0.73rem;color:var(--crm-text-light);">NIT: ${c.nit || 'N/A'} · ${c.ubicacion || c.ciudad || '-'} · Lista: ${c.lista_precios || c.lista_precio || 'L1'}</div>
+          <div style="font-size:0.73rem;color:var(--crm-text-light);">NIT: ${c.nit || 'N/A'} · ${c.ubicacion || c.ciudad || '-'} · Lista: ${nombreLista(c.tipo_cliente)}</div>
         </div>
       </div>
       <button class="crm-btn-editar-cliente" data-uid="${c.uid}" onclick="event.stopPropagation();abrirEditarClienteB2B('${c.uid}')" style="background:none;border:1px solid #cbd5e1;border-radius:6px;padding:4px 8px;cursor:pointer;color:#64748b;font-size:0.8rem;" title="Editar cliente">
@@ -600,23 +605,8 @@ function obtenerPrecioCliente(producto, cliente) {
   const campoDinamico = producto['precio_' + tipoCliente];
   if (campoDinamico && campoDinamico > 0) return campoDinamico;
 
-  // 2. Fallback: Precio por lista_precios (datos migrados)
-  const listaPrecios = cliente?.lista_precios || cliente?.lista_precio || '';
-  if (listaPrecios) {
-    const preciosPorLista = {
-      'L1': producto.Precio_L1,
-      'L4': producto.Precio_L4,
-      'L7': producto.Precio_L7,
-      'L8': producto.Precio_L8,
-      'L9': producto.Precio_L9,
-      'L10': producto.Precio_L10
-    };
-    const precioLista = preciosPorLista[listaPrecios];
-    if (precioLista && precioLista > 0) return precioLista;
-  }
-
-  // 3. Fallback final
-  return producto.precio_persona_natural || producto.p_real || producto.Precio_L1 || producto.p_corriente || 0;
+  // 2. Fallback final
+  return producto.precio_persona_natural || producto.p_real || producto.p_corriente || 0;
 }
 
 // ═══════════ CARGAR PRODUCTOS (preload) ═══════════
