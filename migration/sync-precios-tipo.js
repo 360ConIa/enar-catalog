@@ -16,6 +16,27 @@
  *   node sync-precios-tipo.js --ejecutar   (aplica cambios)
  */
 
+// ════════════════════════════════════════════════════════════════════
+// OBSOLETO — NO EJECUTAR
+// ════════════════════════════════════════════════════════════════════
+// Los precios por lista (precio_mayorista, precio_negocio,
+// precio_persona_natural, precio_nuevos) se calculan EXCLUSIVAMENTE desde el
+// panel admin (public/admin.html, pestaña Listas), que lee incremento, IVA y
+// skus_excepcion de configuracion/listas_precios.
+//
+// Este script tiene los factores cableados (1.30 / 1.35 / 1.40 / 1.45) y NO
+// aplica IVA, así que ejecutarlo sobrescribiría el recálculo del panel y
+// borraría el IVA del catálogo.
+//
+// Si hace falta un recálculo masivo desde terminal, escribe un script nuevo
+// que lea configuracion/listas_precios en vez de declarar sus propios factores.
+// ════════════════════════════════════════════════════════════════════
+console.error('\n\x1b[31m\x1b[1m✖ Script OBSOLETO: no se ejecuta.\x1b[0m');
+console.error('\x1b[33m  Los precios por lista se recalculan desde el panel admin → pestaña Listas.\x1b[0m');
+console.error('\x1b[33m  Fuente de la fórmula: configuracion/listas_precios (incremento + iva + skus_excepcion).\x1b[0m');
+console.error('\x1b[90m  Ver docs/plan-iva-19.md, paso 4.\x1b[0m\n');
+process.exit(1);
+
 const admin = require('firebase-admin');
 const cliProgress = require('cli-progress');
 const chalk = require('chalk');
