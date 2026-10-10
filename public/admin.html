@@ -1061,6 +1061,7 @@
               <thead>
                 <tr>
                   <th>Nombre</th>
+                  <th style="text-align:center;">Cód. ERP</th>
                   <th>Campo Firestore</th>
                   <th style="text-align:right;">Incremento %</th>
                   <th style="text-align:center;">SKUs Excep.</th>
@@ -1071,7 +1072,7 @@
               </thead>
               <tbody id="listasBody">
                 <tr>
-                  <td colspan="7" class="empty-message">Cargando listas...</td>
+                  <td colspan="8" class="empty-message">Cargando listas...</td>
                 </tr>
               </tbody>
             </table>
@@ -1102,6 +1103,14 @@
             <label for="listaCampo">Campo Firestore *</label>
             <input type="text" id="listaCampo" placeholder="Ej: precio_distribuidor_premium" required>
             <small style="color:#64748b;font-size:11px;">Solo letras minúsculas, números y guión bajo. No se puede modificar después.</small>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="listaCodigoErp">Código ERP</label>
+            <input type="number" id="listaCodigoErp" placeholder="Ej: 6" step="1" min="0">
+            <small style="color:#64748b;font-size:11px;">Número de la lista en el ERP. Entero y único. Déjalo vacío si la lista no existe en el ERP.</small>
           </div>
         </div>
 
@@ -2006,6 +2015,7 @@
     } from './js/ordenes.js';
     import { DEPARTAMENTOS_CIUDADES } from './js/colombia-data.js';
     import { obtenerDatosUsuario } from './js/auth.js';
+    import { nombreLista, formatearNombreLista, setListasPrecios } from './js/firebase-config.js';
 
     // Firebase config
     const firebaseConfig = {
@@ -2200,11 +2210,9 @@
     });
 
     // Textos
-    const TIPO_TEXTOS = {
-      'mayorista': 'Mayorista',
-      'negocio': 'Negocio',
-      'persona_natural': 'Persona Natural'
-    };
+    // Las etiquetas de lista salen de nombreLista() (firebase-config.js), que
+    // lee la configuración cacheada por cargarListas(). Así `nuevos` y las
+    // listas personalizadas también tienen nombre legible.
 
     // Tabs
     document.querySelectorAll('.admin-tab').forEach(tab => {
@@ -2338,7 +2346,7 @@
             </div>
           </td>
           <td>
-            <span class="tipo-badge tipo-${u.tipo_cliente}">${TIPO_TEXTOS[u.tipo_cliente] || u.tipo_cliente}</span>
+            <span class="tipo-badge tipo-${u.tipo_cliente}">${nombreLista(u.tipo_cliente)}</span>
             ${u.vendedor_asignado_nombre ? `<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;"><i class="bi bi-person-badge"></i> ${u.vendedor_asignado_nombre}</div>` : ''}
           </td>
           <td>${u.razon_social || '-'}</td>
@@ -3270,7 +3278,7 @@
 
       const tipoCliente = orden.cliente?.tipo_cliente || '';
       const tipoEl = document.getElementById('detalleClienteTipo');
-      tipoEl.textContent = TIPO_TEXTOS[tipoCliente] || tipoCliente;
+      tipoEl.textContent = nombreLista(tipoCliente);
       tipoEl.className = 'tipo-badge tipo-' + tipoCliente;
 
       // Info entrega
@@ -4029,6 +4037,7 @@
     const LISTAS_SISTEMA_SEED = [
       {
         id: 'mayorista',
+        codigo_erp: 2,
         nombre: 'Mayorista',
         campo_firestore: 'precio_mayorista',
         incremento: 30,
@@ -4040,6 +4049,7 @@
       },
       {
         id: 'negocio',
+        codigo_erp: 3,
         nombre: 'Negocio',
         campo_firestore: 'precio_negocio',
         incremento: 35,
@@ -4051,6 +4061,7 @@
       },
       {
         id: 'persona_natural',
+        codigo_erp: 4,
         nombre: 'Persona Natural',
         campo_firestore: 'precio_persona_natural',
         incremento: 40,
@@ -4062,6 +4073,7 @@
       },
       {
         id: 'nuevos',
+        codigo_erp: 5,
         nombre: 'Nuevos',
         campo_firestore: 'precio_nuevos',
         incremento: 45,
@@ -4074,12 +4086,15 @@
     ];
 
     async function cargarListas() {
+      // Lectura y auto-reparación del doc de configuración. Cualquier fallo se
+      // registra y se sigue con lo que haya en memoria: esta función nunca debe
+      // impedir que carguen usuarios, productos u órdenes.
       try {
         const snap = await getDoc(LISTAS_DOC_REF());
         if (!snap.exists()) {
-          // Primer uso: crear doc con las 4 listas del sistema
-          await setDoc(LISTAS_DOC_REF(), { listas: LISTAS_SISTEMA_SEED });
+          // Primer uso: crear doc con las 4 listas del sistema (solo admin)
           listasPrecios = [...LISTAS_SISTEMA_SEED];
+          await guardarListasSiAdmin();
         } else {
           listasPrecios = snap.data().listas || [];
           let cambios = false;
@@ -4093,6 +4108,16 @@
               }
             }
           });
+          // Backfill de codigo_erp en las listas del sistema que ya existen,
+          // preservando el resto de sus campos
+          listasPrecios.forEach((l, idx) => {
+            if (l.codigo_erp != null) return;
+            const seed = LISTAS_SISTEMA_SEED.find(s => s.id === l.id);
+            if (seed && seed.codigo_erp != null) {
+              listasPrecios[idx] = { ...l, codigo_erp: seed.codigo_erp };
+              cambios = true;
+            }
+          });
           // Asegurar que las 4 listas del sistema existan
           LISTAS_SISTEMA_SEED.forEach(seed => {
             if (!listasPrecios.find(l => l.id === seed.id)) {
@@ -4100,10 +4125,15 @@
               cambios = true;
             }
           });
-          if (cambios) {
-            await setDoc(LISTAS_DOC_REF(), { listas: listasPrecios });
-          }
+          if (cambios) await guardarListasSiAdmin();
         }
+      } catch (error) {
+        console.error('Error cargando listas de precios (se continúa sin ellas):', error);
+      }
+
+      // El render y las etiquetas funcionan con lo que haya quedado en memoria
+      try {
+        setListasPrecios(listasPrecios);
 
         const activas = listasPrecios.filter(l => l.activa).length;
         const personalizadas = listasPrecios.filter(l => !l.sistema).length;
@@ -4115,7 +4145,23 @@
         renderizarListas();
         poblarSelectsTipoCliente();
       } catch (error) {
-        console.error('Error cargando listas:', error);
+        console.error('Error renderizando listas de precios:', error);
+      }
+    }
+
+    /**
+     * Persiste el array de listas solo si el usuario es admin. Las reglas de
+     * Firestore restringen la escritura de `configuracion` a admin, así que
+     * para gestores el fallo es esperado y no debe propagarse.
+     */
+    async function guardarListasSiAdmin() {
+      if (!isAdminUser) return false;
+      try {
+        await setDoc(LISTAS_DOC_REF(), { listas: listasPrecios });
+        return true;
+      } catch (error) {
+        console.error('No se pudo guardar la configuración de listas:', error);
+        return false;
       }
     }
 
@@ -4127,7 +4173,7 @@
         if (!select) return;
         const valorActual = select.value;
         select.innerHTML = activas.map(l =>
-          `<option value="${l.id}">${l.nombre}</option>`
+          `<option value="${l.id}">${formatearNombreLista(l)}</option>`
         ).join('');
         if (valorActual) select.value = valorActual;
       });
@@ -4144,13 +4190,14 @@
     function renderizarListas() {
       const body = document.getElementById('listasBody');
       if (listasPrecios.length === 0) {
-        body.innerHTML = '<tr><td colspan="7" class="empty-message">No hay listas</td></tr>';
+        body.innerHTML = '<tr><td colspan="8" class="empty-message">No hay listas</td></tr>';
         return;
       }
 
       body.innerHTML = listasPrecios.map(l => `
         <tr>
           <td style="font-weight:500;">${l.nombre}</td>
+          <td style="text-align:center;">${l.codigo_erp != null && l.codigo_erp !== '' ? l.codigo_erp : '—'}</td>
           <td><code style="font-size:12px;background:#f1f5f9;padding:2px 6px;border-radius:4px;">${l.campo_firestore}</code></td>
           <td style="text-align:right;">${l.incremento || 0}%</td>
           <td style="text-align:center;">${(l.skus_excepcion || []).length}</td>
@@ -4211,6 +4258,7 @@
       document.getElementById('listaNombre').value = '';
       document.getElementById('listaCampo').value = '';
       document.getElementById('listaCampo').disabled = false;
+      document.getElementById('listaCodigoErp').value = '';
       document.getElementById('listaIncremento').value = '';
       document.getElementById('listaIva').value = '0';
       document.getElementById('listaActiva').value = 'true';
@@ -4231,6 +4279,7 @@
       document.getElementById('listaNombre').value = l.nombre;
       document.getElementById('listaCampo').value = l.campo_firestore;
       document.getElementById('listaCampo').disabled = true;
+      document.getElementById('listaCodigoErp').value = l.codigo_erp != null ? l.codigo_erp : '';
       document.getElementById('listaNombre').readOnly = !!l.sistema;
       document.getElementById('listaIncremento').value = l.incremento || l.descuento_base || 0;
       document.getElementById('listaIva').value = l.iva || 0;
@@ -4245,6 +4294,7 @@
       const errorEl = document.getElementById('listaError');
       const nombre = document.getElementById('listaNombre').value.trim();
       const campoInput = document.getElementById('listaCampo').value.trim();
+      const codigoErpInput = document.getElementById('listaCodigoErp').value.trim();
       const incremento = parseFloat(document.getElementById('listaIncremento').value);
       const iva = parseFloat(document.getElementById('listaIva').value) || 0;
       const activa = document.getElementById('listaActiva').value === 'true';
@@ -4265,6 +4315,24 @@
       }
 
       const editId = document.getElementById('listaEditId').value;
+
+      // Código ERP: opcional, pero si viene debe ser entero y único
+      let codigoErp = null;
+      if (codigoErpInput !== '') {
+        const n = Number(codigoErpInput);
+        if (!Number.isInteger(n)) {
+          errorEl.textContent = 'El Código ERP debe ser un número entero.';
+          errorEl.style.display = 'block';
+          return;
+        }
+        const duplicada = listasPrecios.find(l => l.id !== editId && Number(l.codigo_erp) === n);
+        if (duplicada) {
+          errorEl.textContent = `El Código ERP ${n} ya lo usa la lista "${duplicada.nombre}".`;
+          errorEl.style.display = 'block';
+          return;
+        }
+        codigoErp = n;
+      }
       const btn = document.getElementById('btnGuardarLista');
       btn.disabled = true;
       btn.textContent = 'Guardando...';
@@ -4279,6 +4347,7 @@
           listasPrecios[idx] = {
             ...existente,
             nombre: existente.sistema ? existente.nombre : nombre,
+            codigo_erp: codigoErp,
             incremento,
             iva,
             skus_excepcion: skusExcepcion,
@@ -4298,6 +4367,7 @@
           listasPrecios.push({
             id: nuevoId,
             nombre,
+            codigo_erp: codigoErp,
             campo_firestore: campoInput,
             incremento,
             iva,
@@ -4513,9 +4583,15 @@
       // Limpiar de nuevo tras breve delay (el navegador puede autocompletar después)
       setTimeout(() => { campoBusqueda.value = ''; renderizarUsuarios(); }, 300);
 
+      // Las listas van primero: las etiquetas de tipo_cliente de la tabla de
+      // usuarios y del detalle de orden dependen de su caché.
+      if (isAdminUser || isManager) {
+        await cargarListas();
+      }
+
       const cargaInicial = [cargarUsuarios(), cargarVendedores()];
       if (isAdminUser || isManager) {
-        cargaInicial.push(cargarProductos(), cargarListas());
+        cargaInicial.push(cargarProductos());
       }
       await Promise.all(cargaInicial);
       await cargarOrdenes();

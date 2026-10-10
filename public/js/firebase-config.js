@@ -74,10 +74,11 @@ let _listasPrecios = null;
 
 /**
  * Carga y cachea las listas de precios configuradas.
+ * @param {boolean} forzar - relee Firestore ignorando la caché
  * @returns {Promise<Array>} listas tal como están en Firestore
  */
-async function cargarListasPrecios() {
-  if (_listasPrecios) return _listasPrecios;
+async function cargarListasPrecios(forzar = false) {
+  if (_listasPrecios && !forzar) return _listasPrecios;
   try {
     const snap = await getDoc(doc(db, COLECCION_CONFIGURACION, 'listas_precios'));
     _listasPrecios = snap.exists() ? (snap.data().listas || []) : [];
@@ -86,6 +87,15 @@ async function cargarListasPrecios() {
     _listasPrecios = [];
   }
   return _listasPrecios;
+}
+
+/**
+ * Sustituye la caché con listas ya cargadas por el módulo llamante.
+ * Lo usa admin.html, que mantiene su propio array editable, para que las
+ * etiquetas de toda la página reflejen los cambios sin releer Firestore.
+ */
+function setListasPrecios(listas) {
+  _listasPrecios = Array.isArray(listas) ? listas : [];
 }
 
 /**
@@ -106,13 +116,25 @@ async function esTipoClienteValido(tipoCliente) {
 }
 
 /**
- * Nombre legible de la lista. Si el valor no corresponde a ninguna lista
- * configurada se devuelve tal cual, para no ocultar los datos heredados.
+ * Etiqueta legible de una lista: "2 – Mayorista" si tiene codigo_erp,
+ * solo el nombre si no.
  */
-async function nombreLista(tipoCliente) {
+function formatearNombreLista(lista) {
+  return lista.codigo_erp != null && lista.codigo_erp !== ''
+    ? `${lista.codigo_erp} – ${lista.nombre}`
+    : lista.nombre;
+}
+
+/**
+ * Etiqueta de la lista de un cliente según su tipo_cliente. Sincrónica: usa la
+ * caché, así que requiere un cargarListasPrecios() previo. Si el valor no
+ * corresponde a ninguna lista configurada se devuelve tal cual, para no
+ * ocultar los datos heredados.
+ */
+function nombreLista(tipoCliente) {
   if (!tipoCliente) return '—';
-  const lista = (await cargarListasPrecios()).find(l => l.id === tipoCliente);
-  return lista ? lista.nombre : tipoCliente;
+  const lista = (_listasPrecios || []).find(l => l.id === tipoCliente);
+  return lista ? formatearNombreLista(lista) : tipoCliente;
 }
 
 // Exportar para usar en otros módulos
@@ -125,8 +147,10 @@ export {
   COLECCION_CONFIGURACION,
   TIPOS_CLIENTE,
   cargarListasPrecios,
+  setListasPrecios,
   listasActivas,
   esTipoClienteValido,
+  formatearNombreLista,
   nombreLista,
   collection,
   doc,

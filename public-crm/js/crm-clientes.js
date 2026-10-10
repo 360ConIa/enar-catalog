@@ -22,7 +22,7 @@ import {
   formatearPrecio, formatearFecha, formatearNumero, tiempoRelativo,
   badgeEstado, badgeSalud, badgeABC, badgeRiesgo, badgeTendencia,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio,
-  cargarListasPrecios, listasActivas, nombreLista, esListaValida
+  cargarListasPrecios, listasActivas, nombreLista, esListaValida, formatearNombreLista
 } from './crm-utils.js';
 
 // ═══════════ FIREBASE INIT ═══════════
@@ -96,7 +96,7 @@ async function cargarListasPreciosParaSelect() {
   const select = $('inputTipo');
   if (!select) return;
   select.innerHTML = '<option value="">Seleccionar</option>' +
-    listasActivas().map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
+    listasActivas().map(l => `<option value="${l.id}">${formatearNombreLista(l)}</option>`).join('');
 }
 
 /**

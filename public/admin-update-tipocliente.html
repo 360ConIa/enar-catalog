@@ -601,6 +601,11 @@ nit	nombre	razon_social	tipo_cliente
     let allUsers = [];           // raw Firestore user docs
     let usersByNit = {};         // NIT normalizado → { id, nombre, razon_social, tipo_cliente, nit_original }
     let validTipos = ['mayorista', 'negocio', 'persona_natural', 'nuevos'];
+    // Índice para resolver la columna tipo_cliente: acepta el id de la lista o
+    // su codigo_erp, y siempre devuelve el id, que es lo que se guarda.
+    let indiceTipos = {};
+    let etiquetasTipos = [];
+    let listasActivasCache = [];
     let previewRows = [];        // parsed + matched rows for preview
     let changesToApply = [];     // only rows with actual changes
 
@@ -670,15 +675,39 @@ nit	nombre	razon_social	tipo_cliente
         const snap = await getDoc(doc(db, 'configuracion', 'listas_precios'));
         if (snap.exists()) {
           const listas = snap.data().listas || [];
-          const activas = listas.filter(l => l.activa).map(l => l.id);
+          const activas = listas.filter(l => l.activa);
           if (activas.length > 0) {
-            validTipos = activas;
+            validTipos = activas.map(l => l.id);
+            listasActivasCache = activas;
           }
         }
       } catch (e) {
         console.warn('No se pudieron cargar listas de precios, usando valores por defecto:', e);
       }
-      document.getElementById('tiposValidos').textContent = validTipos.join(', ');
+      construirIndiceTipos();
+      document.getElementById('tiposValidos').textContent = etiquetasTipos.join(', ');
+    }
+
+    function construirIndiceTipos() {
+      indiceTipos = {};
+      etiquetasTipos = [];
+      const fuente = listasActivasCache.length
+        ? listasActivasCache
+        : validTipos.map(id => ({ id, nombre: id }));
+      for (const l of fuente) {
+        indiceTipos[String(l.id).toLowerCase()] = l.id;
+        if (l.codigo_erp != null && l.codigo_erp !== '') {
+          indiceTipos[String(l.codigo_erp).toLowerCase()] = l.id;
+          etiquetasTipos.push(`${l.codigo_erp} o ${l.id}`);
+        } else {
+          etiquetasTipos.push(String(l.id));
+        }
+      }
+    }
+
+    /** Resuelve un valor de la columna tipo_cliente al id de la lista. */
+    function resolverTipo(valor) {
+      return indiceTipos[String(valor || '').toLowerCase().trim()] || '';
     }
 
     // ── Download template ──
@@ -691,8 +720,15 @@ nit	nombre	razon_social	tipo_cliente
           nombre: u.nombre,
           razon_social: u.razon_social,
           tipo_cliente_actual: u.tipo_cliente,
+          codigo_erp: codigoErpDe(u.tipo_cliente),
           tipo_cliente: ''
         }));
+    }
+
+    /** codigo_erp de la lista a la que corresponde un tipo_cliente. */
+    function codigoErpDe(tipoCliente) {
+      const lista = listasActivasCache.find(l => l.id === tipoCliente);
+      return lista && lista.codigo_erp != null ? lista.codigo_erp : '';
     }
 
     function descargarXLSX() {
@@ -708,6 +744,7 @@ nit	nombre	razon_social	tipo_cliente
         { wch: 30 }, // nombre
         { wch: 35 }, // razon_social
         { wch: 20 }, // tipo_cliente_actual
+        { wch: 11 }, // codigo_erp
         { wch: 20 }  // tipo_cliente
       ];
       const wb = XLSX.utils.book_new();
@@ -721,7 +758,7 @@ nit	nombre	razon_social	tipo_cliente
         alert('No hay clientes con NIT para exportar');
         return;
       }
-      const headers = ['nit', 'nombre', 'razon_social', 'tipo_cliente_actual', 'tipo_cliente'];
+      const headers = ['nit', 'nombre', 'razon_social', 'tipo_cliente_actual', 'codigo_erp', 'tipo_cliente'];
       const lines = [headers.join(',')];
       for (const row of data) {
         lines.push(headers.map(h => {
@@ -786,9 +823,11 @@ nit	nombre	razon_social	tipo_cliente
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(delimiter).map(v => v.trim());
         const nitRaw = values[nitIdx] || '';
-        const tipoNuevo = values[tipoIdx] || '';
+        const tipoRaw = values[tipoIdx] || '';
+        // Acepta el id de la lista o su codigo_erp; se guarda siempre el id
+        const tipoNuevo = resolverTipo(tipoRaw) || tipoRaw.toLowerCase().trim();
 
-        if (!nitRaw && !tipoNuevo) continue; // skip empty rows
+        if (!nitRaw && !tipoRaw) continue; // skip empty rows
 
         const nitNorm = normalizarNit(nitRaw);
         const user = nitNorm ? usersByNit[nitNorm] : null;
@@ -797,7 +836,7 @@ nit	nombre	razon_social	tipo_cliente
           rowNum: i + 1,
           nitInput: nitRaw,
           nitNorm: nitNorm,
-          tipoNuevo: tipoNuevo.toLowerCase().trim(),
+          tipoNuevo: tipoNuevo,
           nombreInput: nombreIdx >= 0 ? (values[nombreIdx] || '') : '',
           razonInput: razonIdx >= 0 ? (values[razonIdx] || '') : '',
           user: user,
@@ -820,7 +859,7 @@ nit	nombre	razon_social	tipo_cliente
           row.error = 'tipo_cliente vacio';
         } else if (!validTipos.includes(row.tipoNuevo)) {
           row.status = 'error';
-          row.error = `Tipo invalido (validos: ${validTipos.join(', ')})`;
+          row.error = `Tipo invalido (validos, por codigo ERP o id: ${etiquetasTipos.join(', ')})`;
         } else if (row.tipoNuevo === (user.tipo_cliente || '').toLowerCase().trim()) {
           row.status = 'nochange';
         } else {

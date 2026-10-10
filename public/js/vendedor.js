@@ -22,9 +22,9 @@ import {
   formatearPrecio, formatearFecha, formatearNumero,
   badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   generarIdOrden, Paginador, buscarMultiCampo,
-  showToast, debounce, mostrarLoader, mostrarVacio,
-  cargarListasPrecios, nombreLista
+  showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js';
+import { cargarListasPrecios, nombreLista } from './firebase-config.js';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -119,7 +119,7 @@ onAuthStateChanged(auth, async (user) => {
   await Promise.all([
     cargarClientes(),
     cargarProductos(),
-    cargarListasPrecios(db, doc, getDoc)
+    cargarListasPrecios()
   ]);
   cargarOrdenes();
   initEventListeners();

@@ -568,6 +568,7 @@
   <script type="module">
     import { onAuthChange, cerrarSesion, obtenerDatosUsuario, cambiarPassword, ADMIN_EMAILS, USER_MANAGER_EMAILS } from './js/auth.js';
     import { actualizarPerfil, TIPOS_CLIENTE } from './js/user-manager.js';
+    import { cargarListasPrecios, nombreLista } from './js/firebase-config.js';
 
     // Elementos del DOM
     const loading = document.getElementById('loading');
@@ -581,12 +582,7 @@
     let currentUser = null;
     let userData = null;
 
-    // Textos de tipos
-    const TIPO_TEXTOS = {
-      'mayorista': 'Mayorista',
-      'negocio': 'Negocio',
-      'persona_natural': 'Persona Natural'
-    };
+    // La etiqueta de la lista sale de nombreLista() (firebase-config.js)
 
     // Mostrar mensaje
     function showMessage(texto, tipo) {
@@ -621,9 +617,10 @@
       statusBadge.textContent = userData.estado === 'aprobado' ? 'Aprobado' : 'Pendiente';
       statusBadge.className = `status-badge status-${userData.estado}`;
 
-      // Tipo
+      // Tipo / lista de precios
+      await cargarListasPrecios();
       const tipoBadge = document.getElementById('userTipo');
-      tipoBadge.textContent = TIPO_TEXTOS[userData.tipo_cliente] || userData.tipo_cliente;
+      tipoBadge.textContent = nombreLista(userData.tipo_cliente);
       tipoBadge.className = `tipo-badge tipo-${userData.tipo_cliente}`;
 
       // Rellenar formulario

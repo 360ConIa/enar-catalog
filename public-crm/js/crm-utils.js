@@ -460,14 +460,24 @@ export function listasActivas() {
 }
 
 /**
- * Nombre legible de la lista de un cliente según su tipo_cliente.
+ * Etiqueta legible de una lista: "2 – Mayorista" si tiene codigo_erp,
+ * solo el nombre si no.
+ */
+export function formatearNombreLista(lista) {
+  return lista.codigo_erp != null && lista.codigo_erp !== ''
+    ? `${lista.codigo_erp} – ${lista.nombre}`
+    : lista.nombre;
+}
+
+/**
+ * Etiqueta de la lista de un cliente según su tipo_cliente.
  * Si el valor no corresponde a una lista configurada, se devuelve tal cual
  * para no ocultar los datos heredados.
  */
 export function nombreLista(tipoCliente) {
   if (!tipoCliente) return '—';
   const lista = _listasPrecios.find(l => l.id === tipoCliente);
-  return lista ? lista.nombre : tipoCliente;
+  return lista ? formatearNombreLista(lista) : tipoCliente;
 }
 
 export function esListaValida(tipoCliente) {
