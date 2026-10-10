@@ -112,7 +112,6 @@ const elementos = {
   modalProductoEan: document.getElementById('modalProductoEan'),
   modalProductoStock: document.getElementById('modalProductoStock'),
   modalProductoPrecio: document.getElementById('modalProductoPrecio'),
-  modalProductoPrecioReg: document.getElementById('modalProductoPrecioReg'),
   modalProductoCantidad: document.getElementById('modalProductoCantidad'),
   btnAgregarDesdeModal: document.getElementById('btnAgregarDesdeModal'),
   modalImagenBadge: document.getElementById('modalImagenBadge'),
@@ -671,9 +670,8 @@ function renderizarFila(producto) {
   }
 
   // Obtener precio según tipo de cliente
+  // Nota: precio_lista es el costo base de ENAR, no se muestra al cliente.
   const precioCliente = obtenerPrecioCliente(producto);
-  const precioLista = producto.precio_lista || 0;
-  const tieneDescuento = precioLista > precioCliente && precioLista > 0;
 
   // Código interno
   const codigoInterno = producto.cod_interno || '-';
@@ -827,11 +825,9 @@ function abrirModalProducto(producto) {
   elementos.modalProductoEan.textContent = producto.ean || '-';
   elementos.modalProductoStock.textContent = producto.cantidad || 0;
 
-  // Precios según tipo de cliente
+  // Precio según tipo de cliente. precio_lista (costo base) no se muestra.
   const precioCliente = obtenerPrecioCliente(producto);
-  const precioLista = producto.precio_lista || 0;
   elementos.modalProductoPrecio.textContent = formatearPrecio(precioCliente);
-  elementos.modalProductoPrecioReg.textContent = formatearPrecio(precioLista);
 
   // Actualizar label del precio con tipo de cliente
   const labelPrecio = document.getElementById('modalPrecioLabel');
