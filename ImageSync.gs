@@ -1122,6 +1122,283 @@ function vincularFichasConProductos() {
   }
 }
 
+// ============================================
+// COPIAR IMAGEN ENTRE PRODUCTOS
+// ============================================
+
+/**
+ * Busca un producto por título (parcial) y retorna su imagen_principal
+ * @param {string} tituloBuscado - Texto a buscar en el título
+ * @returns {Object} - { docId, titulo, imagen_principal }
+ */
+function buscarProductoPorTitulo(tituloBuscado) {
+  var token = ScriptApp.getOAuthToken();
+  var queryUrl = FIRESTORE_URL + ":runQuery";
+
+  var queryBody = {
+    structuredQuery: {
+      from: [{ collectionId: COLECCIONES.productos }],
+      limit: 500
+    }
+  };
+
+  var response = UrlFetchApp.fetch(queryUrl, {
+    method: "POST",
+    contentType: "application/json",
+    headers: { Authorization: "Bearer " + token },
+    payload: JSON.stringify(queryBody),
+    muteHttpExceptions: true
+  });
+
+  var resultados = JSON.parse(response.getContentText());
+  var busqueda = tituloBuscado.toUpperCase();
+
+  for (var i = 0; i < resultados.length; i++) {
+    var item = resultados[i];
+    if (!item.document) continue;
+    var fields = item.document.fields;
+    var titulo = (fields.titulo && fields.titulo.stringValue) || "";
+    if (titulo.toUpperCase().indexOf(busqueda) !== -1) {
+      var docPath = item.document.name;
+      return {
+        docId: docPath.split("/").pop(),
+        titulo: titulo,
+        imagen_principal: (fields.imagen_principal && fields.imagen_principal.stringValue) || null,
+        codInterno: (fields.cod_interno && fields.cod_interno.stringValue) || ""
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Copia la imagen de un producto a otros productos (buscados por título)
+ * @param {string} tituloOrigen - Título del producto origen
+ * @param {Array} titulosDestino - Array de títulos destino
+ */
+function copiarImagenEntreProductos(tituloOrigen, titulosDestino) {
+  Logger.log("=== COPIAR IMAGEN ENTRE PRODUCTOS ===");
+  Logger.log("Origen: " + tituloOrigen);
+
+  // Buscar producto origen
+  var origen = buscarProductoPorTitulo(tituloOrigen);
+  if (!origen) {
+    Logger.log("ERROR: No se encontró producto origen: " + tituloOrigen);
+    return;
+  }
+  if (!origen.imagen_principal) {
+    Logger.log("ERROR: El producto origen no tiene imagen: " + origen.titulo);
+    return;
+  }
+
+  Logger.log("Producto origen encontrado: " + origen.titulo + " (" + origen.codInterno + ")");
+  Logger.log("Imagen: " + origen.imagen_principal);
+  Logger.log("");
+
+  var actualizados = 0;
+  var token = ScriptApp.getOAuthToken();
+
+  for (var i = 0; i < titulosDestino.length; i++) {
+    var tituloDestino = titulosDestino[i];
+    var destino = buscarProductoPorTitulo(tituloDestino);
+
+    if (!destino) {
+      Logger.log("X No encontrado: " + tituloDestino);
+      continue;
+    }
+
+    // Actualizar imagen
+    var updateUrl = FIRESTORE_URL + "/" + COLECCIONES.productos + "/" + destino.docId +
+      "?updateMask.fieldPaths=imagen_principal&updateMask.fieldPaths=updated_at";
+
+    var updateBody = {
+      fields: {
+        imagen_principal: { stringValue: origen.imagen_principal },
+        updated_at: { stringValue: new Date().toISOString() }
+      }
+    };
+
+    var updateResponse = UrlFetchApp.fetch(updateUrl, {
+      method: "PATCH",
+      contentType: "application/json",
+      headers: { Authorization: "Bearer " + token },
+      payload: JSON.stringify(updateBody),
+      muteHttpExceptions: true
+    });
+
+    if (updateResponse.getResponseCode() === 200) {
+      actualizados++;
+      Logger.log("OK " + destino.titulo + " (" + destino.codInterno + ")");
+    } else {
+      Logger.log("X Error HTTP " + updateResponse.getResponseCode() + " para: " + destino.titulo);
+    }
+  }
+
+  Logger.log("\n=== RESUMEN ===");
+  Logger.log("Imagen copiada a: " + actualizados + "/" + titulosDestino.length + " productos");
+}
+
+/**
+ * Copia la imagen del Anticorrosivo Galón Blanco a los otros colores
+ * Ejecutar desde Apps Script
+ */
+function copiarImagenAnticorrosivos() {
+  copiarImagenEntreProductos("Anticorrosivo Galón Blanco", [
+    "Anticorrosivo Galón Rojo",
+    "Anticorrosivo Galón Negro",
+    "Anticorrosivo Galón Gris",
+    "Anticorrosivo Galón Verde",
+    "Anticorrosivo Galón Caoba"
+  ]);
+}
+
+// ============================================
+// SINCRONIZACIÓN SELECTIVA POR SUBCARPETA
+// ============================================
+
+/**
+ * Busca una subcarpeta por nombre dentro de una carpeta (recursivo hasta 2 niveles)
+ * @param {Folder} carpetaPadre - Carpeta donde buscar
+ * @param {string} nombreBuscado - Nombre de la subcarpeta a encontrar
+ * @param {number} nivel - Nivel actual de profundidad
+ * @returns {Folder|null} - La carpeta encontrada o null
+ */
+function buscarSubcarpetaPorNombre(carpetaPadre, nombreBuscado, nivel) {
+  nivel = nivel || 0;
+  const MAX_NIVEL = 3;
+
+  const subcarpetas = carpetaPadre.getFolders();
+  while (subcarpetas.hasNext()) {
+    const sub = subcarpetas.next();
+    const nombre = sub.getName();
+
+    if (nombre.toUpperCase().indexOf(nombreBuscado.toUpperCase()) !== -1) {
+      return sub;
+    }
+
+    // Buscar recursivamente hasta MAX_NIVEL
+    if (nivel < MAX_NIVEL) {
+      const encontrada = buscarSubcarpetaPorNombre(sub, nombreBuscado, nivel + 1);
+      if (encontrada) return encontrada;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Sincroniza imágenes de una subcarpeta específica con Firestore
+ * @param {string} nombreSubcarpeta - Nombre (o parte del nombre) de la subcarpeta a buscar
+ * @param {string} carpetaRaizId - ID de la carpeta raíz donde buscar (default: CARPETA_TODAS_IMAGENES_ID)
+ */
+function sincronizarSubcarpeta(nombreSubcarpeta, carpetaRaizId) {
+  carpetaRaizId = carpetaRaizId || CARPETA_TODAS_IMAGENES_ID;
+
+  Logger.log("=== SINCRONIZACIÓN SELECTIVA POR SUBCARPETA ===");
+  Logger.log("Buscando: " + nombreSubcarpeta);
+
+  const startTime = new Date();
+
+  try {
+    const carpetaRaiz = DriveApp.getFolderById(carpetaRaizId);
+    Logger.log("Carpeta raíz: " + carpetaRaiz.getName());
+
+    // Buscar la subcarpeta
+    const subcarpeta = buscarSubcarpetaPorNombre(carpetaRaiz, nombreSubcarpeta, 0);
+
+    if (!subcarpeta) {
+      Logger.log("ERROR: No se encontró subcarpeta con nombre: " + nombreSubcarpeta);
+      Logger.log("Subcarpetas disponibles en la raíz:");
+      var subs = carpetaRaiz.getFolders();
+      while (subs.hasNext()) {
+        Logger.log("  - " + subs.next().getName());
+      }
+      return { success: false, error: "Subcarpeta no encontrada" };
+    }
+
+    Logger.log("Subcarpeta encontrada: " + subcarpeta.getName());
+    Logger.log("");
+
+    // Obtener todas las imágenes recursivamente dentro de esa subcarpeta
+    var imagenes = obtenerImagenesRecursivo(subcarpeta, subcarpeta.getName(), []);
+    Logger.log("Total imágenes encontradas: " + imagenes.length);
+
+    if (imagenes.length === 0) {
+      Logger.log("No se encontraron imágenes en la subcarpeta");
+      return { success: true, total: 0, actualizados: 0 };
+    }
+
+    // Listar las imágenes encontradas
+    Logger.log("\nImágenes encontradas:");
+    imagenes.forEach(function(img, i) {
+      Logger.log("  " + (i + 1) + ". " + img.sku + " (" + img.ruta + ")");
+    });
+    Logger.log("");
+
+    // Actualizar Firestore
+    var actualizados = 0;
+    var noEncontrados = [];
+    var errores = [];
+
+    for (var j = 0; j < imagenes.length; j++) {
+      var img = imagenes[j];
+      try {
+        var resultado = actualizarImagenProducto(img.sku, img.url);
+        if (resultado.success) {
+          actualizados++;
+          Logger.log("OK " + img.sku + ": imagen actualizada → " + img.url);
+        } else {
+          noEncontrados.push(img.sku);
+          Logger.log("X " + img.sku + ": " + resultado.error);
+        }
+      } catch (e) {
+        errores.push(img.sku + ": " + e.message);
+        Logger.log("ERROR " + img.sku + ": " + e.message);
+      }
+    }
+
+    // Resumen
+    var endTime = new Date();
+    var duracionSeg = ((endTime - startTime) / 1000).toFixed(1);
+
+    Logger.log("\n========================================");
+    Logger.log("           RESUMEN");
+    Logger.log("========================================");
+    Logger.log("Subcarpeta: " + subcarpeta.getName());
+    Logger.log("Total imágenes: " + imagenes.length);
+    Logger.log("Productos actualizados: " + actualizados);
+    Logger.log("No encontrados en Firestore: " + noEncontrados.length);
+    Logger.log("Errores: " + errores.length);
+    Logger.log("Tiempo: " + duracionSeg + "s");
+
+    if (noEncontrados.length > 0) {
+      Logger.log("\nSKUs no encontrados:");
+      noEncontrados.forEach(function(sku) { Logger.log("  - " + sku); });
+    }
+
+    return {
+      success: true,
+      subcarpeta: subcarpeta.getName(),
+      total: imagenes.length,
+      actualizados: actualizados,
+      noEncontrados: noEncontrados.length,
+      errores: errores.length
+    };
+
+  } catch (error) {
+    Logger.log("ERROR CRÍTICO: " + error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Sincroniza imágenes de ESTUCOS Y MASILLAS
+ * Ejecutar esta función desde el editor de Apps Script
+ */
+function sincronizarEstucos() {
+  return sincronizarSubcarpeta("ESTUCOS Y MASILLAS");
+}
+
 /**
  * Agrega opciones al menú de Google Sheets
  * NOTA: El menú principal está en Utils.gs
