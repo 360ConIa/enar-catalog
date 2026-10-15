@@ -774,15 +774,14 @@ function sincronizarConBatches() {
  * Campos que se actualizan desde la hoja de cálculo (NO incluye campos de ImageSync)
  * Esto asegura que imagen_principal, ficha_tecnica_url, imagenes, total_imagenes
  * NO sean sobrescritos cuando se sincronizan productos
+ * Tampoco incluye precios:
+ * Los precios se actualizan subiendo una hoja de cálculo en la carga masiva
+ * del panel admin, no por esta sincronización
  */
 const CAMPOS_DESDE_SHEET = [
   'cod_interno',
   'titulo',
   'cantidad',
-  'precio_mayorista',
-  'precio_negocio',
-  'precio_persona_natural',
-  'precio_lista',
   'embalaje',
   'peso',
   'impuesto',
@@ -846,10 +845,8 @@ function convertirProductoAFields(producto) {
     cod_interno: { stringValue: String(producto.cod_interno) },
     titulo: { stringValue: String(producto.titulo || '') },
     cantidad: { integerValue: String(producto.cantidad || 0) },
-    precio_mayorista: { doubleValue: producto.precio_mayorista || 0 },
-    precio_negocio: { doubleValue: producto.precio_negocio || 0 },
-    precio_persona_natural: { doubleValue: producto.precio_persona_natural || 0 },
-    precio_lista: { doubleValue: producto.precio_lista || 0 },
+    // Sin precios. Los precios se actualizan subiendo una hoja de cálculo en la carga masiva
+    // del panel admin, no por esta sincronización
     embalaje: { integerValue: String(producto.embalaje || 1) },
     peso: { doubleValue: producto.peso || 0 },
     impuesto: { doubleValue: producto.impuesto || 0.19 },

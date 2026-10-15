@@ -55,6 +55,22 @@ function verificarProductoExiste(codInterno, intentos = 3) {
 }
 
 /**
+ * Campos de precio que la sincronización NO escribe.
+ * Los precios se actualizan subiendo una hoja de cálculo en la carga masiva
+ * del panel admin, no por esta sincronización
+ */
+const CAMPOS_PRECIO = ['precio_lista', 'precio_mayorista', 'precio_negocio', 'precio_persona_natural'];
+
+/**
+ * Copia del producto sin los campos de precio
+ */
+function sinPrecios(producto) {
+  const copia = Object.assign({}, producto);
+  CAMPOS_PRECIO.forEach(c => delete copia[c]);
+  return copia;
+}
+
+/**
  * Crea un nuevo producto en Firestore
  * @param {Object} producto - Objeto con los datos del producto
  * @throws {Error} - Si hay un error en la creación
@@ -64,7 +80,7 @@ function crearProducto(producto) {
   const url = `${FIRESTORE_URL}/${COLECCIONES.productos}?documentId=${encodeURIComponent(producto.cod_interno)}`;
 
   const payload = {
-    fields: convertirAFirestoreFields(producto)
+    fields: convertirAFirestoreFields(sinPrecios(producto))
   };
 
   const options = {
@@ -92,10 +108,12 @@ function crearProducto(producto) {
  * Campos que se actualizan desde la hoja de cálculo
  * NUNCA incluye: imagen_principal, ficha_tecnica_url, imagenes, total_imagenes
  * Esos campos se manejan SOLO desde ImageSync.gs
+ * Tampoco incluye precios (CAMPOS_PRECIO):
+ * Los precios se actualizan subiendo una hoja de cálculo en la carga masiva
+ * del panel admin, no por esta sincronización
  */
 const CAMPOS_PRODUCTO_SHEET = [
   'cod_interno', 'titulo', 'cantidad',
-  'precio_mayorista', 'precio_negocio', 'precio_persona_natural', 'precio_lista',
   'embalaje', 'peso', 'impuesto',
   'ean', 'marca', 'categoria', 'ficha_tecnica',
   'activo', 'sync_at', 'updated_at'
@@ -114,7 +132,7 @@ function actualizarProducto(producto) {
   const url = `${baseUrl}?${updateMaskParams}`;
 
   const payload = {
-    fields: convertirAFirestoreFields(producto)
+    fields: convertirAFirestoreFields(sinPrecios(producto))
   };
 
   const options = {
