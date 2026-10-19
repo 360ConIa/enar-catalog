@@ -8,7 +8,8 @@
  *   archivo_correcto = ok         acepta archivo_propuesto (debe ser uno solo)
  *   archivo_correcto = ninguna    el producto queda sin imagen
  *   archivo_correcto vacío        exacta/familia: usa archivo_propuesto
- *                                 suposición/ambiguo: PENDIENTE, no se toca
+ *                                 suposición/ambiguo: PENDIENTE (solo se retira la URL
+ *                                 de Drive, para que muestre el placeholder)
  *
  * Escribe en el producto:
  *   imagen_principal       URL WebP 1200 px (se borra si queda sin imagen)
@@ -84,7 +85,7 @@ function leerCSV(archivo) {
     } else if (correcto) archivo = correcto;
     else if (f.tipo === 'exacta' || f.tipo === 'familia') archivo = f.archivo_propuesto;
     else if (f.tipo === 'sin imagen') decision = 'sin imagen';
-    else { pendientes.push(`${f.cod_interno} (${f.tipo})`); continue; }
+    else { pendientes.push(`${f.cod_interno} (${f.tipo})`); plan.push({ cod: f.cod_interno, archivo: null, tipo: 'pendiente' }); continue; }
 
     if (archivo) {
       if (!manifest[archivo]) { errores.push(`${f.cod_interno}: "${archivo}" no está en imagenes-web/manifest.json`); continue; }
@@ -121,6 +122,14 @@ function leerCSV(archivo) {
     if (!snap.exists) { noEncontrados.push(p.cod); continue; }
     const d = snap.data();
     if (d.activo !== true) { inactivos.push(p.cod); continue; }
+    if (p.tipo === 'pendiente') {
+      // Sin decisión aún: solo retirar la URL de Drive rota; nunca tocar una imagen de Storage
+      if (!esDrive(d.imagen_principal)) continue;
+      const u = { updated_at: new Date().toISOString(), imagen_principal: FieldValue.delete() };
+      if (!d.imagen_drive_anterior) u.imagen_drive_anterior = d.imagen_principal;
+      cambios.push({ ref, p, u });
+      continue;
+    }
     const u = { updated_at: new Date().toISOString() };
     if (esDrive(d.imagen_principal) && !d.imagen_drive_anterior) u.imagen_drive_anterior = d.imagen_principal;
     if (p.archivo) {
@@ -140,8 +149,8 @@ function leerCSV(archivo) {
 
   const cuenta = t => plan.filter(p => p.tipo === t).length;
   console.log(`Modo: ${EJECUTAR ? 'EJECUTAR' : 'DRY-RUN'}`);
-  console.log(`CSV: ${filas.length} filas · exacta ${cuenta('exacta')} · familia ${cuenta('familia')} · sin imagen ${cuenta('sin imagen')} · pendientes de revisión ${pendientes.length}`);
-  console.log(`Productos con cambios: ${cambios.length} · ya al día: ${plan.length - cambios.length - noEncontrados.length - inactivos.length}`);
+  console.log(`CSV: ${filas.length} filas · exacta ${cuenta('exacta')} · familia ${cuenta('familia')} · sin imagen ${cuenta('sin imagen')} · pendientes de revisión ${pendientes.length} (se les retira la URL de Drive)`);
+  console.log(`Productos con cambios: ${cambios.length} (pendientes: ${cambios.filter(c => c.p.tipo === 'pendiente').length}) · ya al día: ${plan.length - cambios.length - noEncontrados.length - inactivos.length}`);
   if (noEncontrados.length) console.log(`No existen en Firestore: ${noEncontrados.join(', ')}`);
   if (inactivos.length) console.log(`Ya no están activos (no se tocan): ${inactivos.join(', ')}`);
   if (pendientes.length) console.log(`\nPendientes (rellena archivo_correcto en el CSV):\n  ${pendientes.join(', ')}`);
