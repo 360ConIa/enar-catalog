@@ -69,24 +69,27 @@ enar-catalog/
 - **Precarga**: clientes y productos se cargan al iniciar la página en arrays en memoria
 - **Búsqueda**: filtrado en memoria (NO queries Firestore por cada tecleo)
 - **Precios** (`obtenerPrecioCliente(producto, cliente)`):
-  1. Por `tipo_cliente`: `mayorista` → `precio_mayorista`, `negocio` → `precio_negocio`, `persona_natural` → `precio_persona_natural`
-  2. Fallback `lista_precios`: `Precio_L1`, `Precio_L4`, `Precio_L7`, `Precio_L8`, `Precio_L9`, `Precio_L10`
-  3. Fallback final: `p_real` → `p_corriente`
+  1. Por `tipo_cliente`: `mayorista` → `precio_mayorista`, `negocio` → `precio_negocio`, `persona_natural` → `precio_persona_natural`, `nuevos` → `precio_nuevos`
+  2. Listas personalizadas: campo dinámico `precio_<tipo_cliente>`
+  3. Fallback final: `precio_persona_natural` → `p_real` → `p_corriente`
+  - La lista de precios del cliente es **`usuarios.tipo_cliente`**. `lista_precios` y `Precio_Lx` son históricos y no se usan
 - **Cliente en tabla**: `nombreCliente(o)` / `nitCliente(o)` resuelven desde `o.clienteNombre` (CRM) o `o.cliente.razon_social` (B2B)
 
 ## Campos clave Firestore
 
 ### Colección `usuarios`
 - `email`, `nombre`, `nit`, `razon_social`, `tipo_cliente`, `estado`, `rol`
-- `ubicacion` (no `ciudad`), `lista_precios` (no `lista_precio`), `sheets_id_cliente`
+- `tipo_cliente` = lista de precios vigente del cliente (`mayorista`, `negocio`, `persona_natural`, `nuevos`)
+- `ubicacion` (no `ciudad`), `sheets_id_cliente`
+- `lista_precios`: histórico de la migración, no se usa
 - Usuarios auto-registrados: NO tienen `creado_por`
 - Usuarios creados por gestor: SÍ tienen `creado_por`
 
 ### Colección `productos`
 - `cod_interno`, `titulo`, `marca`, `ean`, `cantidad`, `imagen_principal`, `activo`
-- Precios B2B: `precio_mayorista`, `precio_negocio`, `precio_persona_natural`, `precio_lista`
+- Precios B2B: `precio_mayorista`, `precio_negocio`, `precio_persona_natural`, `precio_nuevos`, calculados desde `precio_lista` con `configuracion/listas_precios`
 - Precios sync: `p_real`, `p_corriente`, `impuesto`
-- Precios migrados: `Precio_L1`, `Precio_L4`, `Precio_L7`, `Precio_L8`, `Precio_L9`, `Precio_L10`
+- `Precio_L1`, `Precio_L4`, `Precio_L7`, `Precio_L8`, `Precio_L9`, `Precio_L10`: históricos de la migración, no se usan
 
 ### Colección `ordenes`
 - Órdenes CRM: `clienteNombre`, `clienteNit`, `creadaPor`, `creadaPorEmail`, `tipo: 'orden-vendedor'`
