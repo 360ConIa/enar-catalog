@@ -1,8 +1,8 @@
 ---
 name: deploy
-description: Despliega una app ENAR a Firebase Hosting (b2b, crm o portal) o las reglas de Firestore, exigiendo árbol limpio y commit hecho.
+description: Despliega una app ENAR a Firebase Hosting (b2b, crm o portal) o las reglas de Firestore o de Storage, exigiendo árbol limpio y commit hecho.
 disable-model-invocation: true
-argument-hint: "b2b | crm | portal | reglas"
+argument-hint: "b2b | crm | portal | reglas | storage"
 ---
 
 # Deploy a Firebase
@@ -17,12 +17,13 @@ App solicitada: $ARGUMENTS
 | `crm` | `firebase deploy --only hosting:crm` | `public-crm/` | https://enar-comercial.web.app |
 | `portal` | `firebase deploy --only hosting:portal` | `public-portal/` | https://enar-digital.web.app |
 | `reglas` | `firebase deploy --only firestore:rules` | `firestore.rules` | — |
+| `storage` | `firebase deploy --only storage` | `storage.rules` | — |
 
 **Prohibido:** `firebase deploy` sin `--only`, `--only hosting` sin target y cualquier deploy de `functions` (falla por `rolldown_runtime.js`, ver CLAUDE.md). Si el usuario pide algo fuera de esta tabla, explícale por qué no y detente.
 
 ## Pasos
 
-1. **App**: si `$ARGUMENTS` está vacío o no es uno de los cuatro valores, pregunta cuál desplegar. No la deduzcas de los cambios.
+1. **App**: si `$ARGUMENTS` está vacío o no es uno de los cinco valores, pregunta cuál desplegar. No la deduzcas de los cambios.
 
 2. **Precondiciones** (si alguna falla, detente y explica cómo resolverla; sugiere `/cierre`):
    - `git status --porcelain` debe estar vacío: árbol limpio, sin archivos sin seguimiento dentro del directorio de la app
@@ -34,7 +35,7 @@ App solicitada: $ARGUMENTS
 
 4. **Desplegar**: ejecuta solo el comando de la tabla. Si falla, muestra el error completo; no reintentes con otro filtro.
 
-5. **Verificar**: `curl -s -o /dev/null -w "%{http_code}" <URL>` debe dar 200. Para `reglas`, confirma en la salida del CLI que se publicaron.
+5. **Verificar**: `curl -s -o /dev/null -w "%{http_code}" <URL>` debe dar 200. Para `reglas` y `storage`, confirma en la salida del CLI que se publicaron.
 
 ## Resultado
 

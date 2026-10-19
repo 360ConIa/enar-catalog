@@ -1049,7 +1049,7 @@ function buscarProducto(termino, focusCantidad) {
   container.innerHTML = filtrados.map((p, i) => {
     const precio = obtenerPrecioCliente(p, clienteSeleccionado);
     const yaEnOrden = productosOrden.some(po => po.cod_interno === p.cod_interno);
-    const imgSrc = p.imagen_principal || '';
+    const imgSrc = p.imagen_miniatura || p.imagen_principal || '';
     return `
       <div class="prod-row${yaEnOrden ? ' prod-row--added' : ''}" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--crm-border);font-size:0.82rem;${yaEnOrden ? 'opacity:0.5;' : ''}" data-cod="${p.cod_interno}" data-idx="${i}">
         ${imgSrc ? `<img src="${imgSrc}" alt="" style="width:36px;height:36px;border-radius:4px;object-fit:cover;" onerror="this.style.display='none'">` : '<div style="width:36px;height:36px;border-radius:4px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#94a3b8;">N/A</div>'}

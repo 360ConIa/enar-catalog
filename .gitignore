@@ -71,3 +71,7 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Imágenes originales del catálogo (fuente local, no versionar)
+imagenes-originales/
+imagenes-web/

@@ -1,0 +1,34 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Mismo criterio que productos en firestore.rules: admin o gestor
+    function puedeEditarCatalogo() {
+      return request.auth != null && (
+        request.auth.token.email == 'sebastianbumq@enarapp.com' ||
+        request.auth.token.email == 'ventas@enar.com.co' ||
+        firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.rol in ['admin', 'gestor']
+      );
+    }
+
+    // Imágenes de producto (WebP 1200 px y miniaturas 300 px): lectura pública
+    match /productos/{ruta=**} {
+      allow read: if true;
+      allow write: if puedeEditarCatalogo()
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Fichas técnicas (PDF): lectura pública
+    match /fichas/{ruta=**} {
+      allow read: if true;
+      allow write: if puedeEditarCatalogo()
+        && request.resource.size < 20 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+    }
+
+    // Todo lo demás: cerrado
+    match /{ruta=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -656,7 +656,7 @@ function renderizarFila(producto) {
 
     imagenHtml = `
       <div class="imagen-container" data-id="${producto.id || ''}" data-producto='${productoDataStr}'>
-        <img src="${imgOptimizada(imagenUrl, 150)}" alt="${tituloTexto}"
+        <img src="${producto.imagen_miniatura || imgOptimizada(imagenUrl, 150)}" alt="${tituloTexto}"
              class="tabla-thumbnail tabla-thumbnail-clickeable"
              loading="lazy" decoding="async" width="150" height="150"
              referrerpolicy="no-referrer"

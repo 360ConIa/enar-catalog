@@ -13,8 +13,9 @@
 | Gestión Comercial | https://enar-comercial.web.app | `firebase deploy --only hosting:crm` | `public-crm/` |
 | Portal ENAR Digital | https://enar-digital.web.app | `firebase deploy --only hosting:portal` | `public-portal/` |
 | Firestore Rules | — | `firebase deploy --only firestore:rules` | `firestore.rules` |
+| Storage Rules | — | `firebase deploy --only storage` | `storage.rules` |
 
-**IMPORTANTE:** Deploy de functions falla por `rolldown_runtime.js` → usar siempre `--only hosting,firestore:rules` (nunca `firebase deploy` sin filtro).
+**IMPORTANTE:** Deploy de functions falla por `rolldown_runtime.js` → usar siempre `--only hosting:<app>`, `--only firestore:rules` o `--only storage` (nunca `firebase deploy` sin filtro).
 
 ## Arquitectura
 - Frontend puro (HTML/JS), sin framework
