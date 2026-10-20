@@ -7,16 +7,20 @@
  *   archivo_correcto = <ruta>     usa esa ruta (relativa a imagenes-originales/)
  *   archivo_correcto = ok         acepta archivo_propuesto (debe ser uno solo)
  *   archivo_correcto = ninguna    el producto queda sin imagen
- *   archivo_correcto vacío        exacta/familia: usa archivo_propuesto
+ *   archivo_correcto vacío        exacta: usa archivo_propuesto
  *                                 suposición/ambiguo: PENDIENTE (solo se retira la URL
  *                                 de Drive, para que muestre el placeholder)
  *
  * Escribe en el producto:
  *   imagen_principal       URL WebP 1200 px (se borra si queda sin imagen)
  *   imagen_miniatura       URL WebP 300 px
- *   imagen_tipo            'exacta' | 'familia' (para reemplazar las de familia luego)
+ *   imagen_tipo            'exacta' (un solo envase del mismo producto y tamaño)
  *   imagen_drive_anterior  la URL de Drive que tenía, solo si aún no estaba guardada
  *   updated_at
+ *
+ * Regla: cada producto muestra un solo envase. Aborta si el CSV usa una imagen
+ * de migration/imagenes-prohibidas.json (fotos de varios envases o etiquetas
+ * planas) o si aparece el tipo 'familia', que ya no existe.
  *
  * Antes de escribir comprueba que cada archivo existe en Storage. Solo toca
  * productos activos que estén en el CSV.
@@ -69,10 +73,8 @@ function leerCSV(archivo) {
   const filas = leerCSV(path.join(RAIZ, 'docs', 'revision-imagenes.csv'));
   const manifest = JSON.parse(fs.readFileSync(path.join(RAIZ, 'imagenes-web', 'manifest.json'), 'utf8'));
 
-  // Archivos que el CSV usa como imagen de familia
-  const deFamilia = new Set(filas
-    .filter(f => f.tipo === 'familia' || (f.tipo === 'suposición' && f.nota.includes('Imagen de familia')))
-    .map(f => f.archivo_propuesto));
+  const prohibidas = JSON.parse(fs.readFileSync(path.join(__dirname, 'imagenes-prohibidas.json'), 'utf8'));
+  const PROHIBIDAS = new Set([...prohibidas.varios_envases, ...prohibidas.etiquetas_planas]);
 
   const plan = [], pendientes = [], errores = [];
   for (const f of filas) {
@@ -83,13 +85,15 @@ function leerCSV(archivo) {
       if (f.archivo_propuesto.includes('|') || !f.archivo_propuesto) { errores.push(`${f.cod_interno}: "ok" sobre una propuesta que no es un solo archivo`); continue; }
       archivo = f.archivo_propuesto;
     } else if (correcto) archivo = correcto;
-    else if (f.tipo === 'exacta' || f.tipo === 'familia') archivo = f.archivo_propuesto;
+    else if (f.tipo === 'familia') { errores.push(`${f.cod_interno}: el tipo "familia" ya no existe (un solo envase por producto)`); continue; }
+    else if (f.tipo === 'exacta') archivo = f.archivo_propuesto;
     else if (f.tipo === 'sin imagen') decision = 'sin imagen';
     else { pendientes.push(`${f.cod_interno} (${f.tipo})`); plan.push({ cod: f.cod_interno, archivo: null, tipo: 'pendiente' }); continue; }
 
     if (archivo) {
       if (!manifest[archivo]) { errores.push(`${f.cod_interno}: "${archivo}" no está en imagenes-web/manifest.json`); continue; }
-      decision = deFamilia.has(archivo) ? 'familia' : 'exacta';
+      if (PROHIBIDAS.has(archivo)) { errores.push(`${f.cod_interno}: "${archivo}" muestra varios envases o es una etiqueta plana`); continue; }
+      decision = 'exacta';
     }
     plan.push({ cod: f.cod_interno, archivo, tipo: decision });
   }
@@ -149,7 +153,7 @@ function leerCSV(archivo) {
 
   const cuenta = t => plan.filter(p => p.tipo === t).length;
   console.log(`Modo: ${EJECUTAR ? 'EJECUTAR' : 'DRY-RUN'}`);
-  console.log(`CSV: ${filas.length} filas · exacta ${cuenta('exacta')} · familia ${cuenta('familia')} · sin imagen ${cuenta('sin imagen')} · pendientes de revisión ${pendientes.length} (se les retira la URL de Drive)`);
+  console.log(`CSV: ${filas.length} filas · exacta ${cuenta('exacta')} · sin imagen ${cuenta('sin imagen')} · pendientes de revisión ${pendientes.length} (se les retira la URL de Drive)`);
   console.log(`Productos con cambios: ${cambios.length} (pendientes: ${cambios.filter(c => c.p.tipo === 'pendiente').length}) · ya al día: ${plan.length - cambios.length - noEncontrados.length - inactivos.length}`);
   if (noEncontrados.length) console.log(`No existen en Firestore: ${noEncontrados.join(', ')}`);
   if (inactivos.length) console.log(`Ya no están activos (no se tocan): ${inactivos.join(', ')}`);
