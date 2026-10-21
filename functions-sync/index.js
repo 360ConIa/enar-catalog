@@ -695,6 +695,10 @@ exports.cambiarPasswordUsuario = onCall(
         console.error('cambiarPasswordUsuario getUserByEmail:', e2.code, e2.message);
         throw new HttpsError('internal', `No se pudo consultar Firebase Auth (${e2.code || e2.message})`);
       }
+      // Si esa cuenta ya tiene su propio doc, el email es compartido (otro usuario): no tocarla
+      if ((await db.collection('usuarios').doc(usuario.uid).get()).exists) {
+        throw new HttpsError('failed-precondition', `El email ${email} pertenece a otro usuario; cambie la contraseña desde ese usuario`);
+      }
       console.log(`cambiarPasswordUsuario: doc ${uid} -> cuenta Auth ${usuario.uid} por email`);
     }
 
