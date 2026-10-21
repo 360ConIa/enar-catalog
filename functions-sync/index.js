@@ -656,12 +656,15 @@ async function verificarAdmin(auth) {
 
 /**
  * Callable: El admin fija una contraseña nueva para otro usuario
- * Data: { uid: string, nuevaPassword: string }
+ * Data: { uid: string, nuevaPassword: string }  (uid = id del doc en usuarios)
+ * Si el id del doc no es un uid de Auth, busca la cuenta por el email del doc.
  * Cierra las sesiones abiertas del usuario y deja registro en
  * auditoria_usuarios (sin la contraseña).
+ * Corre con su propia cuenta de servicio (Firebase Auth admin + Firestore):
+ * la cuenta por defecto de las funciones no puede administrar Auth.
  */
 exports.cambiarPasswordUsuario = onCall(
-  { timeoutSeconds: 30, memory: '256MiB' },
+  { timeoutSeconds: 30, memory: '256MiB', serviceAccount: 'enar-auth-admin@enar-b2b.iam.gserviceaccount.com' },
   async (request) => {
     await verificarAdmin(request.auth);
     const { uid, nuevaPassword } = request.data || {};
@@ -673,19 +676,35 @@ exports.cambiarPasswordUsuario = onCall(
       throw new HttpsError('invalid-argument', `La contraseña debe tener entre ${PASSWORD_MIN} y 128 caracteres`);
     }
 
+    const noExiste = (e) => e && e.code === 'auth/user-not-found';
     let usuario;
     try {
       usuario = await admin.auth().getUser(uid);
     } catch (error) {
-      throw new HttpsError('not-found', 'El usuario no existe en Firebase Auth');
+      if (!noExiste(error)) {
+        console.error('cambiarPasswordUsuario getUser:', error.code, error.message);
+        throw new HttpsError('internal', `No se pudo consultar Firebase Auth (${error.code || error.message})`);
+      }
+      const userDoc = await db.collection('usuarios').doc(uid).get();
+      const email = userDoc.exists ? (userDoc.data().email || '').trim().toLowerCase() : '';
+      if (!email) throw new HttpsError('not-found', 'El usuario no tiene cuenta en Firebase Auth ni email registrado');
+      try {
+        usuario = await admin.auth().getUserByEmail(email);
+      } catch (e2) {
+        if (noExiste(e2)) throw new HttpsError('not-found', `No hay cuenta en Firebase Auth con el email ${email}`);
+        console.error('cambiarPasswordUsuario getUserByEmail:', e2.code, e2.message);
+        throw new HttpsError('internal', `No se pudo consultar Firebase Auth (${e2.code || e2.message})`);
+      }
+      console.log(`cambiarPasswordUsuario: doc ${uid} -> cuenta Auth ${usuario.uid} por email`);
     }
 
-    await admin.auth().updateUser(uid, { password: nuevaPassword });
-    await admin.auth().revokeRefreshTokens(uid);
+    await admin.auth().updateUser(usuario.uid, { password: nuevaPassword });
+    await admin.auth().revokeRefreshTokens(usuario.uid);
 
     await db.collection('auditoria_usuarios').add({
       accion: 'cambio_password',
-      uid_objetivo: uid,
+      uid_objetivo: usuario.uid,
+      doc_usuario: uid,
       email_objetivo: usuario.email || null,
       por_uid: request.auth.uid,
       por_email: request.auth.token.email || null,
