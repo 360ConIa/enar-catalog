@@ -633,3 +633,65 @@ exports.recalcularMetricasDiario = onSchedule(
     }
   }
 );
+
+// ═══════════════════════════════════════════════
+// GESTIÓN DE USUARIOS (solo admin)
+// ═══════════════════════════════════════════════
+
+// Mismos criterios que el panel admin (public/js/admin.js: ADMIN_EMAILS) + rol admin
+const ADMIN_EMAILS = ['sebastianbumq@enarapp.com', 'arnulfobuitragoenar@gmail.com'];
+const PASSWORD_MIN = 8;
+
+/**
+ * Helper: Verificar que quien llama es admin (lo comprueba el servidor, no el botón)
+ */
+async function verificarAdmin(auth) {
+  if (!auth) throw new HttpsError('unauthenticated', 'Debe iniciar sesión');
+  if (ADMIN_EMAILS.includes(auth.token.email)) return;
+  const userDoc = await db.collection('usuarios').doc(auth.uid).get();
+  if (!userDoc.exists || userDoc.data().rol !== 'admin') {
+    throw new HttpsError('permission-denied', 'Solo un administrador puede cambiar contraseñas');
+  }
+}
+
+/**
+ * Callable: El admin fija una contraseña nueva para otro usuario
+ * Data: { uid: string, nuevaPassword: string }
+ * Cierra las sesiones abiertas del usuario y deja registro en
+ * auditoria_usuarios (sin la contraseña).
+ */
+exports.cambiarPasswordUsuario = onCall(
+  { timeoutSeconds: 30, memory: '256MiB' },
+  async (request) => {
+    await verificarAdmin(request.auth);
+    const { uid, nuevaPassword } = request.data || {};
+
+    if (typeof uid !== 'string' || !uid) {
+      throw new HttpsError('invalid-argument', 'Falta el usuario');
+    }
+    if (typeof nuevaPassword !== 'string' || nuevaPassword.length < PASSWORD_MIN || nuevaPassword.length > 128) {
+      throw new HttpsError('invalid-argument', `La contraseña debe tener entre ${PASSWORD_MIN} y 128 caracteres`);
+    }
+
+    let usuario;
+    try {
+      usuario = await admin.auth().getUser(uid);
+    } catch (error) {
+      throw new HttpsError('not-found', 'El usuario no existe en Firebase Auth');
+    }
+
+    await admin.auth().updateUser(uid, { password: nuevaPassword });
+    await admin.auth().revokeRefreshTokens(uid);
+
+    await db.collection('auditoria_usuarios').add({
+      accion: 'cambio_password',
+      uid_objetivo: uid,
+      email_objetivo: usuario.email || null,
+      por_uid: request.auth.uid,
+      por_email: request.auth.token.email || null,
+      fecha: new Date().toISOString(),
+    });
+
+    return { ok: true, email: usuario.email || null };
+  }
+);

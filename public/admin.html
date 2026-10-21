@@ -1774,6 +1774,53 @@
   </div>
 
   <!-- Modal Eliminar Usuario -->
+  <div class="modal-overlay" id="modalCambiarPassword">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Cambiar contraseña</h3>
+        <button class="modal-close" onclick="cerrarModal('modalCambiarPassword')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 15px;">Usuario: <strong id="passwordUsuarioNombre">-</strong></p>
+        <div class="form-group">
+          <label for="passwordNueva">Contraseña nueva (mínimo 8 caracteres)</label>
+          <input type="password" id="passwordNueva" autocomplete="new-password" minlength="8">
+        </div>
+        <div class="form-group">
+          <label for="passwordConfirmar">Repetir contraseña</label>
+          <input type="password" id="passwordConfirmar" autocomplete="new-password" minlength="8">
+        </div>
+        <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; margin-bottom: 10px;">
+          <input type="checkbox" id="passwordMostrar"> Mostrar contraseña
+        </label>
+        <p style="color: #666; font-size: 13px;">La contraseña queda activa al instante y se cierran las sesiones abiertas del usuario. Comunícasela por un canal seguro.</p>
+        <p id="passwordError" style="color: #dc2626; font-size: 14px; display: none;"></p>
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalCambiarPassword')">Cancelar</button>
+          <button class="btn-save" id="btnConfirmarPassword">Cambiar contraseña</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalEnlacePassword">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Enviar enlace de restablecimiento</h3>
+        <button class="modal-close" onclick="cerrarModal('modalEnlacePassword')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 15px;">Se enviará un correo a <strong id="enlacePasswordEmail">-</strong> para que el usuario elija su contraseña.</p>
+        <p id="enlacePasswordAviso" style="color: #b45309; font-size: 14px; display: none;">Este correo es del dominio enarapp.com, que ya no recibe mensajes: es mejor usar "Cambiar contraseña".</p>
+        <p id="enlacePasswordError" style="color: #dc2626; font-size: 14px; display: none;"></p>
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="cerrarModal('modalEnlacePassword')">Cancelar</button>
+          <button class="btn-save" id="btnConfirmarEnlacePassword">Enviar enlace</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="modalEliminarUsuario">
     <div class="modal-content">
       <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);">
@@ -1992,7 +2039,8 @@
 
   <script type="module">
     import { initializeApp, deleteApp, getApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js';
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, updateDoc, collection, getDocs, addDoc, query, where, writeBatch } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
     import {
@@ -2031,6 +2079,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
+    const functions = getFunctions(app, 'us-central1');
 
     // Estado
     let usuarios = [];
@@ -2373,6 +2422,12 @@
                 ` : ''}
               ` : ''}
               ${isAdminUser ? `
+              <button class="btn btn-outline-secondary" onclick="abrirCambiarPassword('${u.uid}')" title="Cambiar contraseña">
+                <i class="bi bi-key"></i>
+              </button>
+              <button class="btn btn-outline-secondary" onclick="abrirEnlacePassword('${u.uid}')" title="Enviar enlace para restablecer contraseña">
+                <i class="bi bi-envelope"></i>
+              </button>
               <button class="btn btn-outline-danger" onclick="abrirEliminarUsuario('${u.uid}')" title="Eliminar">
                 <i class="bi bi-trash"></i>
               </button>
@@ -2382,6 +2437,71 @@
         </tr>
       `).join('');
     }
+
+    // ── Contraseñas (solo admin; la Cloud Function lo vuelve a comprobar) ──
+    const PASSWORD_MIN = 8;
+
+    window.abrirCambiarPassword = function(uid) {
+      usuarioSeleccionado = usuarios.find(u => u.uid === uid);
+      if (!usuarioSeleccionado) return;
+      document.getElementById('passwordUsuarioNombre').textContent = `${usuarioSeleccionado.nombre || '-'} (${usuarioSeleccionado.email})`;
+      ['passwordNueva', 'passwordConfirmar'].forEach(id => { const el = document.getElementById(id); el.value = ''; el.type = 'password'; });
+      document.getElementById('passwordMostrar').checked = false;
+      document.getElementById('passwordError').style.display = 'none';
+      document.getElementById('modalCambiarPassword').classList.add('active');
+    };
+
+    document.getElementById('passwordMostrar').addEventListener('change', (e) => {
+      ['passwordNueva', 'passwordConfirmar'].forEach(id => { document.getElementById(id).type = e.target.checked ? 'text' : 'password'; });
+    });
+
+    document.getElementById('btnConfirmarPassword').addEventListener('click', async () => {
+      if (!usuarioSeleccionado) return;
+      const nueva = document.getElementById('passwordNueva').value;
+      const repetida = document.getElementById('passwordConfirmar').value;
+      const error = document.getElementById('passwordError');
+      const mostrarErrorPassword = (texto) => { error.textContent = texto; error.style.display = 'block'; };
+      if (nueva.length < PASSWORD_MIN) return mostrarErrorPassword(`La contraseña debe tener al menos ${PASSWORD_MIN} caracteres.`);
+      if (nueva !== repetida) return mostrarErrorPassword('Las dos contraseñas no coinciden.');
+
+      const boton = document.getElementById('btnConfirmarPassword');
+      boton.disabled = true;
+      try {
+        await httpsCallable(functions, 'cambiarPasswordUsuario')({ uid: usuarioSeleccionado.uid, nuevaPassword: nueva });
+        cerrarModal('modalCambiarPassword');
+        mostrarMensaje(`Contraseña de ${usuarioSeleccionado.email} cambiada`);
+      } catch (e) {
+        mostrarErrorPassword(e.message || 'No se pudo cambiar la contraseña.');
+      } finally {
+        boton.disabled = false;
+      }
+    });
+
+    window.abrirEnlacePassword = function(uid) {
+      usuarioSeleccionado = usuarios.find(u => u.uid === uid);
+      if (!usuarioSeleccionado) return;
+      document.getElementById('enlacePasswordEmail').textContent = usuarioSeleccionado.email;
+      document.getElementById('enlacePasswordAviso').style.display = /@enarapp\.com$/i.test(usuarioSeleccionado.email || '') ? 'block' : 'none';
+      document.getElementById('enlacePasswordError').style.display = 'none';
+      document.getElementById('modalEnlacePassword').classList.add('active');
+    };
+
+    document.getElementById('btnConfirmarEnlacePassword').addEventListener('click', async () => {
+      if (!usuarioSeleccionado) return;
+      const boton = document.getElementById('btnConfirmarEnlacePassword');
+      boton.disabled = true;
+      try {
+        await sendPasswordResetEmail(auth, usuarioSeleccionado.email);
+        cerrarModal('modalEnlacePassword');
+        mostrarMensaje(`Enlace enviado a ${usuarioSeleccionado.email}`);
+      } catch (e) {
+        const error = document.getElementById('enlacePasswordError');
+        error.textContent = e.message || 'No se pudo enviar el enlace.';
+        error.style.display = 'block';
+      } finally {
+        boton.disabled = false;
+      }
+    });
 
     // Abrir modal aprobar
     window.abrirAprobar = function(uid) {
