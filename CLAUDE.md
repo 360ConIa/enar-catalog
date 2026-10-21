@@ -14,8 +14,10 @@
 | Portal ENAR Digital | https://enar-digital.web.app | `firebase deploy --only hosting:portal` | `public-portal/` |
 | Firestore Rules | — | `firebase deploy --only firestore:rules` | `firestore.rules` |
 | Storage Rules | — | `firebase deploy --only storage` | `storage.rules` |
+| Una Cloud Function | — | `firebase deploy --only functions:enar-sync:<nombre>` | `functions-sync/` |
 
-**IMPORTANTE:** Deploy de functions falla por `rolldown_runtime.js` → usar siempre `--only hosting:<app>`, `--only firestore:rules` o `--only storage` (nunca `firebase deploy` sin filtro).
+**IMPORTANTE:** usar siempre `--only hosting:<app>`, `--only firestore:rules`, `--only storage` o `--only functions:enar-sync:<nombre>` (nunca `firebase deploy` sin filtro, ni `--only functions` entero).
+- Functions: desplegar **una sola función** por vez. El 2026-10-21 (CLI 15.34) el deploy de `cambiarPasswordUsuario` funcionó sin el antiguo error de `rolldown_runtime.js`. Antes: `npm ci` en `functions-sync/` (el CLI carga el código en local).
 
 ## Arquitectura
 - Frontend puro (HTML/JS), sin framework
