@@ -143,19 +143,14 @@ service cloud.firestore {
         ((isVendedor() || isGestor()) && request.resource.data.creadaPor == request.auth.uid)
       );
 
-      // Usuarios pueden leer sus propias órdenes, admin/gestores/despachos/comercial_lider leen todas,
-      // vendedores leen las que crearon + las de clientes con vendedor_asignado == su uid
+      // Usuarios pueden leer sus propias órdenes; admin/gestores/despachos/comercial_lider
+      // y todos los vendedores leen todas (los vendedores solo MODIFICAN las suyas, ver update)
       allow read: if isAuthenticated() && (
         resource.data.user_id == request.auth.uid ||
         isAdmin() ||
         isUserManager() ||
         esComercialLider() ||
-        (isVendedor() && (
-          resource.data.creadaPor == request.auth.uid ||
-          (resource.data.user_id != null &&
-            exists(/databases/$(database)/documents/usuarios/$(resource.data.user_id)) &&
-            get(/databases/$(database)/documents/usuarios/$(resource.data.user_id)).data.vendedor_asignado == request.auth.uid)
-        )) ||
+        isVendedor() ||
         isDespachos()
       );
 

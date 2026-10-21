@@ -143,68 +143,19 @@ function cargarOrdenes() {
     showToast('Error al cargar órdenes', 'error');
   };
 
-  if (esAdmin) {
-    const q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(100));
-    unsubOrdenes = onSnapshot(q, (snap) => {
-      todasLasOrdenes = [];
-      snap.forEach(d => {
-        const data = d.data();
-        if (!data.eliminado) todasLasOrdenes.push({ id: d.id, ...data });
-      });
-      actualizarKPIs();
-      aplicarFiltros();
-    }, errorHandler);
-    return;
-  }
-
-  // Vendedor: órdenes propias (creadaPor) + órdenes de clientes asignados (user_id ∈ asignados)
-  const ordenesMap = new Map();
-  const rerender = () => {
-    todasLasOrdenes = [...ordenesMap.values()].sort((a, b) => {
-      const da = toDate(a.created_at)?.getTime() || 0;
-      const db = toDate(b.created_at)?.getTime() || 0;
-      return db - da;
+  // Todos (admin, gestor, comercial_lider y vendedores) ven todas las órdenes;
+  // el filtro "Mis órdenes" es en pantalla
+  // Límite alto para que "Mis órdenes" no pierda órdenes propias antiguas (hoy hay ~400)
+  const q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500));
+  unsubOrdenes = onSnapshot(q, (snap) => {
+    todasLasOrdenes = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (!data.eliminado) todasLasOrdenes.push({ id: d.id, ...data });
     });
     actualizarKPIs();
     aplicarFiltros();
-  };
-
-  const handleSnap = (snap) => {
-    snap.docChanges().forEach(change => {
-      const data = change.doc.data();
-      if (change.type === 'removed' || data.eliminado) {
-        ordenesMap.delete(change.doc.id);
-      } else {
-        ordenesMap.set(change.doc.id, { id: change.doc.id, ...data });
-      }
-    });
-    rerender();
-  };
-
-  // (a) Órdenes creadas por el vendedor desde el panel
-  const qPropias = query(
-    collection(db, 'ordenes'),
-    where('creadaPor', '==', currentUser.uid),
-    orderBy('created_at', 'desc'),
-    limit(100)
-  );
-  unsubOrdenesList.push(onSnapshot(qPropias, handleSnap, errorHandler));
-
-  // (b) Órdenes autónomas de clientes con vendedor_asignado == uid (chunkado por 30, límite de Firestore 'in')
-  const clienteUidsAsignados = todosLosClientes
-    .filter(c => c.vendedor_asignado === currentUser.uid)
-    .map(c => c.uid);
-
-  for (let i = 0; i < clienteUidsAsignados.length; i += 30) {
-    const chunk = clienteUidsAsignados.slice(i, i + 30);
-    const qAsignadas = query(
-      collection(db, 'ordenes'),
-      where('user_id', 'in', chunk),
-      orderBy('created_at', 'desc'),
-      limit(100)
-    );
-    unsubOrdenesList.push(onSnapshot(qAsignadas, handleSnap, errorHandler));
-  }
+  }, errorHandler);
 }
 
 // ═══════════ NOTIFICACIONES DE CHAT ═══════════
@@ -370,8 +321,26 @@ function actualizarKPIs() {
 }
 
 // ═══════════ FILTROS ═══════════
+// ═══════════ PERMISOS ═══════════
+// Misma condición que allow update de ordenes en firestore.rules: el vendedor solo
+// modifica las órdenes que creó o las de sus clientes asignados. Las reglas la imponen;
+// aquí solo se ocultan los botones y se evita el intento.
+function puedeModificarOrden(o) {
+  if (esAdmin) return true; // admin, gestor y comercial_lider
+  if (o.creadaPor === currentUser?.uid) return true;
+  const clienteUid = o.user_id || o.clienteUid;
+  const cliente = clienteUid && todosLosClientes.find(c => c.uid === clienteUid);
+  return !!cliente && cliente.vendedor_asignado === currentUser?.uid;
+}
+
+function avisoSoloLectura() {
+  showToast('Solo puedes modificar tus órdenes o las de tus clientes asignados', 'error');
+}
+
 function aplicarFiltros() {
   let filtradas = [...todasLasOrdenes];
+
+  if ($('filtroAlcance')?.value === 'mias') filtradas = filtradas.filter(puedeModificarOrden);
 
   const texto = $('filtroTexto')?.value;
   if (texto && texto.trim()) {
@@ -434,8 +403,9 @@ function renderBtnCambioEstado(orden) {
 
 function renderMenuAccionesMas(orden) {
   const items = [];
+  const modificable = puedeModificarOrden(orden);
 
-  if (orden.estado === 'pendiente') {
+  if (modificable && orden.estado === 'pendiente') {
     items.push(`<button class="crm-estado-opcion" onclick="window.cerrarMenuMas();editarOrden('${orden.id}')">
       <i class="bi bi-pencil"></i> Editar
     </button>`);
@@ -446,13 +416,13 @@ function renderMenuAccionesMas(orden) {
   </button>`);
 
   const reversion = obtenerReversion(orden.estado);
-  if (reversion && puedeRegresarEstado(userPerfil?.rol)) {
+  if (modificable && reversion && puedeRegresarEstado(userPerfil?.rol)) {
     items.push(`<button class="crm-estado-opcion" style="color:#92400e;" onclick="window.cerrarMenuMas();regresarEstadoOrden('${orden.id}')">
       <i class="bi bi-arrow-counterclockwise"></i> Regresar a ${ESTADOS_ORDEN_LABELS[reversion]}
     </button>`);
   }
 
-  items.push(`<button class="crm-estado-opcion" style="color:#991b1b;" onclick="window.cerrarMenuMas();enviarAPapelera('${orden.id}')">
+  if (modificable) items.push(`<button class="crm-estado-opcion" style="color:#991b1b;" onclick="window.cerrarMenuMas();enviarAPapelera('${orden.id}')">
     <i class="bi bi-trash3"></i> Papelera
   </button>`);
 
@@ -481,6 +451,7 @@ window.cerrarMenuMas = function() {
 };
 
 window.regresarEstadoOrden = async function(ordenId) {
+  { const o = todasLasOrdenes.find(x => x.id === ordenId); if (o && !puedeModificarOrden(o)) return avisoSoloLectura(); }
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
   if (!puedeRegresarEstado(userPerfil?.rol)) {
@@ -546,6 +517,7 @@ window.cambiarEstadoDesdeTabla = async function(ordenId, nuevoEstado) {
 };
 
 window.enviarAPapelera = function(ordenId) {
+  { const o = todasLasOrdenes.find(x => x.id === ordenId); if (o && !puedeModificarOrden(o)) return avisoSoloLectura(); }
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
 
@@ -602,7 +574,7 @@ function renderizarOrdenes() {
           </button>
           ${renderBadgeChatNoLeidos(o.id)}
         </span>
-        ${renderBtnCambioEstado(o)}
+        ${puedeModificarOrden(o) ? renderBtnCambioEstado(o) : `<span title="Solo lectura: orden de otro vendedor" style="color:#94a3b8;padding:0 6px;"><i class="bi bi-lock"></i></span>`}
         ${renderMenuAccionesMas(o)}
       </td>
     </tr>
@@ -675,7 +647,8 @@ window.verDetalleOrden = function(ordenId) {
   const transiciones = obtenerTransicionesPermitidas(orden.estado)
     .filter(e => !['completada', 'parcial', 'en_espera', 'en_proceso'].includes(e));
   const reversionModal = obtenerReversion(orden.estado);
-  const btnRegresarModal = (reversionModal && puedeRegresarEstado(userPerfil?.rol))
+  const modificable = puedeModificarOrden(orden);
+  const btnRegresarModal = (modificable && reversionModal && puedeRegresarEstado(userPerfil?.rol))
     ? `<button class="crm-btn" style="background:#fef3c7;color:#92400e;" onclick="regresarEstadoOrden('${orden.id}')"><i class="bi bi-arrow-counterclockwise"></i> Regresar a ${ESTADOS_ORDEN_LABELS[reversionModal]}</button>`
     : '';
   $('modalDetalleFooter').innerHTML = `
@@ -684,6 +657,7 @@ window.verDetalleOrden = function(ordenId) {
       CSV
     </button>
     ${btnRegresarModal}
+    ${!modificable ? `<span style="color:#64748b;font-size:0.82rem;"><i class="bi bi-lock"></i> Solo lectura: orden de otro vendedor</span>` : `
     ${orden.estado === 'pendiente' ? `<button class="crm-btn crm-btn--primary" onclick="cerrarModal('modalDetalle');editarOrden('${orden.id}')"><i class="bi bi-pencil"></i> Editar</button>` : ''}
     ${transiciones.map(estado => {
       const esCancelada = estado === 'cancelada';
@@ -691,7 +665,7 @@ window.verDetalleOrden = function(ordenId) {
       return `<button class="crm-btn ${clase}" onclick="cambiarEstadoOrden('${orden.id}', '${estado}')">
         ${ESTADOS_ORDEN_LABELS[estado]}
       </button>`;
-    }).join('')}
+    }).join('')}`}
   `;
 
   $('modalDetalle').classList.add('open');
@@ -772,6 +746,7 @@ window.enviarMensajeDetalle = async function(ordenId) {
 
 // ═══════════ CAMBIAR ESTADO ═══════════
 window.cambiarEstadoOrden = async function(ordenId, nuevoEstado) {
+  { const o = todasLasOrdenes.find(x => x.id === ordenId); if (o && !puedeModificarOrden(o)) return avisoSoloLectura(); }
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
 
@@ -1186,6 +1161,7 @@ function renderizarCarrito() {
 
 // ═══════════ EDITAR ORDEN PENDIENTE ═══════════
 window.editarOrden = function(ordenId) {
+  { const o = todasLasOrdenes.find(x => x.id === ordenId); if (o && !puedeModificarOrden(o)) return avisoSoloLectura(); }
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden || orden.estado !== 'pendiente') {
     showToast('Solo se pueden editar órdenes pendientes', 'error');
@@ -1472,6 +1448,7 @@ document.addEventListener('keydown', (e) => {
 function initEventListeners() {
   $('filtroTexto')?.addEventListener('input', debounce(() => aplicarFiltros(), 400));
   $('filtroEstado')?.addEventListener('change', () => aplicarFiltros());
+  $('filtroAlcance')?.addEventListener('change', () => aplicarFiltros());
   $('filtroDesde')?.addEventListener('change', () => aplicarFiltros());
   $('filtroHasta')?.addEventListener('change', () => aplicarFiltros());
 

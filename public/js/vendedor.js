@@ -147,17 +147,9 @@ $('btnLogout').addEventListener('click', async () => {
 function cargarOrdenes() {
   if (unsubOrdenes) unsubOrdenes();
 
-  let q;
-  if (esAdmin) {
-    q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(100));
-  } else {
-    q = query(
-      collection(db, 'ordenes'),
-      where('creadaPor', '==', currentUser.uid),
-      orderBy('created_at', 'desc'),
-      limit(100)
-    );
-  }
+  // Todos los vendedores ven todas las órdenes; el filtro "Mis órdenes" es en pantalla
+  // Límite alto para que "Mis órdenes" no pierda órdenes propias antiguas (hoy hay ~400)
+  const q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500));
 
   unsubOrdenes = onSnapshot(q, (snap) => {
     todasLasOrdenes = [];
@@ -189,9 +181,27 @@ function actualizarKPIs() {
   $('kpiTerminadas').textContent = todasLasOrdenes.filter(o => o.estado === 'terminada').length;
 }
 
+// ═══════════ PERMISOS ═══════════
+// Misma condición que allow update de ordenes en firestore.rules: el vendedor solo
+// modifica las órdenes que creó o las de sus clientes asignados. Las reglas la imponen;
+// aquí solo se ocultan los botones y se evita el intento.
+function puedeModificarOrden(o) {
+  if (esAdmin || userPerfil?.comercial_lider === true) return true;
+  if (o.creadaPor === currentUser?.uid) return true;
+  const clienteUid = o.user_id || o.clienteUid;
+  const cliente = clienteUid && todosLosClientes.find(c => c.uid === clienteUid);
+  return !!cliente && cliente.vendedor_asignado === currentUser?.uid;
+}
+
+function avisoSoloLectura() {
+  showToast('Solo puedes modificar tus órdenes o las de tus clientes asignados', 'error');
+}
+
 // ═══════════ FILTROS ═══════════
 function aplicarFiltros() {
   let filtradas = [...todasLasOrdenes];
+
+  if ($('filtroAlcance')?.value === 'mias') filtradas = filtradas.filter(puedeModificarOrden);
 
   const texto = $('filtroTexto')?.value;
   if (texto && texto.trim()) {
@@ -275,6 +285,7 @@ window.cambiarEstadoDesdeTabla = async function(ordenId, nuevoEstado) {
 window.enviarAPapelera = function(ordenId) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
+  if (!puedeModificarOrden(orden)) return avisoSoloLectura();
 
   // Mostrar info de la orden en el modal
   $('papeleraOrdenInfo').innerHTML = `
@@ -325,10 +336,10 @@ function renderizarOrdenes() {
         <button class="crm-btn crm-btn--sm" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">
           <i class="bi bi-eye"></i>
         </button>
-        ${renderBtnCambioEstado(o)}
-        <button class="crm-btn crm-btn--danger crm-btn--sm" onclick="enviarAPapelera('${o.id}')" title="Enviar a papelera">
+        ${puedeModificarOrden(o) ? renderBtnCambioEstado(o) : `<span title="Solo lectura: orden de otro vendedor" style="color:#94a3b8;padding:0 6px;"><i class="bi bi-lock"></i></span>`}
+        ${!puedeModificarOrden(o) ? '' : `<button class="crm-btn crm-btn--danger crm-btn--sm" onclick="enviarAPapelera('${o.id}')" title="Enviar a papelera">
           <i class="bi bi-trash3"></i>
-        </button>
+        </button>`}
       </td>
     </tr>
   `).join('');
@@ -393,6 +404,7 @@ window.verDetalleOrden = function(ordenId) {
     <button class="crm-btn crm-btn--sm" style="background:#217346;color:white;" onclick="window.generarCSVOrden('${orden.id}')">
       CSV
     </button>
+    ${!puedeModificarOrden(orden) ? `<span style="color:#64748b;font-size:0.82rem;"><i class="bi bi-lock"></i> Solo lectura: orden de otro vendedor</span>` : `
     ${orden.estado === 'pendiente' ? `<button class="crm-btn crm-btn--primary" onclick="cerrarModal('modalDetalle');editarOrden('${orden.id}')"><i class="bi bi-pencil"></i> Editar</button>` : ''}
     ${transiciones.map(estado => {
       const esCancelada = estado === 'cancelada';
@@ -400,7 +412,7 @@ window.verDetalleOrden = function(ordenId) {
       return `<button class="crm-btn ${clase}" onclick="cambiarEstadoOrden('${orden.id}', '${estado}')">
         ${ESTADOS_ORDEN_LABELS[estado]}
       </button>`;
-    }).join('')}
+    }).join('')}`}
   `;
 
   $('modalDetalle').classList.add('open');
@@ -410,6 +422,7 @@ window.verDetalleOrden = function(ordenId) {
 window.cambiarEstadoOrden = async function(ordenId, nuevoEstado) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
+  if (!puedeModificarOrden(orden)) return avisoSoloLectura();
 
   if (!puedeTransicionar(orden.estado, nuevoEstado)) {
     showToast('Transición no permitida', 'error');
@@ -835,6 +848,7 @@ function renderizarCarrito() {
 // ═══════════ EDITAR ORDEN PENDIENTE ═══════════
 window.editarOrden = function(ordenId) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (orden && !puedeModificarOrden(orden)) return avisoSoloLectura();
   if (!orden || orden.estado !== 'pendiente') {
     showToast('Solo se pueden editar órdenes pendientes', 'error');
     return;
@@ -1078,6 +1092,7 @@ document.addEventListener('keydown', (e) => {
 function initEventListeners() {
   $('filtroTexto')?.addEventListener('input', debounce(() => aplicarFiltros(), 400));
   $('filtroEstado')?.addEventListener('change', () => aplicarFiltros());
+  $('filtroAlcance')?.addEventListener('change', () => aplicarFiltros());
   $('filtroDesde')?.addEventListener('change', () => aplicarFiltros());
   $('filtroHasta')?.addEventListener('change', () => aplicarFiltros());
 
