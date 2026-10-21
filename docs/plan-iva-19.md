@@ -131,7 +131,9 @@ Esta constante alimenta el `updateMask` de la línea 113, así que al quitarlos 
 
 ---
 
-## Paso 2 — Agente IA: pasar de sumar IVA a extraerlo
+## Paso 2 — Agente IA: pasar de sumar IVA a extraerlo → **APLICADO 2026-10-21** (commit 29dbfeb)
+
+> **Estado:** desplegado solo `chatAgent`. Alcance ampliado: el chat en vivo solo registra `consultar_catalogo`, `agregar_carrito` y `consultar_ficha_tecnica` (`crear_orden` y `crear_cotizacion` no están registradas). Todas usan `functions-sync/agent/precios.js`: lista del cliente desde `configuracion/listas_precios` (incluye `nuevos`), persona_natural si el `tipo_cliente` no es una lista, nunca `precio_lista`, IVA extraído del total. `chatWidget.js` usa el precio del servidor. Verificado: agente y B2B coinciden al peso en las 4 listas y en un tipo no listado.
 
 Puede ir **después** de aplicar el IVA, pero es **requisito bloqueante para salir en vivo**.
 
