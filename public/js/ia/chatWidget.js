@@ -1148,14 +1148,9 @@ class EnarIAWidget {
       for (const prod of productos) {
         const indice = carrito.findIndex(item => item.cod_interno === prod.cod_interno);
 
-        // Determinar precio según tipo de cliente
-        const tipoCliente = this.obtenerTipoCliente();
-        let precio = prod.precio_persona_natural || prod.precio_lista || 0;
-        if (tipoCliente === 'mayorista' && prod.precio_mayorista) {
-          precio = prod.precio_mayorista;
-        } else if (tipoCliente === 'negocio' && prod.precio_negocio) {
-          precio = prod.precio_negocio;
-        }
+        // Precio resuelto en el servidor con la lista del cliente (configuracion/listas_precios)
+        const precio = prod.precio_unitario;
+        if (!(precio > 0)) continue;
 
         if (indice !== -1) {
           // Incrementar cantidad si ya existe

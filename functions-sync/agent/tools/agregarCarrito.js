@@ -4,6 +4,7 @@
  */
 
 const admin = require('firebase-admin');
+const { obtenerListaCliente, precioProducto } = require('../precios');
 
 /**
  * Prepara productos para agregar al carrito
@@ -14,9 +15,11 @@ const admin = require('firebase-admin');
  * @param {Array} params.items - Lista de items [{sku, cantidad}]
  * @returns {Promise<Object>} Productos listos para el carrito
  */
-async function agregarCarrito({ items }) {
+async function agregarCarrito({ items, user_id }) {
   try {
     const db = admin.firestore();
+    // El precio lo resuelve el servidor con la lista del cliente, igual que el B2B
+    const lista = await obtenerListaCliente(user_id);
     const productosParaCarrito = [];
     const errores = [];
 
@@ -40,13 +43,16 @@ async function agregarCarrito({ items }) {
         continue;
       }
 
+      const precio = precioProducto(prod, lista);
+      if (precio === null) {
+        errores.push(`${prod.titulo}: sin precio para la lista ${lista.nombre}`);
+        continue;
+      }
+
       productosParaCarrito.push({
         cod_interno: prod.cod_interno,
         titulo: prod.titulo,
-        precio_mayorista: prod.precio_mayorista || 0,
-        precio_negocio: prod.precio_negocio || 0,
-        precio_persona_natural: prod.precio_persona_natural || 0,
-        precio_lista: prod.precio_lista || 0,
+        precio_unitario: precio, // con IVA, lista del cliente
         cantidad: item.cantidad,
         imagen_principal: prod.imagen_principal || '',
         marca: prod.marca || '',

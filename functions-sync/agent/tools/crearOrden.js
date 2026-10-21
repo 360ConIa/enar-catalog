@@ -4,6 +4,7 @@
  */
 
 const admin = require('firebase-admin');
+const { obtenerListaCliente, precioProducto, desglosarTotal } = require('../precios');
 
 /**
  * Crea una nueva orden de compra en el sistema
@@ -29,14 +30,9 @@ async function crearOrden({ user_id, items, observaciones }) {
 
     const userData = userDoc.data();
 
-    // Determinar campo de precio según tipo de cliente
-    const tipoCliente = userData.tipo_cliente || 'persona_natural';
-    const camposPrecio = {
-      'mayorista': 'precio_mayorista',
-      'negocio': 'precio_negocio',
-      'persona_natural': 'precio_persona_natural'
-    };
-    const campoPrecio = camposPrecio[tipoCliente] || 'precio_persona_natural';
+    // Lista de precios del cliente (configuracion/listas_precios), igual que el B2B
+    const tipoCliente = userData.tipo_cliente || '';
+    const lista = await obtenerListaCliente(user_id);
 
     // Generar número de orden
     const configRef = db.collection('configuracion').doc('general');
@@ -50,10 +46,10 @@ async function crearOrden({ user_id, items, observaciones }) {
     const year = new Date().getFullYear();
     const numero = `ORD-${year}-${String(consecutivo).padStart(5, '0')}`;
 
-    // Calcular totales y procesar items
-    let subtotal = 0;
-    let total_iva = 0;
+    // Procesar items. Los precios ya incluyen IVA: se suma el total y se extrae el IVA
+    let total = 0;
     const items_detalle = [];
+    const productos_sin_precio = [];
     const productos_sin_stock = [];
 
     for (const item of items) {
@@ -78,14 +74,15 @@ async function crearOrden({ user_id, items, observaciones }) {
           continue; // No agregar productos sin stock suficiente
         }
 
-        const precio = prod[campoPrecio] || prod.precio_lista || 0;
-        const impuesto = prod.impuesto || 0.19;
+        const precio = precioProducto(prod, lista);
+        if (precio === null) {
+          productos_sin_precio.push(prod.titulo);
+          continue;
+        }
 
-        const item_subtotal = cantidad * precio;
-        const item_iva = item_subtotal * impuesto;
-
-        subtotal += item_subtotal;
-        total_iva += item_iva;
+        const item_total = cantidad * precio;
+        const desglose = desglosarTotal(item_total, lista.iva);
+        total += item_total;
 
         items_detalle.push({
           sku: item.sku,
@@ -93,9 +90,9 @@ async function crearOrden({ user_id, items, observaciones }) {
           categoria: prod.categoria,
           cantidad: cantidad,
           precio_unitario: precio,
-          subtotal: item_subtotal,
-          iva: item_iva,
-          total: item_subtotal + item_iva
+          subtotal: desglose.subtotal,
+          iva: desglose.iva,
+          total: item_total
         });
       } else {
         return {
@@ -118,6 +115,14 @@ async function crearOrden({ user_id, items, observaciones }) {
       };
     }
 
+    // Nunca se cobra con otro precio: si falta el de su lista, no se crea la orden
+    if (productos_sin_precio.length > 0) {
+      return {
+        exito: false,
+        mensaje: `Estos productos no tienen precio para tu lista (${lista.nombre}): ${productos_sin_precio.join(', ')}. Un asesor te ayudará con ellos.`
+      };
+    }
+
     // Si no hay items válidos
     if (items_detalle.length === 0) {
       return {
@@ -126,7 +131,7 @@ async function crearOrden({ user_id, items, observaciones }) {
       };
     }
 
-    const total = subtotal + total_iva;
+    const { subtotal, iva: total_iva } = desglosarTotal(total, lista.iva);
 
     // Crear documento de orden
     const ordenData = {
@@ -181,7 +186,7 @@ async function crearOrden({ user_id, items, observaciones }) {
       iva: total_iva,
       total: total,
       items: items_detalle,
-      mensaje: `✅ ¡Orden ${numero} creada exitosamente!\n\n${itemsResumen}\n\nSubtotal: $${subtotal.toLocaleString('es-CO')}\nIVA (19%): $${total_iva.toLocaleString('es-CO')}\n**Total: $${total.toLocaleString('es-CO')}**\n\nPuedes ver el estado de tu orden en "Mis Órdenes".`
+      mensaje: `✅ ¡Orden ${numero} creada exitosamente!\n\n${itemsResumen}\n\nSubtotal: $${subtotal.toLocaleString('es-CO')}\nIVA incluido (${lista.iva}%): $${total_iva.toLocaleString('es-CO')}\n**Total: $${total.toLocaleString('es-CO')}**\n\nPuedes ver el estado de tu orden en "Mis Órdenes".`
     };
 
   } catch (error) {

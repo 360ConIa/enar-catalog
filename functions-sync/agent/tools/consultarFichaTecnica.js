@@ -4,6 +4,7 @@
  */
 
 const admin = require('firebase-admin');
+const { obtenerListaCliente, precioProducto } = require('../precios');
 
 /**
  * Consulta la ficha técnica de un producto
@@ -95,9 +96,11 @@ async function consultarFichaTecnica({ sku }) {
  * @param {string} params.uso - Tipo de uso (interior, exterior, metal, madera, etc.)
  * @returns {Promise<Object>} Productos complementarios sugeridos
  */
-async function buscarProductosComplementarios({ categoria, uso }) {
+async function buscarProductosComplementarios({ categoria, uso, user_id }) {
   try {
     const db = admin.firestore();
+    // Precio de la lista del usuario conectado (nunca precio_lista)
+    const lista = await obtenerListaCliente(user_id);
 
     // Mapa de productos complementarios por categoría
     const complementarios = {
@@ -131,12 +134,13 @@ async function buscarProductosComplementarios({ categoria, uso }) {
 
       snapshot.forEach(doc => {
         const data = doc.data();
-        if (data.cantidad > 0) { // Solo con stock
+        const precio = precioProducto(data, lista);
+        if (data.cantidad > 0 && precio !== null) { // Solo con stock y precio en su lista
           productos.push({
             sku: data.cod_interno,
             nombre: data.titulo,
             categoria: data.categoria,
-            precio: data.precio_negocio || data.precio_lista,
+            precio: precio,
             stock: data.cantidad,
             porque: `Complemento ideal para ${categoria.toLowerCase()}`
           });

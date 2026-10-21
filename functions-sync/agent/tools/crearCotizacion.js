@@ -4,18 +4,25 @@
  */
 
 const admin = require('firebase-admin');
+const { obtenerListaCliente, precioProducto, desglosarTotal } = require('../precios');
 
 /**
  * Crea una nueva cotización en el sistema
  *
  * @param {Object} params - Parámetros de la cotización
+ * @param {string} params.user_id - ID del usuario autenticado (inyectado; define la lista de precios)
  * @param {Object} params.cliente - Datos del cliente {empresa, nit, contacto, email, telefono, ciudad, direccion}
  * @param {Array} params.items - Lista de items [{sku, cantidad}]
  * @returns {Promise<Object>} Información de la cotización creada
  */
-async function crearCotizacion({ cliente, items }) {
+async function crearCotizacion({ user_id, cliente, items }) {
   try {
     const db = admin.firestore();
+    if (!user_id) {
+      return { exito: false, mensaje: 'Debes iniciar sesión para cotizar.' };
+    }
+    // Lista de precios del usuario conectado (configuracion/listas_precios), igual que el B2B
+    const lista = await obtenerListaCliente(user_id);
 
     // Obtener configuración para generar número consecutivo
     const configRef = db.collection('configuracion').doc('general');
@@ -30,10 +37,10 @@ async function crearCotizacion({ cliente, items }) {
     const year = new Date().getFullYear();
     const numero = `COT-${year}-${String(consecutivo).padStart(4, '0')}`;
 
-    // Calcular totales
-    let subtotal = 0;
-    let total_iva = 0;
+    // Los precios ya incluyen IVA: se suma el total y se extrae el IVA
+    let total = 0;
     const items_detalle = [];
+    const sin_precio = [];
 
     // Procesar cada item
     for (const item of items) {
@@ -46,28 +53,32 @@ async function crearCotizacion({ cliente, items }) {
       if (!prodSnapshot.empty) {
         const prod = prodSnapshot.docs[0].data();
         const cantidad = item.cantidad;
-        const precio = prod.p_real || 0;
-        const impuesto = prod.impuesto || 0.19;
+        const precio = precioProducto(prod, lista);
+        if (precio === null) {
+          sin_precio.push(prod.titulo);
+          continue;
+        }
 
-        const item_subtotal = cantidad * precio;
-        const item_iva = item_subtotal * impuesto;
-
-        subtotal += item_subtotal;
-        total_iva += item_iva;
+        const item_total = cantidad * precio;
+        const desglose = desglosarTotal(item_total, lista.iva);
+        total += item_total;
 
         items_detalle.push({
           sku: item.sku,
           nombre: prod.titulo,
           cantidad: cantidad,
           precio_unitario: precio,
-          subtotal: item_subtotal,
-          iva: item_iva,
-          total: item_subtotal + item_iva
+          subtotal: desglose.subtotal,
+          iva: desglose.iva,
+          total: item_total
         });
       }
     }
 
-    const total = subtotal + total_iva;
+    if (sin_precio.length > 0) {
+      return { exito: false, mensaje: `Estos productos no tienen precio para tu lista (${lista.nombre}): ${sin_precio.join(', ')}.` };
+    }
+    const { subtotal, iva: total_iva } = desglosarTotal(total, lista.iva);
     const vigencia = new Date();
     vigencia.setDate(vigencia.getDate() + 15); // 15 días de vigencia
 
@@ -75,6 +86,8 @@ async function crearCotizacion({ cliente, items }) {
     const cotizacionData = {
       numero: numero,
       cliente: cliente,
+      user_id: user_id,
+      lista_precios: lista.id,
       subtotal: subtotal,
       total_iva: total_iva,
       total: total,

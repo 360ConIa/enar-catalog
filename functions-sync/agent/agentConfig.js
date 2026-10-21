@@ -75,11 +75,9 @@ async function procesarMensaje(mensaje, historial = [], userId = null) {
         console.log(`Ejecutando herramienta: ${call.name}`, call.args);
 
         try {
-          // Inyectar user_id automáticamente para crear_orden
-          let args = call.args;
-          if (call.name === 'crear_orden' && userId) {
-            args = { ...args, user_id: userId };
-          }
+          // Inyectar el user_id autenticado en todas las herramientas (define la
+          // lista de precios del cliente). Siempre pisa lo que mande el modelo.
+          const args = { ...call.args, user_id: userId || null };
 
           const toolResult = await executeTool(call.name, args);
 

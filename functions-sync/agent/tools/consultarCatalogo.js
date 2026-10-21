@@ -4,6 +4,7 @@
  */
 
 const admin = require('firebase-admin');
+const { obtenerListaCliente, precioProducto } = require('../precios');
 
 /**
  * Calcula similitud entre dos strings (0-1)
@@ -46,7 +47,9 @@ function calcularSimilitud(str1, str2) {
  * @param {number} [params.limite=10] - Máximo de resultados a retornar
  * @returns {Promise<Object>} Resultados de la búsqueda
  */
-async function consultarCatalogo({ query, categoria, marca, limite = 10 }) {
+async function consultarCatalogo({ query, categoria, marca, limite = 10, user_id }) {
+  // Solo se expone al modelo el precio de la lista del cliente (nunca precio_lista)
+  const lista = await obtenerListaCliente(user_id);
   try {
     const db = admin.firestore();
     let productosRef = db.collection('productos');
@@ -101,10 +104,8 @@ async function consultarCatalogo({ query, categoria, marca, limite = 10 }) {
         nombre: data.titulo,
         categoria: data.categoria,
         marca: data.marca,
-        precio_mayorista: data.precio_mayorista || 0,
-        precio_negocio: data.precio_negocio || 0,
-        precio_persona_natural: data.precio_persona_natural || 0,
-        precio_lista: data.precio_lista || 0,
+        precio: precioProducto(data, lista), // con IVA, lista del cliente; null = sin precio
+        lista_precios: lista.nombre,
         stock: data.cantidad || 0,
         embalaje: data.embalaje || 1,
         impuesto: data.impuesto || 0.19,
@@ -175,7 +176,7 @@ async function consultarCatalogo({ query, categoria, marca, limite = 10 }) {
         sku: p.sku,
         nombre: p.nombre,
         stock: p.stock,
-        precio_negocio: p.precio_negocio
+        precio: p.precio
       }));
 
       return {
