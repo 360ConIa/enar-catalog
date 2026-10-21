@@ -111,12 +111,15 @@ function crearProducto(producto) {
  * Tampoco incluye precios (CAMPOS_PRECIO):
  * Los precios se actualizan subiendo una hoja de cálculo en la carga masiva
  * del panel admin, no por esta sincronización
+ * Tampoco incluye activo: transformarFilaAProducto no lo envía, y un campo que
+ * está en updateMask pero no en el payload se BORRA en Firestore. Solo
+ * migration/limpiar-productos.js controla activo
  */
 const CAMPOS_PRODUCTO_SHEET = [
   'cod_interno', 'titulo', 'cantidad',
   'embalaje', 'peso', 'impuesto',
   'ean', 'marca', 'categoria', 'ficha_tecnica',
-  'activo', 'sync_at', 'updated_at'
+  'sync_at', 'updated_at'
 ];
 
 /**
