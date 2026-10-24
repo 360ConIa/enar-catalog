@@ -710,6 +710,8 @@
       claseEstado
     } from './js/ordenes.js';
     import { obtenerPrecioCliente, inicializarUsuario } from './js/usuario.js';
+    // Solo cantidades despachadas: los mensajes internos de despacho no se muestran al cliente
+    import { resumenDespacho, htmlCantidad, htmlTotalesDespacho } from './js/despacho.js';
 
     // Elementos del DOM
     const loading = document.getElementById('loading');
@@ -803,8 +805,15 @@
     // Placeholder image for missing product images
     const PLACEHOLDER_IMG = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 60 60%22><rect fill=%22%23f0f0f0%22 width=%2260%22 height=%2260%22 rx=%226%22/><text x=%2230%22 y=%2235%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%229%22 font-family=%22sans-serif%22>Sin img</text></svg>";
 
+    // Historial para el cliente: solo cambios de estado con su fecha. Las notas
+    // (alistamiento, reversiones, motivos, quién lo hizo) son internas.
+    function historialCliente(historial) {
+      return (historial || []).filter((h, i, arr) => h.estado && (i === 0 || h.estado !== arr[i - 1].estado));
+    }
+
     // Render read-only detail view
     function renderReadOnlyDetail(orden) {
+      const despacho = resumenDespacho(orden);
       const editBtn = orden.estado === 'pendiente'
         ? `<button class="btn-edit-order" data-action="enter-edit" data-orden-id="${orden.id}">Editar</button>`
         : '';
@@ -855,8 +864,8 @@
         <div class="detail-section">
           <h4>Productos (${orden.items.length})</h4>
           <div class="product-list">
-            ${orden.items.map(item => `
-              <div class="product-item">
+            ${despacho.items.map(({ item, ...fila }) => `
+              <div class="product-item"${fila.diferencia ? ' style="background:#fffbeb;"' : ''}>
                 <img src="${item.imagen || PLACEHOLDER_IMG}" alt="${item.titulo}" class="product-img"
                   onerror="this.onerror=null;this.src='${PLACEHOLDER_IMG}'">
                 <div class="product-info">
@@ -864,25 +873,26 @@
                   <div class="product-code">${item.cod_interno}</div>
                 </div>
                 <div class="product-price">
-                  <div class="product-quantity">${item.cantidad} × ${formatearPrecio(item.precio_unitario)}</div>
-                  <div class="product-subtotal">${formatearPrecio(item.subtotal || item.precio_unitario * item.cantidad)}</div>
+                  <div class="product-quantity">${htmlCantidad(fila)} × ${formatearPrecio(item.precio_unitario)}</div>
+                  ${fila.diferencia ? `<div style="font-size:11px;color:#92400e;">Pedidas ${fila.pedida} · despachadas ${fila.despachada}</div>` : ''}
+                  <div class="product-subtotal">${formatearPrecio(fila.despachada !== null ? fila.subtotal : (item.subtotal || fila.subtotal))}</div>
                 </div>
               </div>
             `).join('')}
           </div>
+          ${htmlTotalesDespacho(despacho, orden.total)}
         </div>
 
-        ${orden.historial && orden.historial.length > 0 ? `
+        ${historialCliente(orden.historial).length > 0 ? `
           <div class="detail-section">
             <h4>Historial</h4>
             <div class="timeline">
-              ${orden.historial.map(h => `
+              ${historialCliente(orden.historial).map(h => `
                 <div class="timeline-item">
                   <div class="timeline-dot">✓</div>
                   <div class="timeline-content">
                     <div class="timeline-estado">${textoEstado(h.estado)}</div>
                     <div class="timeline-fecha">${formatearFecha(h.fecha)}</div>
-                    ${h.nota ? `<div class="timeline-nota">${h.nota}</div>` : ''}
                   </div>
                 </div>
               `).join('')}
@@ -1002,8 +1012,12 @@
 
     // Ver detalles de orden
     window.verDetalles = async function(ordenId) {
-      const orden = ordenes.find(o => o.id === ordenId);
-      if (!orden) return;
+      const idx = ordenes.findIndex(o => o.id === ordenId);
+      if (idx === -1) return;
+      // Releer la orden: Despachos pudo registrar cantidades después de cargar la lista
+      const fresca = await obtenerOrden(ordenId);
+      if (fresca.success) ordenes[idx] = fresca.orden;
+      const orden = ordenes[idx];
 
       editingOrdenId = null;
       editItems = [];

@@ -62,6 +62,21 @@ function sortItemsPorCargue(items) {
   });
 }
 
+// El modal de alistamiento muestra los ítems en orden de cargue, pero se guardan en
+// orden.items en el orden original: se identifican por código de producto (con el
+// número de aparición, por si el código se repite), nunca por la posición en pantalla.
+function claveItem(items, item) {
+  const cod = item.cod_interno || item.sku || '';
+  const n = items.filter(i => (i.cod_interno || i.sku || '') === cod).indexOf(item);
+  return `${cod}#${n}`;
+}
+
+function indiceItem(items, clave) {
+  return items.findIndex(i => claveItem(items, i) === clave);
+}
+
+const claveJS = (clave) => clave.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
 function toDate(val) {
   if (!val) return null;
   if (val instanceof Date) return val;
@@ -713,7 +728,8 @@ window.abrirAlistamiento = function(ordenId) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
 
-  const items = sortItemsPorCargue(orden.items || orden.productos || []);
+  const itemsOrden = orden.items || orden.productos || [];
+  const items = sortItemsPorCargue(itemsOrden);
 
   $('modalAlistamientoTitulo').textContent = `Alistamiento — ${orden.numero_orden || ordenId.substring(0, 8)}`;
 
@@ -771,23 +787,24 @@ window.abrirAlistamiento = function(ordenId) {
             let imgUrl = imgSrc || (prod && prod.imagen_principal) || '';
             if (imgUrl && imgUrl.includes('googleusercontent.com')) imgUrl += '=w80-h80-c';
 
+            const clave = claveJS(claveItem(itemsOrden, item));
             return `
-            <tr data-idx="${idx}" class="${estadoItem === 'comp' ? 'alist-row-comp' : estadoItem === 'sinstock' ? 'alist-row-sinstock' : ''}">
+            <tr data-idx="${idx}" data-clave="${clave}" class="${estadoItem === 'comp' ? 'alist-row-comp' : estadoItem === 'sinstock' ? 'alist-row-sinstock' : ''}">
               <td style="text-align:center;">
                 <button type="button" class="alist-estado-btn alist-comp ${estadoItem === 'comp' ? 'activo' : ''}"
-                  onclick="cambiarEstadoItem('${ordenId}',${idx},'comp',this)" title="Completo">
+                  onclick="cambiarEstadoItem('${ordenId}','${clave}','comp',this)" title="Completo">
                   <i class="bi bi-check-lg"></i>
                 </button>
               </td>
               <td style="text-align:center;">
                 <button type="button" class="alist-estado-btn alist-parcial ${estadoItem === 'parcial' ? 'activo' : ''}"
-                  onclick="cambiarEstadoItem('${ordenId}',${idx},'parcial',this)" title="Parcial">
+                  onclick="cambiarEstadoItem('${ordenId}','${clave}','parcial',this)" title="Parcial">
                   <i class="bi bi-dash-lg"></i>
                 </button>
               </td>
               <td style="text-align:center;">
                 <button type="button" class="alist-estado-btn alist-sinstock ${estadoItem === 'sinstock' ? 'activo' : ''}"
-                  onclick="cambiarEstadoItem('${ordenId}',${idx},'sinstock',this)" title="Sin Stock">
+                  onclick="cambiarEstadoItem('${ordenId}','${clave}','sinstock',this)" title="Sin Stock">
                   <i class="bi bi-x-lg"></i>
                 </button>
               </td>
@@ -805,7 +822,7 @@ window.abrirAlistamiento = function(ordenId) {
                 <input type="number" id="cantReal-${ordenId}-${idx}" value="${cantReal}" min="0"
                   style="width:70px;padding:4px 6px;border:1px solid var(--crm-border);border-radius:4px;text-align:center;font-size:0.85rem;${estadoItem !== 'parcial' ? 'background:#f8fafc;' : ''}"
                   ${estadoItem !== 'parcial' ? 'readonly' : ''}
-                  onchange="actualizarCantidadReal('${ordenId}',${idx},this.value)">
+                  onchange="actualizarCantidadReal('${ordenId}','${clave}',this.value)">
               </td>
             </tr>`;
           }).join('')}
@@ -856,12 +873,13 @@ function renderModalFooter(orden) {
 }
 
 // ═══════════ ESTADO ITEM (Comp/Parcial/Sin Stock) ═══════════
-window.cambiarEstadoItem = async function(ordenId, idx, tipo, btn) {
+window.cambiarEstadoItem = async function(ordenId, clave, tipo, btn) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
 
   const items = orden.items || orden.productos || [];
-  if (!items[idx]) return;
+  const idx = indiceItem(items, clave);
+  if (idx === -1) return;
 
   const tr = btn.closest('tr');
   const btns = tr.querySelectorAll('.alist-estado-btn');
@@ -870,10 +888,9 @@ window.cambiarEstadoItem = async function(ordenId, idx, tipo, btn) {
   // Desactivar todos en esta fila
   btns.forEach(b => { b.classList.remove('activo'); });
   tr.className = '';
-  tr.dataset.idx = idx;
 
   const cantPedida = items[idx].cantidad || 0;
-  const inputCant = $(`cantReal-${ordenId}-${idx}`);
+  const inputCant = tr.querySelector('input[type="number"]');
 
   if (yaActivo) {
     // Toggle off
@@ -926,16 +943,16 @@ window.seleccionarTodosEstado = async function(ordenId, tipo, seleccionar) {
   const items = orden.items || orden.productos || [];
   const filas = document.querySelectorAll(`#tablaAlistamiento-${ordenId} tbody tr`);
 
-  filas.forEach((tr, idx) => {
-    if (!items[idx]) return;
+  filas.forEach(tr => {
+    const idx = indiceItem(items, tr.dataset.clave || '');
+    if (idx === -1) return;
     const btns = tr.querySelectorAll('.alist-estado-btn');
-    const inputCant = $(`cantReal-${ordenId}-${idx}`);
+    const inputCant = tr.querySelector('input[type="number"]');
     const cantPedida = items[idx].cantidad || 0;
 
     // Desactivar todos
     btns.forEach(b => b.classList.remove('activo'));
     tr.className = '';
-    tr.dataset.idx = idx;
 
     if (seleccionar) {
       const btnTarget = tr.querySelector(`.alist-${tipo}`);
@@ -1169,13 +1186,14 @@ window.regresarEstado = async function(ordenId) {
 };
 
 // ═══════════ PREPARACIÓN ═══════════
-window.marcarPreparado = async function(ordenId, itemIdx, preparado) {
+window.marcarPreparado = async function(ordenId, clave, preparado) {
   try {
     const orden = todasLasOrdenes.find(o => o.id === ordenId);
     if (!orden) return;
 
     const items = orden.items || orden.productos || [];
-    if (!items[itemIdx]) return;
+    const itemIdx = indiceItem(items, clave);
+    if (itemIdx === -1) return;
 
     items[itemIdx].preparado = preparado;
     items[itemIdx].preparado_por = currentUser.email;
@@ -1198,13 +1216,14 @@ window.marcarPreparado = async function(ordenId, itemIdx, preparado) {
   }
 };
 
-window.actualizarCantidadReal = async function(ordenId, itemIdx, cantidad) {
+window.actualizarCantidadReal = async function(ordenId, clave, cantidad) {
   try {
     const orden = todasLasOrdenes.find(o => o.id === ordenId);
     if (!orden) return;
 
     const items = orden.items || orden.productos || [];
-    if (!items[itemIdx]) return;
+    const itemIdx = indiceItem(items, clave);
+    if (itemIdx === -1) return;
 
     items[itemIdx].cantidad_real = parseInt(cantidad) || 0;
 

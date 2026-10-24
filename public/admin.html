@@ -1921,12 +1921,16 @@
             <span id="detalleTotal">$0</span>
           </div>
         </div>
+        <div id="detalleDespachoTotales"></div>
 
         <!-- Observaciones -->
         <div id="detalleObservacionesContainer" style="margin-top: 15px; display: none;">
           <h4 style="font-size: 14px; color: #666; margin-bottom: 8px;">Observaciones</h4>
           <p style="font-size: 13px; padding: 10px; background: #fffbeb; border-radius: 6px; border-left: 3px solid #f59e0b;" id="detalleObservaciones">-</p>
         </div>
+
+        <!-- Mensajes internos de despacho (CRM, colección chat_ordenes) -->
+        <div id="detalleMensajesDespacho"></div>
 
         <div class="modal-actions" style="margin-top: 20px;">
           <button class="btn-cancel" onclick="cerrarModal('modalDetalleOrden')">Cerrar</button>
@@ -2054,6 +2058,7 @@
       ESTADOS_USUARIO,
       TIPOS_CLIENTE
     } from './js/user-manager.js';
+    import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual, cargarMensajesDespacho, htmlMensajesDespacho } from './js/despacho.js';
     import {
       obtenerTodasLasOrdenes,
       actualizarEstadoOrden,
@@ -3384,9 +3389,12 @@
     }
 
     // Ver detalle de orden
-    window.verDetalleOrden = function(ordenId) {
-      const orden = ordenes.find(o => o.id === ordenId);
-      if (!orden) return;
+    window.verDetalleOrden = async function(ordenId) {
+      const enLista = ordenes.find(o => o.id === ordenId);
+      if (!enLista) return;
+      // Releer la orden: Despachos (CRM) pudo cambiar cantidades después de cargar el listado
+      let orden = enLista;
+      try { orden = (await leerOrdenActual(ordenId)) || enLista; Object.assign(enLista, orden); } catch (e) { console.warn('No se pudo releer la orden:', e); }
 
       // Info orden
       document.getElementById('detalleOrdenNumero').textContent = orden.numero_orden;
@@ -3434,24 +3442,25 @@
         }
       }
 
-      // Productos
-      const items = orden.items || [];
+      // Productos: cantidad pedida y, si Despachos la registró, la despachada
+      const despacho = resumenDespacho(orden);
       const tbody = document.getElementById('detalleProductosBody');
-      if (items.length === 0) {
+      if (despacho.items.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" class="empty-message">Sin productos</td></tr>';
       } else {
-        tbody.innerHTML = items.map(item => `
-          <tr>
+        tbody.innerHTML = despacho.items.map(fila => `
+          <tr${fila.diferencia ? ' style="background:#fffbeb;"' : ''}>
             <td>
-              <div style="font-weight: 500;">${item.titulo || '-'}</div>
-              <div style="font-size: 11px; color: #888;">${item.cod_interno || ''}</div>
+              <div style="font-weight: 500;">${fila.item.titulo || fila.item.nombre || '-'}</div>
+              <div style="font-size: 11px; color: #888;">${fila.item.cod_interno || fila.item.sku || ''}</div>
             </td>
-            <td style="text-align: center;">${item.cantidad}</td>
-            <td style="text-align: right;">${formatearPrecio(item.precio_unitario)}</td>
-            <td style="text-align: right;">${formatearPrecio(item.subtotal || item.precio_unitario * item.cantidad)}</td>
+            <td style="text-align: center; white-space: nowrap;">${htmlCantidad(fila)}</td>
+            <td style="text-align: right;">${formatearPrecio(fila.item.precio_unitario)}</td>
+            <td style="text-align: right;">${formatearPrecio(fila.despachada !== null ? fila.subtotal : (fila.item.subtotal || fila.subtotal))}</td>
           </tr>
         `).join('');
       }
+      document.getElementById('detalleDespachoTotales').innerHTML = htmlTotalesDespacho(despacho, orden.total);
 
       // Totales
       document.getElementById('detalleSubtotal').textContent = formatearPrecio(orden.subtotal || 0);
@@ -3469,6 +3478,16 @@
 
       // Mostrar modal
       document.getElementById('modalDetalleOrden').classList.add('active');
+
+      // Mensajes internos de despacho (solo personal; las reglas de chat_ordenes lo exigen)
+      const mensajesEl = document.getElementById('detalleMensajesDespacho');
+      mensajesEl.innerHTML = '';
+      try {
+        const mensajes = await cargarMensajesDespacho(ordenId);
+        if (document.getElementById('detalleOrdenNumero').textContent === String(orden.numero_orden)) mensajesEl.innerHTML = htmlMensajesDespacho(mensajes);
+      } catch (e) {
+        console.warn('No se pudieron cargar los mensajes de despacho:', e);
+      }
     };
 
     // Cambiar estado rápido desde dropdown

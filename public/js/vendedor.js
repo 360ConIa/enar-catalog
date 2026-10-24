@@ -25,6 +25,7 @@ import {
   showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js';
 import { cargarListasPrecios, nombreLista } from './firebase-config.js';
+import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual, cargarMensajesDespacho, htmlMensajesDespacho } from './despacho.js';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -348,11 +349,14 @@ function renderizarOrdenes() {
 }
 
 // ═══════════ DETALLE ORDEN ═══════════
-window.verDetalleOrden = function(ordenId) {
-  const orden = todasLasOrdenes.find(o => o.id === ordenId);
-  if (!orden) return;
+window.verDetalleOrden = async function(ordenId) {
+  const enLista = todasLasOrdenes.find(o => o.id === ordenId);
+  if (!enLista) return;
+  // Releer la orden: Despachos (CRM) pudo registrar cantidades después de cargar el listado
+  let orden = enLista;
+  try { orden = (await leerOrdenActual(ordenId)) || enLista; } catch (e) { console.warn('No se pudo releer la orden:', e); }
 
-  const items = sortItemsPorCargue(orden.items || orden.productos || []);
+  const despacho = resumenDespacho({ ...orden, items: sortItemsPorCargue(orden.items || orden.productos || []) });
 
   $('modalDetalleTitulo').textContent = `Orden ${orden.numero_orden || ''}`;
   $('modalDetalleBody').innerHTML = `
@@ -377,13 +381,13 @@ window.verDetalleOrden = function(ordenId) {
           </tr>
         </thead>
         <tbody>
-          ${items.map(it => `
-            <tr>
-              <td style="font-weight:500;color:var(--crm-primary-light);">${it.cod_interno || it.sku || '-'}</td>
-              <td>${it.titulo || it.nombre || '-'}</td>
-              <td>${formatearPrecio(it.precio_unitario)}</td>
-              <td style="text-align:center;">${it.cantidad}</td>
-              <td style="text-align:right;font-weight:600;">${formatearPrecio(it.subtotal || it.precio_unitario * it.cantidad)}</td>
+          ${despacho.items.map(fila => `
+            <tr${fila.diferencia ? ' style="background:#fffbeb;"' : ''}>
+              <td style="font-weight:500;color:var(--crm-primary-light);">${fila.item.cod_interno || fila.item.sku || '-'}</td>
+              <td>${fila.item.titulo || fila.item.nombre || '-'}</td>
+              <td>${formatearPrecio(fila.item.precio_unitario)}</td>
+              <td style="text-align:center;white-space:nowrap;">${htmlCantidad(fila)}</td>
+              <td style="text-align:right;font-weight:600;">${formatearPrecio(fila.despachada !== null ? fila.subtotal : (fila.item.subtotal || fila.subtotal))}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -394,6 +398,8 @@ window.verDetalleOrden = function(ordenId) {
       <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:4px;"><span>IVA (19%)</span><span>${formatearPrecio(orden.iva || 0)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:700;border-top:2px solid var(--crm-border);padding-top:8px;"><span>Total</span><span>${formatearPrecio(orden.total || 0)}</span></div>
     </div>
+    ${htmlTotalesDespacho(despacho, orden.total)}
+    <div id="detalleMensajesDespacho"></div>
   `;
 
   // Botones de cambio de estado (completada/parcial/en_espera se gestionan desde Despachos)
@@ -416,6 +422,17 @@ window.verDetalleOrden = function(ordenId) {
   `;
 
   $('modalDetalle').classList.add('open');
+
+  // Mensajes internos de despacho (solo personal; las reglas de chat_ordenes lo exigen)
+  try {
+    const mensajes = await cargarMensajesDespacho(ordenId);
+    if ($('modalDetalleTitulo').textContent === `Orden ${orden.numero_orden || ''}`) {
+      const el = $('detalleMensajesDespacho');
+      if (el) el.innerHTML = htmlMensajesDespacho(mensajes);
+    }
+  } catch (e) {
+    console.warn('No se pudieron cargar los mensajes de despacho:', e);
+  }
 };
 
 // ═══════════ CAMBIAR ESTADO ═══════════
