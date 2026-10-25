@@ -791,9 +791,24 @@
   border-top: 1px solid var(--crm-border);
 }
 
+/* Con muchos ítems la tabla se recorre con su propio scroll (antes se cortaba en ~12
+   filas sin poder llegar al resto); la cabecera de la tabla queda fija */
+.crm-despacho-dropdown.open .crm-tabla-wrapper {
+  max-height: 598px;
+  overflow: auto;
+}
+
+.crm-despacho-dropdown.open thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f1f5f9;
+}
+
 /* En tablet/mobile no capamos altura, para mostrar todos los items sin corte */
 @media (max-width: 991px) {
-  .crm-despacho-dropdown.open {
+  .crm-despacho-dropdown.open,
+  .crm-despacho-dropdown.open .crm-tabla-wrapper {
     max-height: none;
   }
 }

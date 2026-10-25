@@ -542,6 +542,23 @@
       max-height: 90vh;
       overflow-y: auto;
     }
+    /* Los modales se abren debajo de la cabecera fija (.crm-header, sticky, z-index 1200):
+       --alto-cabecera lo mide el script de la página. El título queda fijo arriba del
+       modal y el contenido largo se recorre con el scroll propio del modal. */
+    .modal-overlay {
+      padding-top: calc(var(--alto-cabecera, 0px) + 12px);
+      padding-bottom: 12px;
+    }
+    .modal-overlay .modal-content {
+      max-height: calc(100vh - var(--alto-cabecera, 0px) - 24px);
+      max-height: calc(100dvh - var(--alto-cabecera, 0px) - 24px);
+      overscroll-behavior: contain;
+    }
+    .modal-overlay .modal-header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
     .modal-header {
       background: #D9232D;
       padding: 15px 20px;
@@ -718,7 +735,8 @@
       .admin-tabs { gap: 4px; }
       .admin-tab { padding: 8px 12px; font-size: 12px; }
       .admin-tab .badge { font-size: 10px; padding: 1px 6px; margin-left: 4px; }
-      .modal-content { margin: 10px; max-height: 95vh; }
+      .modal-overlay { padding-left: 10px; padding-right: 10px; }
+      .modal-content { margin: 0; }
       .form-row { grid-template-columns: 1fr; }
       .modal-body { padding: 16px; }
       .modal-actions { flex-direction: column; }
@@ -4737,5 +4755,16 @@
     });
   </script>
   <script>document.addEventListener('click',function(e){if(!e.target.closest('.nav-user-dropdown')){var m=document.getElementById('navUserMenu');if(m)m.classList.remove('open')}});</script>
+  <script>
+    // Alto real de la cabecera fija (cambia al hacer wrap en celular): los modales se abren debajo
+    (function () {
+      const cabecera = document.querySelector('.crm-header');
+      if (!cabecera) return;
+      const medir = () => document.documentElement.style.setProperty('--alto-cabecera', cabecera.offsetHeight + 'px');
+      medir();
+      if ('ResizeObserver' in window) new ResizeObserver(medir).observe(cabecera);
+      window.addEventListener('resize', medir);
+    })();
+  </script>
 </body>
 </html>
