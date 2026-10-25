@@ -104,7 +104,7 @@ pública y URLs permanentes; `fichas/` (fichas técnicas). Fuente local: `imagen
 
 | Función | Tipo | Qué hace |
 |---|---|---|
-| `syncProductos` | HTTP público, CORS abierto | Recibe productos de GAS (`TriggerFunction.gs`) y hace `merge` de `titulo`, `cantidad`, `p_real`, `p_corriente`, `impuesto`, `ean`, `marca`, `imagen_principal`… **Sin autenticación** (ver §8) |
+| `syncProductos` | HTTP | `merge` de `titulo`, `cantidad`, `p_real`, `p_corriente`, `impuesto`, `ean`, `marca`, `imagen_principal`… Desde 2026-10-25 exige el header `X-Sync-Token` (secreto `SYNC_PRODUCTOS_TOKEN` en Secret Manager); además Cloud Run no la deja invocar sin IAM (sin `allUsers`). **Sin uso**: la última sincronización (2026-03-12) la hizo GAS directo por la API de Firestore |
 | `chatAgent` | Callable | Agente IA del catálogo (Gemini `gemini-2.5-flash`, `@google/generative-ai`); herramientas en `agent/tools/` (catálogo, ficha técnica, stock, carrito, cotización, orden) con precios de `agent/precios.js` |
 | `recalcularMetricas` | Callable (CRM) | Métricas de clientes |
 | `recalcularMetricasDiario` | Programada 04:00 Bogotá | Igual, diaria |
@@ -130,7 +130,7 @@ Gemini (agente `chatAgent`), Chart.js y CDNs (jsDelivr, gstatic).
 
 | Riesgo | Detalle | Qué hacer en la migración |
 |---|---|---|
-| `syncProductos` sin autenticación | Endpoint HTTP público (`https://syncproductos-3ylre3k6ka-uc.a.run.app`, escrito en `TriggerFunction.gs`). Cualquiera puede sobrescribir títulos, existencias, `p_real`/`p_corriente` e `imagen_principal` de cualquier producto | Exigir un secreto compartido (header) o cambiar a Callable/cuenta de servicio. Corregirlo también en producción, no esperar a la migración |
+| URL de sincronización de otro proyecto | `TriggerFunction.gs` llama a `https://syncproductos-3ylre3k6ka-uc.a.run.app`, que **no es de enar-b2b** y acepta escrituras sin credencial (la de enar-b2b es `…-hcwtmp4f7q-uc.a.run.app`) | Confirmar a qué proyecto pertenece y protegerla o retirarla; quitar `TriggerFunction.gs` si es un resto de otra app |
 | `cotizaciones` abierta | Regla `read, write: if isAuthenticated()`: cualquier usuario lee y modifica cotizaciones de otros | Restringir a dueño + personal |
 | `ventas@enar.com.co` es gestor por correo | `isUserManager()` acepta ese correo aunque su `rol` es `vendedor`: puede editar cualquier usuario, incluido `rol` | Decidir si se mantiene; pasar a rol explícito |
 | Utilidades en producción | `create-test-users.html`, `fix-user.html`, `admin-import-users.html`, `admin-update-tipocliente.html` se publican en el hosting B2B | Moverlas a scripts o a una ruta solo-admin |

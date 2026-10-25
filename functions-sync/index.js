@@ -3,6 +3,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { setGlobalOptions } = require('firebase-functions/v2');
 const admin = require('firebase-admin');
+const crypto = require('crypto');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -13,18 +14,38 @@ setGlobalOptions({
 });
 
 /**
- * Función HTTP para sincronizar productos desde Apps Script
+ * Token compartido con Apps Script (TriggerFunction.gs) para syncProductos.
+ * Vive en Secret Manager (SYNC_PRODUCTOS_TOKEN); en Apps Script, en las Propiedades del
+ * script con la misma clave. Nunca en el repositorio.
+ */
+function tokenSyncValido(recibido) {
+  const esperado = process.env.SYNC_PRODUCTOS_TOKEN || '';
+  if (!esperado || typeof recibido !== 'string' || !recibido) return false;
+  // Comparar hashes de igual largo en tiempo constante
+  const h = (v) => crypto.createHash('sha256').update(v).digest();
+  return crypto.timingSafeEqual(h(recibido), h(esperado));
+}
+
+/**
+ * Función HTTP para sincronizar productos desde Apps Script.
+ * Exige el header X-Sync-Token (sin él responde 401 y no toca Firestore).
+ * Sin CORS: solo la llama el servidor de Apps Script, nunca un navegador.
  */
 exports.syncProductos = onRequest(
   {
     timeoutSeconds: 540,
     memory: '1GiB',
-    cors: true
+    secrets: ['SYNC_PRODUCTOS_TOKEN']
   },
   async (req, res) => {
     // Verificar método POST
     if (req.method !== 'POST') {
       return res.status(405).send('Method not allowed');
+    }
+
+    if (!tokenSyncValido(req.get('X-Sync-Token'))) {
+      console.warn('syncProductos: llamada rechazada sin token válido', req.ip);
+      return res.status(401).send('Unauthorized');
     }
 
     // Obtener productos del body
