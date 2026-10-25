@@ -275,25 +275,7 @@
 
 /* ═══════════ BADGES DE ESTADO ═══════════ */
 
-.badge-estado {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 0.73rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.badge-pendiente { background: #fef3c7; color: #92400e; }
-.badge-aprobada { background: #dbeafe; color: #1e40af; }
-.badge-en-proceso { background: #e0e7ff; color: #3730a3; }
-.badge-en-espera { background: #f3e8ff; color: #6b21a8; }
-.badge-completada { background: #d1fae5; color: #065f46; }
-.badge-parcial { background: #ffedd5; color: #9a3412; }
-.badge-alistamiento { background: #dbeafe; color: #1e40af; }
-.badge-terminada { background: #d1fae5; color: #065f46; }
-.badge-cancelada { background: #fee2e2; color: #991b1b; }
+/* Etiquetas de estado de orden: tabla única en js/estados-orden.js */
 
 /* ═══════════ DROPDOWN CAMBIO ESTADO ═══════════ */
 

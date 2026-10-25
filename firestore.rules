@@ -192,11 +192,22 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Chat de órdenes CRM: lectura/escritura para CRM users, eliminar solo admin
+    // Chat de órdenes (mensajes internos): solo personal (CRM users), nunca clientes,
+    // y solo de órdenes que ese usuario puede leer. Hoy solo restringe al vendedor
+    // externo (únicamente sus órdenes, creadaPor); el resto del personal lee todas.
+    // Dos reglas separadas: la del personal no depende del documento, así sus consultas
+    // sin filtro (avisos de chat del CRM) se aprueban; las del externo deben filtrar por
+    // orden_id. Eliminar solo admin.
+    function esExternoDeLaOrden(ordenId) {
+      return esVendedorExterno() &&
+        get(/databases/$(database)/documents/ordenes/$(ordenId)).data.creadaPor == request.auth.uid;
+    }
+
     match /chat_ordenes/{mensajeId} {
-      allow read: if isCRM();
-      allow create: if isCRM();
-      allow update: if isCRM();
+      allow read, update: if isCRM() && !esVendedorExterno();
+      allow read, update: if esExternoDeLaOrden(resource.data.orden_id);
+      allow create: if isCRM() && !esVendedorExterno();
+      allow create: if esExternoDeLaOrden(request.resource.data.orden_id);
       allow delete: if isAdmin();
     }
 

@@ -21,6 +21,7 @@ import {
   badgeSalud, badgeABC, badgeRiesgo, badgeTendencia, badgeEstado,
   showToast, debounce, buscarMultiCampo, mostrarLoader
 } from './crm-utils.js';
+import { etiquetaEstado, colorEstado } from './estados-orden.js';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -55,10 +56,6 @@ function toDate(val) {
   return isNaN(d.getTime()) ? null : d;
 }
 
-const COLORES_ESTADO = {
-  pendiente: '#fbbf24', aprobada: '#60a5fa', en_proceso: '#818cf8',
-  en_espera: '#c084fc', completada: '#34d399', parcial: '#fb923c', cancelada: '#f87171'
-};
 
 // ═══════════ AUTH ═══════════
 onAuthStateChanged(auth, async (user) => {
@@ -256,10 +253,10 @@ function renderGeneral() {
   ordenes.forEach(o => { estadoCounts[o.estado] = (estadoCounts[o.estado] || 0) + 1; });
 
   renderChart('chartEstados', 'doughnut', {
-    labels: Object.keys(estadoCounts).map(k => ESTADOS_ORDEN_LABELS[k] || k),
+    labels: Object.keys(estadoCounts).map(k => etiquetaEstado(k)),
     datasets: [{
       data: Object.values(estadoCounts),
-      backgroundColor: Object.keys(estadoCounts).map(k => COLORES_ESTADO[k] || '#94a3b8')
+      backgroundColor: Object.keys(estadoCounts).map(k => colorEstado(k))
     }]
   });
 

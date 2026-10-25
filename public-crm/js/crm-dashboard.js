@@ -21,6 +21,7 @@ import {
   badgeEstado, badgeSalud, badgeRiesgo,
   showToast
 } from './crm-utils.js';
+import { etiquetaEstado, colorEstado } from './estados-orden.js';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -221,16 +222,12 @@ async function cargarDashboard(user, perfil, esAdmin) {
     const estadoCounts = {};
     ordenes.forEach(o => { estadoCounts[o.estado] = (estadoCounts[o.estado] || 0) + 1; });
 
-    const colores = {
-      pendiente: '#fbbf24', aprobada: '#60a5fa', en_proceso: '#818cf8',
-      en_espera: '#c084fc', completada: '#34d399', parcial: '#fb923c', cancelada: '#f87171'
-    };
-
+    // Etiquetas y colores: tabla única (estados-orden.js)
     renderChart('chartDistribucion', 'doughnut', {
-      labels: Object.keys(estadoCounts).map(k => ESTADOS_ORDEN_LABELS[k] || k),
+      labels: Object.keys(estadoCounts).map(k => etiquetaEstado(k)),
       datasets: [{
         data: Object.values(estadoCounts),
-        backgroundColor: Object.keys(estadoCounts).map(k => colores[k] || '#94a3b8')
+        backgroundColor: Object.keys(estadoCounts).map(k => colorEstado(k))
       }]
     });
 

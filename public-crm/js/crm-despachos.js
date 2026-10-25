@@ -590,9 +590,7 @@ function renderBadgeResultado(orden) {
   const resultado = orden.resultado_alistamiento
     || (orden.estado === 'completada' ? 'completada' : orden.estado === 'parcial' ? 'parcial' : '');
   if (!resultado) return '';
-  const label = resultado === 'completada' ? 'Completa' : 'Parcial';
-  const clase = resultado === 'completada' ? 'badge-completada' : 'badge-parcial';
-  return `<span class="badge-estado ${clase}" style="font-size:0.68rem;">${label}</span>`;
+  return badgeEstado(resultado === 'completada' ? 'completada' : 'parcial');
 }
 
 // ═══════════ ACCIONES POR TAB ═══════════

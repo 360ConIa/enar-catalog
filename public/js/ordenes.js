@@ -33,6 +33,7 @@ import {
 import {
   getAuth
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { etiquetaEstado, htmlEstado } from './estados-orden.js';
 
 // Configuración Firebase
 const firebaseConfig = {
@@ -841,39 +842,17 @@ function formatearPrecio(precio) {
 }
 
 /**
- * Obtiene el texto del estado
+ * Texto del estado (tabla única: estados-orden.js)
  */
 function textoEstado(estado) {
-  const textos = {
-    [ESTADOS_ORDEN.BORRADOR]: 'Borrador',
-    [ESTADOS_ORDEN.PENDIENTE]: 'Pendiente',
-    [ESTADOS_ORDEN.EN_PROCESO]: 'En Proceso',
-    [ESTADOS_ORDEN.ALISTAMIENTO]: 'Alistamiento',
-    [ESTADOS_ORDEN.COMPLETO]: 'Completo',
-    [ESTADOS_ORDEN.PARCIAL]: 'Parcial',
-    [ESTADOS_ORDEN.EN_ESPERA]: 'En Espera',
-    [ESTADOS_ORDEN.CANCELADA]: 'Cancelada'
-  };
-
-  return textos[estado] || estado;
+  return etiquetaEstado(estado);
 }
 
 /**
- * Obtiene la clase CSS del estado
+ * Clase CSS de la etiqueta de estado. Para pintar la etiqueta usar htmlEstado()
  */
-function claseEstado(estado) {
-  const clases = {
-    [ESTADOS_ORDEN.BORRADOR]: 'estado-borrador',
-    [ESTADOS_ORDEN.PENDIENTE]: 'estado-pendiente',
-    [ESTADOS_ORDEN.EN_PROCESO]: 'estado-en_proceso',
-    [ESTADOS_ORDEN.ALISTAMIENTO]: 'estado-alistamiento',
-    [ESTADOS_ORDEN.COMPLETO]: 'estado-completo',
-    [ESTADOS_ORDEN.PARCIAL]: 'estado-parcial',
-    [ESTADOS_ORDEN.EN_ESPERA]: 'estado-en_espera',
-    [ESTADOS_ORDEN.CANCELADA]: 'estado-cancelada'
-  };
-
-  return clases[estado] || '';
+function claseEstado() {
+  return 'estado-orden';
 }
 
 // Exportaciones
@@ -903,5 +882,6 @@ export {
   obtenerEstadisticasOrdenes,
   formatearPrecio,
   textoEstado,
-  claseEstado
+  claseEstado,
+  htmlEstado
 };

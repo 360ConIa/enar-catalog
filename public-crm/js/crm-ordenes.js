@@ -163,6 +163,7 @@ function cargarOrdenes() {
     });
     actualizarKPIs();
     aplicarFiltros();
+    if (externo && unsubChatNotif) sincronizarChatExterno();
   }, errorHandler);
 }
 
@@ -189,6 +190,31 @@ function reproducirTonoNotificacion() {
 
 let chatNotifPrimerSnapshot = true;
 
+// Vendedor externo: firestore.rules solo le deja leer mensajes de órdenes que él creó,
+// así que en vez de escuchar todo chat_ordenes escucha cada una de sus órdenes.
+const chatExterno = { porOrden: new Map(), unsubs: new Map() };
+
+function sincronizarChatExterno() {
+  const ids = new Set(todasLasOrdenes.map(o => o.id));
+  for (const [id, unsub] of chatExterno.unsubs) {
+    if (!ids.has(id)) { unsub(); chatExterno.unsubs.delete(id); chatExterno.porOrden.delete(id); }
+  }
+  for (const id of ids) {
+    if (chatExterno.unsubs.has(id)) continue;
+    let primero = true;
+    const q = query(collection(db, 'chat_ordenes'), where('orden_id', '==', id), orderBy('created_at', 'asc'));
+    chatExterno.unsubs.set(id, onSnapshot(q, (snap) => {
+      const nuevosDeOtros = !primero && snap.docChanges().some(c => c.type === 'added' && c.doc.data().usuario_id !== currentUser.uid);
+      primero = false;
+      chatExterno.porOrden.set(id, snap.docs.map(d => ({ id: d.id, created_at: d.data().created_at, usuario_id: d.data().usuario_id })));
+      mensajesPorOrden = new Map(chatExterno.porOrden);
+      actualizarBadgeGlobalChat();
+      aplicarFiltros();
+      if (nuevosDeOtros) reproducirTonoNotificacion();
+    }, (error) => console.error('Error listener chat (externo):', error)));
+  }
+}
+
 function iniciarChatNotifListener(perfil) {
   // Cargar lecturas previas desde el perfil
   const lecturasIniciales = perfil?.chat_lecturas || {};
@@ -196,6 +222,13 @@ function iniciarChatNotifListener(perfil) {
   chatNotifPrimerSnapshot = true;
 
   if (unsubChatNotif) unsubChatNotif();
+
+  if (perfil?.rol === 'vendedor' && perfil?.vendedor_externo === true) {
+    // Los listeners por orden se crean al llegar las órdenes (cargarOrdenes)
+    unsubChatNotif = () => { chatExterno.unsubs.forEach(u => u()); chatExterno.unsubs.clear(); chatExterno.porOrden.clear(); };
+    sincronizarChatExterno();
+    return;
+  }
 
   const q = query(
     collection(db, 'chat_ordenes'),

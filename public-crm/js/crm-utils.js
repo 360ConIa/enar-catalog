@@ -8,6 +8,8 @@
  * ============================================
  */
 
+import { htmlEstado } from './estados-orden.js';
+
 // ═══════════ CONSTANTES ═══════════
 
 export const ESTADOS_ORDEN = {
@@ -22,17 +24,8 @@ export const ESTADOS_ORDEN = {
   CANCELADA: 'cancelada'
 };
 
-export const ESTADOS_ORDEN_LABELS = {
-  pendiente: 'Pendiente',
-  aprobada: 'Aprobada',
-  en_proceso: 'En Proceso',
-  en_espera: 'En Espera',
-  alistamiento: 'Alistamiento',
-  completada: 'Completa',
-  parcial: 'Parcial',
-  terminada: 'Terminada',
-  cancelada: 'Cancelada'
-};
+// Etiquetas, íconos y colores de estado: tabla única en estados-orden.js (misma copia en B2B y CRM)
+export { ESTADOS_ORDEN_LABELS } from './estados-orden.js';
 
 export const ROLES = {
   ADMIN: 'admin',
@@ -202,19 +195,7 @@ export function puedeRegresarEstado(rol) {
 // ═══════════ BADGES ═══════════
 
 export function badgeEstado(estado) {
-  const clases = {
-    pendiente: 'badge-estado badge-pendiente',
-    aprobada: 'badge-estado badge-aprobada',
-    en_proceso: 'badge-estado badge-en-proceso',
-    en_espera: 'badge-estado badge-en-espera',
-    alistamiento: 'badge-estado badge-alistamiento',
-    completada: 'badge-estado badge-completada',
-    parcial: 'badge-estado badge-parcial',
-    terminada: 'badge-estado badge-terminada',
-    cancelada: 'badge-estado badge-cancelada'
-  };
-  const label = ESTADOS_ORDEN_LABELS[estado] || estado;
-  return `<span class="${clases[estado] || 'badge-estado'}">${label}</span>`;
+  return htmlEstado(estado);
 }
 
 export function badgeSalud(salud) {

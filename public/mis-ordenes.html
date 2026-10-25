@@ -106,38 +106,7 @@
       color: #888;
       margin-top: 4px;
     }
-    .order-status {
-      display: inline-block;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-    .estado-pendiente {
-      background: #fef3c7;
-      color: #d97706;
-    }
-    .estado-confirmada {
-      background: #dbeafe;
-      color: #2563eb;
-    }
-    .estado-proceso, .estado-en_proceso {
-      background: #e0e7ff;
-      color: #4f46e5;
-    }
-    .estado-enviada {
-      background: #d1fae5;
-      color: #059669;
-    }
-    .estado-entregada {
-      background: #dcfce7;
-      color: #16a34a;
-    }
-    .estado-cancelada {
-      background: #fee2e2;
-      color: #dc2626;
-    }
+    /* Etiquetas de estado de orden: tabla única en js/estados-orden.js */
     .order-summary {
       display: flex;
       justify-content: space-between;
@@ -579,10 +548,6 @@
       color: #888;
       font-size: 13px;
     }
-    .estado-alistamiento { background: #e0e7ff; color: #4f46e5; }
-    .estado-completo { background: #dcfce7; color: #16a34a; }
-    .estado-parcial { background: #fef3c7; color: #d97706; }
-    .estado-en_espera { background: #fce7f3; color: #db2777; }
     /* Toast notifications */
     .toast-container {
       position: fixed;
@@ -709,7 +674,7 @@
       buscarProductos,
       formatearPrecio,
       textoEstado,
-      claseEstado
+      htmlEstado
     } from './js/ordenes.js';
     import { obtenerPrecioCliente, inicializarUsuario } from './js/usuario.js';
     // Solo cantidades despachadas: los mensajes internos de despacho no se muestran al cliente
@@ -767,7 +732,7 @@
               <div class="order-number">${orden.numero_orden}</div>
               <div class="order-date">${formatearFecha(orden.created_at)}</div>
             </div>
-            <span class="order-status ${claseEstado(orden.estado)}">${textoEstado(orden.estado)}</span>
+            ${htmlEstado(orden.estado)}
           </div>
 
           <div class="order-summary">
@@ -833,7 +798,7 @@
           </div>
           <div class="detail-row">
             <span class="detail-label">Estado</span>
-            <span class="order-status ${claseEstado(orden.estado)}" style="font-size: 11px;">${textoEstado(orden.estado)}</span>
+            ${htmlEstado(orden.estado)}
           </div>
           <div class="detail-row">
             <span class="detail-label">Total</span>
