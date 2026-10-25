@@ -8,6 +8,11 @@ entre B2B, CRM y agente IA se marca **⚠ Decidir**: la migración no debe elegi
 Fuente: código al commit `2656905` (2026-10-25) y decisiones del dueño registradas en el
 historial del proyecto.
 
+**Decisiones tomadas el 2026-10-25** ([decisiones.md](decisiones.md)): RN-13 → D-01 (no se
+vende), RN-25 → D-02 (`ORD-AAAA-nnnnn`), RN-30 → D-03 (sin `aprobada`/`en_espera`), RN-02 → D-04
+(solo `rol`), RN-65 → D-06 (aplicada en producción), RN-15 → D-07 (equivalencias pendientes).
+Sigue abierta RN-03 (D-05, Henry).
+
 ## 1. Usuarios, roles y acceso
 
 - **RN-01 Roles.** `admin`, `gestor`, `vendedor`, `despachos`, `cliente`. Se guardan en

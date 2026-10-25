@@ -181,9 +181,15 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Cotizaciones (legacy): solo autenticados
-    match /cotizaciones/{document=**} {
-      allow read, write: if isAuthenticated();
+    // Cotizaciones: cada usuario crea y lee solo las suyas (user_id); el personal lee y
+    // gestiona todas. Las del agente IA se escriben con Admin SDK. Las antiguas sin user_id
+    // solo las ve el personal. Crear con un ID ya usado es update: el cliente no puede pisar
+    // la cotización de otro.
+    match /cotizaciones/{cotizacionId} {
+      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
+      allow read: if isAuthenticated() && (resource.data.get('user_id', null) == request.auth.uid || isCRM());
+      allow update: if isCRM();
+      allow delete: if isAdmin();
     }
 
     // Métricas de clientes CRM: lectura para CRM users, escritura solo admin

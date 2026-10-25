@@ -6,9 +6,9 @@ de prueba, nunca contra producción.
 
 Tipos de verificación:
 - **R** — reglas de Firestore con la API de prueba de reglas (`firebaserules.googleapis.com …:test`)
-  o el emulador. Existen hoy 4 baterías que pasan contra producción (55 casos: visibilidad de
-  vendedores 9, despacho 11, vendedor externo 22, chat 13); hay que pasarlas al repositorio y
-  reutilizarlas tal cual.
+  o el emulador. Las baterías actuales están en `tests/reglas/probar_reglas.py` y pasan contra
+  producción: 73 casos (visibilidad 9, despacho 11, vendedor externo 22, chat 13,
+  cotizaciones 18). Ejecutar: `python3 tests/reglas/probar_reglas.py`.
 - **E** — extremo a extremo en navegador (Playwright), con usuarios de prueba por rol.
 - **U** — prueba unitaria de una función pura (precio, totales, estados).
 
@@ -85,6 +85,7 @@ Usuarios de prueba en staging: `admin`, `gestor`, `vendedor-interno`, `vendedor-
 | PA-6.4 | Texto con `<script>` o HTML en nombres, observaciones o mensajes se muestra como texto | — | E |
 | PA-6.5 | Modales: título visible bajo la cabecera en 1366×768 y 390×844; cierre con fondo/Esc; confirmación si hay cambios sin guardar | 70, 71 | E |
 | PA-6.6 | El endpoint de sincronización de productos rechaza llamadas sin credencial | 14 | E |
+| PA-6.7 | Un cliente solo lee y crea sus cotizaciones; no puede sobrescribir una ajena | 65 | R |
 
 ## Criterio de salida de cada iteración
 Pasan todas las pruebas R y U de las reglas tocadas, y las E de las pantallas migradas, en

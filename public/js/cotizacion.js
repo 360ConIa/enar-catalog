@@ -10,6 +10,7 @@
 
 import {
   db,
+  auth,
   collection,
   getDocs,
   query,
@@ -243,8 +244,10 @@ async function guardarCotizacion(datosCliente) {
   const total = carrito.obtenerTotal();
 
   // Crear documento de cotización
+  // user_id: dueño de la cotización (firestore.rules: solo él y el personal la leen)
   const cotizacion = {
     numero: numero,
+    user_id: auth.currentUser?.uid || null,
     cliente: {
       empresa: datosCliente.empresa,
       nit: datosCliente.nit,
