@@ -1255,3 +1255,60 @@
     gap: 8px;
   }
 }
+
+/* ═══════════ MODALES BAJO LA CABECERA FIJA ═══════════
+   La cabecera (.crm-header, sticky, z-index 1200) queda por encima de los modales.
+   Todos se abren debajo de ella; js/cabecera-fija.js publica su alto real en
+   --alto-cabecera. El título del modal siempre se ve y el contenido largo se
+   recorre con el scroll propio del modal. Las reglas van con "body" delante para
+   imponerse al CSS propio de cada página (p. ej. .modal-overlay { padding: 20px }). */
+
+/* Modales propios: .crm-modal-overlay (vendedor) y .modal-overlay (admin, mis-ordenes) */
+body .crm-modal-overlay,
+body .modal-overlay {
+  padding-top: calc(var(--alto-cabecera, 0px) + 12px);
+  padding-bottom: 12px;
+}
+
+body .crm-modal-overlay .crm-modal,
+body .modal-overlay .modal-content {
+  max-height: calc(100vh - var(--alto-cabecera, 0px) - 24px);
+  max-height: calc(100dvh - var(--alto-cabecera, 0px) - 24px);
+}
+
+body .crm-modal-overlay .crm-modal-body { min-height: 0; }
+
+body .modal-overlay .modal-content {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+body .modal-overlay .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* Modales de Bootstrap (catálogo): el contenedor empieza bajo la cabecera y el
+   cuerpo hace scroll dentro del diálogo */
+body .modal {
+  top: var(--alto-cabecera, 0px);
+  height: calc(100% - var(--alto-cabecera, 0px));
+}
+
+body .modal .modal-content {
+  max-height: calc(100vh - var(--alto-cabecera, 0px) - 3.5rem);
+  max-height: calc(100dvh - var(--alto-cabecera, 0px) - 3.5rem);
+}
+
+body .modal .modal-body {
+  overflow-y: auto;
+}
+
+@media (max-width: 576px) {
+  body .crm-modal-overlay,
+  body .modal-overlay {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
