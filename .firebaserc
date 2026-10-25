@@ -1,6 +1,7 @@
 {
   "projects": {
-    "default": "enar-b2b"
+    "default": "enar-b2b",
+    "staging": "enar-staging"
   },
   "targets": {
     "enar-b2b": {
