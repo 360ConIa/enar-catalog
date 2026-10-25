@@ -143,10 +143,18 @@ function cargarOrdenes() {
     showToast('Error al cargar órdenes', 'error');
   };
 
-  // Todos (admin, gestor, comercial_lider y vendedores) ven todas las órdenes;
-  // el filtro "Mis órdenes" es en pantalla
+  // Admin, gestor, comercial_lider y vendedores internos ven todas las órdenes;
+  // el filtro "Mis órdenes" es en pantalla.
+  // Vendedor externo (usuarios.vendedor_externo): solo las que él creó; firestore.rules
+  // rechaza cualquier consulta suya que no filtre por creadaPor.
   // Límite alto para que "Mis órdenes" no pierda órdenes propias antiguas (hoy hay ~400)
-  const q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500));
+  const externo = userPerfil?.rol === 'vendedor' && userPerfil?.vendedor_externo === true;
+  const grupoAlcance = $('filtroAlcance')?.closest('.crm-filtro-group');
+  if (grupoAlcance) grupoAlcance.style.display = externo ? 'none' : '';
+  if (externo) $('filtroAlcance').value = 'todas';
+  const q = externo
+    ? query(collection(db, 'ordenes'), where('creadaPor', '==', currentUser.uid), orderBy('created_at', 'desc'), limit(500))
+    : query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500));
   unsubOrdenes = onSnapshot(q, (snap) => {
     todasLasOrdenes = [];
     snap.forEach(d => {

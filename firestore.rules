@@ -59,6 +59,12 @@ service cloud.firestore {
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.comercial_lider == true;
     }
 
+    // Helper: Vendedor externo (usuarios.vendedor_externo == true): solo ve las órdenes que él creó
+    function esVendedorExterno() {
+      return isVendedor() &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('vendedor_externo', false) == true;
+    }
+
     // Helper: CRM user (admin, vendedor, despachos o gestor)
     function isCRM() {
       return isAdmin() || isVendedor() || isDespachos() || isGestor();
@@ -103,12 +109,13 @@ service cloud.firestore {
 
       // Usuario puede actualizar su propio doc (datos limitados)
       // Admin, gestor y vendedores pueden actualizar cualquier usuario
-      // Vendedores no pueden cambiar campos sensibles (estado, tipo_cliente, etc.)
+      // Ni el propio usuario ni los vendedores pueden cambiar campos sensibles: comerciales
+      // (estado, tipo_cliente, crédito...) ni de permisos (rol, comercial_lider, vendedor_externo)
       allow update: if isAuthenticated() && (
-        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional'])) ||
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional', 'rol', 'comercial_lider', 'vendedor_externo'])) ||
         isAdmin() ||
         isUserManager() ||
-        (isVendedor() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional']))
+        (isVendedor() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional', 'rol', 'comercial_lider', 'vendedor_externo']))
       );
 
       // Solo admin puede eliminar usuarios
@@ -144,14 +151,18 @@ service cloud.firestore {
       );
 
       // Usuarios pueden leer sus propias órdenes; admin/gestores/despachos/comercial_lider
-      // y todos los vendedores leen todas (los vendedores solo MODIFICAN las suyas, ver update)
+      // y los vendedores internos leen todas (los vendedores solo MODIFICAN las suyas, ver update).
+      // Vendedor externo: solo las que él creó (creadaPor), ni las de sus clientes asignados.
       allow read: if isAuthenticated() && (
         resource.data.user_id == request.auth.uid ||
-        isAdmin() ||
-        isUserManager() ||
-        esComercialLider() ||
-        isVendedor() ||
-        isDespachos()
+        (esVendedorExterno() && resource.data.creadaPor == request.auth.uid) ||
+        (!esVendedorExterno() && (
+          isAdmin() ||
+          isUserManager() ||
+          esComercialLider() ||
+          isVendedor() ||
+          isDespachos()
+        ))
       );
 
       // Admin, gestores, despachos y comercial_lider pueden actualizar órdenes

@@ -1548,6 +1548,13 @@
               <option value="">Sin asignar</option>
             </select>
           </div>
+          <!-- Solo admin y solo para rol vendedor (firestore.rules: nadie más puede cambiarlo) -->
+          <div class="form-group" id="filaVendedorExterno" style="display:none;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:22px;">
+              <input type="checkbox" id="editarVendedorExterno" style="width:auto;"> Vendedor externo
+            </label>
+            <small style="color:#6b7280;">Solo ve las órdenes que él mismo crea, ni las de sus clientes asignados creadas por otros.</small>
+          </div>
         </div>
 
         <div class="form-row">
@@ -2100,6 +2107,8 @@
     let isManager = false;
     let isVendedor = false;
     let isComercialLider = false;
+    let isVendedorExterno = false;
+    let esAdminPanel = false; // admin por correo o por rol: puede marcar "Vendedor externo"
 
     // Toggle input "Otro" para selects de producto
     window.toggleOtroInput = function(select, inputId) {
@@ -2664,9 +2673,19 @@
         filaVendedor.style.display = 'none';
       }
 
+      document.getElementById('editarVendedorExterno').checked = usuario.vendedor_externo === true;
+      actualizarFilaVendedorExterno();
+
       document.getElementById('editarUsuarioError').style.display = 'none';
       document.getElementById('modalEditarUsuario').classList.add('active');
     };
+
+    // Casilla "Vendedor externo": solo la ve un admin y solo si el rol elegido es vendedor
+    function actualizarFilaVendedorExterno() {
+      const esVendedorElegido = document.getElementById('editarRol').value === 'vendedor';
+      document.getElementById('filaVendedorExterno').style.display = (esAdminPanel && esVendedorElegido) ? '' : 'none';
+    }
+    document.getElementById('editarRol').addEventListener('change', actualizarFilaVendedorExterno);
 
     // Guardar cambios del modal editar usuario
     document.getElementById('btnGuardarEditarUsuario').addEventListener('click', async () => {
@@ -2716,6 +2735,11 @@
         if (rol === 'cliente') {
           updateData.vendedor_asignado = vendedorAsignadoUid || '';
           updateData.vendedor_asignado_nombre = vendedorAsignadoNombre;
+        }
+
+        // Vendedor externo: solo lo cambia un admin, y solo en usuarios con rol vendedor
+        if (esAdminPanel && rol === 'vendedor') {
+          updateData.vendedor_externo = document.getElementById('editarVendedorExterno').checked;
         }
 
         await updateDoc(doc(db, 'usuarios', uid), updateData);
@@ -3210,7 +3234,8 @@
 
     // Cargar órdenes
     async function cargarOrdenes() {
-      const resultado = await obtenerTodasLasOrdenes();
+      // Vendedor externo: la consulta debe filtrar por creadaPor (firestore.rules)
+      const resultado = await obtenerTodasLasOrdenes(isVendedorExterno ? { creadaPor: auth.currentUser?.uid } : {});
 
       if (resultado.success) {
         ordenes = resultado.ordenes;
@@ -4691,6 +4716,8 @@
       isManager = esUserManager(user, userData);
       isVendedor = userData && userData.rol === 'vendedor';
       isComercialLider = userData && userData.comercial_lider === true;
+      isVendedorExterno = isVendedor && userData.vendedor_externo === true;
+      esAdminPanel = isAdminUser || (userData && userData.rol === 'admin');
 
       if (!isAdminUser && !isManager && !isVendedor) {
         noAccess.style.display = 'block';

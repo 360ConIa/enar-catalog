@@ -145,12 +145,21 @@ $('btnLogout').addEventListener('click', async () => {
 });
 
 // ═══════════ CARGAR ÓRDENES (REAL-TIME) ═══════════
+// Vendedor externo (usuarios.vendedor_externo): solo ve las órdenes que él creó.
+// firestore.rules rechaza cualquier consulta suya que no filtre por creadaPor.
+const esVendedorExterno = () => userPerfil?.rol === 'vendedor' && userPerfil?.vendedor_externo === true;
+
 function cargarOrdenes() {
   if (unsubOrdenes) unsubOrdenes();
 
-  // Todos los vendedores ven todas las órdenes; el filtro "Mis órdenes" es en pantalla
+  // Los vendedores internos ven todas las órdenes; el filtro "Mis órdenes" es en pantalla.
   // Límite alto para que "Mis órdenes" no pierda órdenes propias antiguas (hoy hay ~400)
-  const q = query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500));
+  const externo = esVendedorExterno();
+  const filtroAlcance = $('filtroAlcance');
+  if (filtroAlcance) { filtroAlcance.style.display = externo ? 'none' : ''; if (externo) filtroAlcance.value = 'todas'; }
+  const q = externo
+    ? query(collection(db, 'ordenes'), where('creadaPor', '==', currentUser.uid), orderBy('created_at', 'desc'), limit(500))
+    : query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500));
 
   unsubOrdenes = onSnapshot(q, (snap) => {
     todasLasOrdenes = [];

@@ -111,8 +111,12 @@ $('btnLogout').addEventListener('click', async () => {
 // ═══════════ CARGAR DATOS ═══════════
 async function cargarDatos() {
   try {
+    // Vendedor externo: solo sus órdenes (firestore.rules exige filtrar por creadaPor)
+    const externo = userPerfil?.rol === 'vendedor' && userPerfil?.vendedor_externo === true;
     const [ordenesSnap, metricasSnap, productosSnap, vendedoresSnap, comisionDoc, clientesSnap] = await Promise.all([
-      getDocs(query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500))),
+      getDocs(externo
+        ? query(collection(db, 'ordenes'), where('creadaPor', '==', currentUser.uid), orderBy('created_at', 'desc'), limit(500))
+        : query(collection(db, 'ordenes'), orderBy('created_at', 'desc'), limit(500))),
       getDocs(collection(db, 'metricas_clientes')),
       getDocs(query(collection(db, 'productos'), where('activo', '==', true))),
       getDocs(query(collection(db, 'usuarios'), where('rol', 'in', ['vendedor', 'admin']))),

@@ -532,6 +532,15 @@ async function obtenerTodasLasOrdenes(filtros = {}) {
       );
     }
 
+    // Vendedor externo: firestore.rules solo le deja consultar las órdenes que creó
+    if (filtros.creadaPor) {
+      q = query(
+        ordenesRef,
+        where('creadaPor', '==', filtros.creadaPor),
+        orderBy('created_at', 'desc')
+      );
+    }
+
     if (filtros.limit) {
       q = query(q, limit(filtros.limit));
     }

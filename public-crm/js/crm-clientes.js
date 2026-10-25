@@ -327,16 +327,18 @@ window.verDetalle = async function(clienteId) {
 
   // Fetch recent orders for this client
   try {
-    const ordenesSnap = await getDocs(
-      query(collection(db, 'ordenes'),
-        where('user_id', '==', clienteId),
-        orderBy('created_at', 'desc'),
-        limit(5)
-      )
+    // Vendedor externo: solo las órdenes del cliente que él creó (firestore.rules).
+    // Dos igualdades sin orderBy no necesitan índice compuesto: se ordena aquí.
+    const externo = userPerfil?.rol === 'vendedor' && userPerfil?.vendedor_externo === true;
+    const ordenesSnap = await getDocs(externo
+      ? query(collection(db, 'ordenes'), where('user_id', '==', clienteId), where('creadaPor', '==', currentUser.uid))
+      : query(collection(db, 'ordenes'), where('user_id', '==', clienteId), orderBy('created_at', 'desc'), limit(5))
     );
 
-    const ordenes = [];
+    let ordenes = [];
     ordenesSnap.forEach(d => ordenes.push({ id: d.id, ...d.data() }));
+    const ms = v => v?.toMillis?.() ?? (Date.parse(v) || 0);
+    if (externo) ordenes = ordenes.sort((a, b) => ms(b.created_at) - ms(a.created_at)).slice(0, 5);
 
     const ordenesHTML = ordenes.length === 0
       ? '<p style="color:var(--crm-text-light);font-size:0.82rem;">Sin órdenes registradas</p>'
