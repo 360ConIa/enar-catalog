@@ -464,19 +464,7 @@ window.cerrarModal = function(id) {
   if (el) el.classList.remove('open');
 };
 
-// Close on overlay click
-document.querySelectorAll('.crm-modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.classList.remove('open');
-  });
-});
-
-// Close on Escape
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.crm-modal-overlay.open').forEach(m => m.classList.remove('open'));
-  }
-});
+// Cierre con el fondo y Esc (con confirmación si hay cambios sin guardar): js/modal-cierre.js
 
 // ═══════════ EVENT LISTENERS ═══════════
 function initEventListeners() {

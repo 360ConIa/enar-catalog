@@ -725,6 +725,7 @@
     }
   </style>
   <script src="js/cabecera-fija.js" defer></script>
+  <script src="js/modal-cierre.js" defer></script>
 </head>
 <body>
   <!-- Header -->
@@ -1792,7 +1793,7 @@
           <input type="password" id="passwordConfirmar" autocomplete="new-password" minlength="8">
         </div>
         <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; margin-bottom: 10px;">
-          <input type="checkbox" id="passwordMostrar"> Mostrar contraseña
+          <input type="checkbox" id="passwordMostrar" data-sin-cambios> Mostrar contraseña
         </label>
         <p style="color: #666; font-size: 13px;">La contraseña queda activa al instante y se cierran las sesiones abiertas del usuario. Comunícasela por un canal seguro.</p>
         <p id="passwordError" style="color: #dc2626; font-size: 14px; display: none;"></p>

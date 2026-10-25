@@ -631,6 +631,7 @@
     }
   </style>
   <script src="js/cabecera-fija.js" defer></script>
+  <script src="js/modal-cierre.js" defer></script>
 </head>
 <body>
   <!-- Header -->
@@ -1216,11 +1217,16 @@
       orderModal.classList.remove('active');
     });
 
-    orderModal.addEventListener('click', (e) => {
-      if (e.target === orderModal) {
-        orderModal.classList.remove('active');
-      }
-    });
+    // Cierre con el fondo y Esc: js/modal-cierre.js. Solo hay cambios sin guardar
+    // en modo edición, si los productos u observaciones difieren de la orden.
+    window.ModalCierre?.registrar('orderModal', () => {
+      if (!editingOrdenId) return '';
+      const orden = ordenes.find(o => o.id === editingOrdenId);
+      if (!orden) return '';
+      captureObservaciones();
+      const clave = (items, obs) => JSON.stringify([items.map(i => [i.cod_interno, i.cantidad]), obs || '']);
+      return clave(editItems, editObservaciones) === clave(orden.items || [], orden.observaciones) ? '' : 'cambios';
+    }, { soloEstado: true });
 
     // Cerrar sesión
     logoutLink.addEventListener('click', async (e) => {

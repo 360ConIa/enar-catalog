@@ -1432,17 +1432,9 @@ window.cerrarModal = function(id) {
   }
 };
 
-document.querySelectorAll('.crm-modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) cerrarModal(overlay.id);
-  });
-});
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.crm-modal-overlay.open').forEach(m => cerrarModal(m.id));
-  }
-});
+// Cierre con el fondo y Esc: js/modal-cierre.js. Si la orden en armado/edición
+// cambió desde que se abrió el modal, pide confirmación antes de descartarla.
+window.ModalCierre?.registrar('modalProductos', () => JSON.stringify(productosOrden.map(p => [p.cod_interno, p.cantidad])));
 
 // ═══════════ EVENT LISTENERS ═══════════
 function initEventListeners() {
