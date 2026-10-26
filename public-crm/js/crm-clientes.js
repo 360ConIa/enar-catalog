@@ -23,7 +23,7 @@ import {
   badgeEstado, badgeSalud, badgeABC, badgeRiesgo, badgeTendencia,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio,
   cargarListasPrecios, listasActivas, nombreLista, esListaValida, formatearNombreLista
-} from './crm-utils.js?v=20261026';
+} from './crm-utils.js?v=20261026c';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({

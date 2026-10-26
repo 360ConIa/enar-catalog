@@ -22,8 +22,8 @@ import {
   tiempoRelativo, badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   obtenerReversion, puedeRegresarEstado,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
-} from './crm-utils.js?v=20261026';
-import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado } from './estados-orden.js?v=20261026';
+} from './crm-utils.js?v=20261026c';
+import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado } from './estados-orden.js?v=20261026c';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({

@@ -30,9 +30,11 @@ export const ESTADOS_ORDEN_TABLA = [
   { estado: 'cancelada',    etiqueta: 'Cancelada',    icono: 'bi-x-circle',        fondo: '#fee2e2', texto: '#991b1b', color: '#ef4444' },
 ];
 
+// Subestados: contorno (borde de 1 px, fondo transparente) y más pequeños que el estado,
+// para leerse como complemento de Cerrada. texto = color del borde y del texto.
 export const SUBESTADOS_CERRADA = [
-  { subestado: 'completa', etiqueta: 'Completa', icono: 'bi-check2-all',  fondo: '#dcfce7', texto: '#166534', color: '#22c55e' },
-  { subestado: 'parcial',  etiqueta: 'Parcial',  icono: 'bi-circle-half', fondo: '#ffedd5', texto: '#9a3412', color: '#f97316' },
+  { subestado: 'completa', etiqueta: 'Completa', icono: 'bi-check2-all',  fondo: 'transparent', texto: '#0f766e', color: '#0f766e' },
+  { subestado: 'parcial',  etiqueta: 'Parcial',  icono: 'bi-circle-half', fondo: 'transparent', texto: '#c2410c', color: '#c2410c' },
 ];
 
 export const ESTADOS = ESTADOS_ORDEN_TABLA.map(e => e.estado);
@@ -160,8 +162,12 @@ const CSS = `
   text-transform: none; letter-spacing: normal; white-space: nowrap; vertical-align: middle;
 }
 .estado-orden i { font-size: 11px; line-height: 1; }
-.estado-orden-grupo { display: inline-flex; align-items: center; gap: 4px; flex-wrap: nowrap; vertical-align: middle; }
-.estado-orden--sub { padding: 2px 8px; font-size: 11px; }
+.estado-orden-grupo { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; vertical-align: middle; }
+.estado-orden-grupo > .estado-orden--sub { margin-left: 12px; }
+.estado-orden-grupo--linea { flex-direction: row; align-items: center; gap: 4px; }
+.estado-orden-grupo--linea > .estado-orden--sub { margin-left: 0; }
+.estado-orden.estado-orden--sub { padding: 0 6px; gap: 3px; font-size: 10px; line-height: 1.5; border: 1px solid currentColor; }
+.estado-orden.estado-orden--sub i { font-size: 9px; }
 .selector-estado { position: relative; display: inline-block; min-width: 190px; }
 .selector-estado-boton {
   width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -180,7 +186,7 @@ const CSS = `
   border-radius: 6px; cursor: pointer; font-size: 13px; color: #334155; text-align: left; white-space: nowrap;
 }
 .selector-estado-opcion:hover, .selector-estado-opcion.activa { background: #f1f5f9; }
-.selector-estado-opcion--sub { padding-left: 26px; }
+.selector-estado-opcion--sub { padding-left: 28px; }
 .selector-estado-sep { height: 1px; background: #e2e8f0; margin: 4px 2px; }
 .boton-estado {
   display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; background: #fff;
@@ -212,16 +218,17 @@ export function htmlSubestado(subestado) {
 /**
  * Etiqueta de estado igual en todas las vistas. Acepta el estado o la orden entera:
  * htmlEstado('aprobada'), htmlEstado(orden), htmlEstado('cerrada', 'parcial').
- * Una orden cerrada muestra su subestado junto a Cerrada.
+ * Una orden cerrada muestra su subestado debajo de Cerrada, con sangría (tablas, detalle).
+ * enLinea: el subestado a la derecha, para espacios de una sola línea (botón del filtro).
  */
-export function htmlEstado(estadoUOrden, subestado) {
+export function htmlEstado(estadoUOrden, subestado, { enLinea = false } = {}) {
   const orden = estadoUOrden && typeof estadoUOrden === 'object' ? estadoUOrden : null;
   const estado = orden ? orden.estado : estadoUOrden;
   const e = infoEstado(estado);
   const principal = pastilla(e, '', `data-estado="${e.estado}"`);
   const sub = orden ? subestadoDe(orden) : (subestado || LEGADO[estado]?.subestado || null);
   if (e.estado !== 'cerrada' || !sub) return principal;
-  return `<span class="estado-orden-grupo">${principal}${htmlSubestado(sub)}</span>`;
+  return `<span class="estado-orden-grupo${enLinea ? ' estado-orden-grupo--linea' : ''}">${principal}${htmlSubestado(sub)}</span>`;
 }
 
 /** Botón "Pasar a [etiqueta]" para cambiar de estado (mismo aspecto en todas las pantallas) */
@@ -230,11 +237,16 @@ export function htmlBotonEstado(estado, accion, texto = 'Pasar a') {
     + `<span>${texto}</span>${htmlEstado(estado)}</button>`;
 }
 
-/** Etiqueta de una opción del filtro ('cerrada/parcial' → Cerrada + Parcial) */
-export function htmlFiltroEstado(valor) {
+/**
+ * Etiqueta de una opción del filtro. En la lista (enLista), un subestado va solo y con
+ * sangría bajo el título Cerrada; como valor elegido ('cerrada/parcial') se muestra
+ * Cerrada + Parcial en una línea, para que se entienda sin la lista.
+ */
+export function htmlFiltroEstado(valor, { enLista = false } = {}) {
   if (!valor) return '';
   const [estado, sub] = valor.split('/');
-  return sub ? htmlEstado(estado, sub) : htmlEstado(estado);
+  if (!sub) return htmlEstado(estado);
+  return enLista ? htmlSubestado(sub) : htmlEstado(estado, sub, { enLinea: true });
 }
 
 /**
@@ -275,9 +287,9 @@ export function mejorarSelectorEstado(select) {
     select.addEventListener('change', () => mejorarSelectorEstado(select));
     document.addEventListener('click', () => caja.classList.remove('abierto'));
   }
-  const contenido = (op) => {
+  const contenido = (op, enLista) => {
     const [estado, sub] = op.value.split('/');
-    if (op.value && POR_ESTADO[estado] && (!sub || POR_SUB[sub])) return htmlFiltroEstado(op.value);
+    if (op.value && POR_ESTADO[estado] && (!sub || POR_SUB[sub])) return htmlFiltroEstado(op.value, { enLista });
     return `<span>${op.textContent}</span>`;
   };
   const elegida = select.options[select.selectedIndex] || select.options[0];
@@ -285,7 +297,7 @@ export function mejorarSelectorEstado(select) {
   caja.querySelector('.selector-estado-lista').innerHTML = [...select.options].map(op => {
     const sep = op.dataset.separador === 'antes' ? '<div class="selector-estado-sep"></div>' : '';
     const esSub = op.value.includes('/');
-    return `${sep}<button type="button" class="selector-estado-opcion${esSub ? ' selector-estado-opcion--sub' : ''}${op.value === select.value ? ' activa' : ''}" data-valor="${op.value}">${contenido(op)}</button>`;
+    return `${sep}<button type="button" class="selector-estado-opcion${esSub ? ' selector-estado-opcion--sub' : ''}${op.value === select.value ? ' activa' : ''}" data-valor="${op.value}">${contenido(op, true)}</button>`;
   }).join('');
 }
 

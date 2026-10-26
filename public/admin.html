@@ -2000,14 +2000,14 @@
       ESTADOS_USUARIO,
       TIPOS_CLIENTE
     } from './js/user-manager.js';
-    import { htmlEstado, htmlFiltroEstado, etiquetaEstado, normalizarEstado, transicionesDe, coincideFiltroEstado, FILTROS_ESTADO } from './js/estados-orden.js?v=20261026';
+    import { htmlEstado, htmlFiltroEstado, etiquetaEstado, normalizarEstado, transicionesDe, coincideFiltroEstado, FILTROS_ESTADO } from './js/estados-orden.js?v=20261026c';
     import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './js/despacho.js';
     import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './js/chat-ordenes.js';
     import {
       obtenerTodasLasOrdenes,
       actualizarEstadoOrden,
       formatearPrecio
-    } from './js/ordenes.js?v=20261026';
+    } from './js/ordenes.js?v=20261026c';
     import { DEPARTAMENTOS_CIUDADES } from './js/colombia-data.js';
     import { obtenerDatosUsuario } from './js/auth.js';
     import { nombreLista, formatearNombreLista, setListasPrecios } from './js/firebase-config.js';
@@ -3298,7 +3298,7 @@
 
     // Opciones del filtro de estado: los 5 estados y, bajo Cerrada, Completa y Parcial
     document.getElementById('filtroEstadoOpciones').outerHTML = FILTROS_ESTADO.map(f =>
-      `${f.valor === 'cancelada' ? '<li><hr class="dropdown-divider"></li>' : ''}<li><a class="dropdown-item" href="#"${f.sub ? ' style="padding-left:32px;"' : ''} onclick="filtrarPorEstado('${f.valor}'); return false;">${htmlFiltroEstado(f.valor)}</a></li>`
+      `${f.valor === 'cancelada' ? '<li><hr class="dropdown-divider"></li>' : ''}<li><a class="dropdown-item" href="#"${f.sub ? ' style="padding-left:36px;"' : ''} onclick="filtrarPorEstado('${f.valor}'); return false;">${htmlFiltroEstado(f.valor, { enLista: true })}</a></li>`
     ).join('');
 
     // Etiquetas de estado: tabla única (js/estados-orden.js). Pinta las fijas del HTML.
