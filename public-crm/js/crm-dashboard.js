@@ -20,8 +20,8 @@ import {
   formatearPrecio, formatearFecha, formatearNumero, tiempoRelativo,
   badgeEstado, badgeSalud, badgeRiesgo,
   showToast
-} from './crm-utils.js?v=20261026c';
-import { etiquetaEstado, colorEstado, normalizarEstado } from './estados-orden.js?v=20261026c';
+} from './crm-utils.js?v=20261026d';
+import { etiquetaEstado, colorEstado, normalizarEstado } from './estados-orden.js?v=20261026d';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({

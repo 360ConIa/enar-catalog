@@ -174,7 +174,7 @@ const CSS = `
   padding: 6px 10px; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px;
   font-size: 13px; color: #334155; cursor: pointer; text-align: left; min-height: 36px;
 }
-.selector-estado-boton::after { content: '▾'; color: #64748b; font-size: 11px; }
+/* Flecha del botón: css/desplegables.css (indicador único de ambas apps) */
 .selector-estado-lista {
   display: none; position: absolute; z-index: 1000; top: calc(100% + 4px); left: 0; min-width: 100%;
   background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 8px 24px rgba(15,23,42,.12);

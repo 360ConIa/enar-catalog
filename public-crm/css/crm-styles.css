@@ -702,15 +702,7 @@
   font-weight: 500;
 }
 
-.crm-despacho-toggle {
-  color: var(--crm-red);
-  font-size: 0.75rem;
-  transition: transform 0.2s;
-}
-
-.crm-despacho-toggle.rotated {
-  transform: rotate(90deg);
-}
+/* .crm-despacho-toggle: modelo de la flecha de desplegable, en css/desplegables.css */
 
 .crm-despacho-footer-right {
   display: flex;
@@ -1479,8 +1471,23 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  /* Celular: filtros a una columna y a todo el ancho (antes quedaban corridos a la
+     derecha por align-items: flex-end) */
   .crm-filtros {
     flex-direction: column;
+    align-items: stretch;
+  }
+  .crm-filtros > .crm-filtro-group {
+    width: 100%;
+    flex: none !important;
+    align-self: stretch !important;
+  }
+  .crm-filtros .crm-input,
+  .crm-filtros .crm-select,
+  .crm-filtros .crm-btn,
+  .crm-filtros .selector-estado {
+    width: 100%;
+    min-width: 0;
   }
 
   .crm-input--search {

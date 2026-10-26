@@ -111,11 +111,7 @@
 .nav-user-dropdown > a {
   cursor: pointer;
 }
-.nav-user-dropdown > a i.bi-caret-down-fill {
-  font-size: 0.6rem;
-  margin-left: 2px;
-  opacity: 0.7;
-}
+/* Flecha del menú de usuario: css/desplegables.css */
 .nav-user-menu {
   display: none;
   position: absolute;

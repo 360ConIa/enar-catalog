@@ -1,0 +1,120 @@
+/**
+ * ============================================
+ * INDICADOR DE DESPLEGABLE (FLECHA) ÚNICO — B2B y CRM
+ * ============================================
+ * Archivo: css/desplegables.css  (misma copia en public/css y public-crm/css)
+ * Modelo: la flecha de la tarjeta de orden en Despachos que despliega los productos
+ * (triángulo relleno Bootstrap Icons "caret-fill", rojo ENAR, 12 px, gira al abrir).
+ * Se carga al final del <head> de cada página para ganar a los estilos propios.
+ *   - Secciones que se expanden: flecha a la derecha que gira 90° al abrir.
+ *   - Selects, filtros y menús: flecha hacia abajo que gira 180° al abrir.
+ *   - Margen interno de 12 px a la derecha de la flecha y espacio reservado para que
+ *     el texto no se monte sobre ella.
+ *   - En la cabecera azul la flecha es blanca (el rojo no se vería sobre azul ni sobre
+ *     el enlace activo rojo); misma forma y tamaño.
+ * ============================================
+ */
+
+:root {
+  --flecha-color: #D9232D;
+  --flecha-tam: 12px;
+  --flecha-margen: 12px;
+  /* Espacio reservado a la derecha: margen + flecha + separación con el texto */
+  --flecha-reserva: calc(var(--flecha-margen) + var(--flecha-tam) + 8px);
+  /* bi-caret-down-fill, en el rojo ENAR */
+  --flecha-abajo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23D9232D' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+}
+
+/* ── Modelo e íconos de flecha (<i class="bi bi-caret-…-fill">) ── */
+.flecha-desplegable,
+.crm-despacho-toggle,
+i.bi-caret-down-fill,
+i.bi-caret-right-fill {
+  display: inline-block;
+  color: var(--flecha-color) !important;
+  font-size: var(--flecha-tam) !important;
+  line-height: 1;
+  opacity: 1 !important;
+  transition: transform 0.2s;
+}
+.flecha-desplegable.abierta,
+.crm-despacho-toggle.rotated { transform: rotate(90deg); }
+
+/* Cabecera azul: blanca */
+.crm-header i.bi-caret-down-fill,
+.crm-header i.bi-caret-right-fill,
+header i.bi-caret-down-fill { color: #fff !important; margin-left: 4px; }
+
+/* ── <select> nativos: appearance none + flecha de fondo ── */
+select:not([multiple]):not([size]),
+select[size="1"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: var(--flecha-abajo) !important;
+  background-repeat: no-repeat !important;
+  background-position: right var(--flecha-margen) center !important;
+  background-size: var(--flecha-tam) var(--flecha-tam) !important;
+  padding-right: var(--flecha-reserva) !important;
+  text-overflow: ellipsis;
+}
+select::-ms-expand { display: none; }
+
+/* ── Botones desplegables de Bootstrap (filtro de estado, menús de acciones) ── */
+.dropdown-toggle { padding-right: var(--flecha-margen) !important; }
+.dropdown-toggle::after {
+  border: 0 !important;
+  width: var(--flecha-tam);
+  height: var(--flecha-tam);
+  margin-left: 8px !important;
+  vertical-align: -1px !important;
+  background: var(--flecha-abajo) center / var(--flecha-tam) var(--flecha-tam) no-repeat;
+  transition: transform 0.2s;
+}
+.dropdown-toggle.show::after { transform: rotate(180deg); }
+
+/* ── Desplegable de estados (js/estados-orden.js) ── */
+.selector-estado-boton { padding-right: var(--flecha-margen) !important; }
+.selector-estado-boton::after {
+  content: '' !important;
+  flex: 0 0 var(--flecha-tam);
+  width: var(--flecha-tam);
+  height: var(--flecha-tam);
+  margin-left: 8px;
+  background: var(--flecha-abajo) center / var(--flecha-tam) var(--flecha-tam) no-repeat;
+  transition: transform 0.2s;
+}
+.selector-estado.abierto .selector-estado-boton::after { transform: rotate(180deg); }
+
+/* ── Desplegable propio del admin (modal de estado) ── */
+.custom-dropdown-selected { padding-right: var(--flecha-margen) !important; }
+.custom-dropdown-arrow {
+  display: inline-block;
+  flex: 0 0 var(--flecha-tam);
+  width: var(--flecha-tam);
+  height: var(--flecha-tam);
+  margin-left: 8px;
+  font-size: 0 !important;
+  color: transparent !important;
+  background: var(--flecha-abajo) center / var(--flecha-tam) var(--flecha-tam) no-repeat;
+  transition: transform 0.2s;
+}
+.custom-dropdown.open .custom-dropdown-arrow { transform: rotate(180deg); }
+
+/* ── Select2 (catálogo B2B) ── */
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  padding-right: var(--flecha-reserva) !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  right: var(--flecha-margen) !important;
+  width: var(--flecha-tam) !important;
+  top: 50% !important;
+  height: var(--flecha-tam) !important;
+  margin-top: calc(var(--flecha-tam) / -2);
+  background: var(--flecha-abajo) center / var(--flecha-tam) var(--flecha-tam) no-repeat;
+  transition: transform 0.2s;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow b { display: none !important; }
+.select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow {
+  transform: rotate(180deg);
+}

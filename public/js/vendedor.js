@@ -23,8 +23,8 @@ import {
   badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio
-} from './crm-utils.js?v=20261026c';
-import { normalizarEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado } from './estados-orden.js?v=20261026c';
+} from './crm-utils.js?v=20261026d';
+import { normalizarEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado } from './estados-orden.js?v=20261026d';
 import { cargarListasPrecios, nombreLista } from './firebase-config.js';
 import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './despacho.js';
 import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './chat-ordenes.js';
