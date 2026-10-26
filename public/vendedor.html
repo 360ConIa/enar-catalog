@@ -215,7 +215,7 @@
       </div>
       <div class="crm-kpi crm-kpi--green">
         <div class="crm-kpi-value" id="kpiTerminadas">0</div>
-        <div class="crm-kpi-label">Terminadas</div>
+        <div class="crm-kpi-label">Cerradas</div>
       </div>
     </div>
 
@@ -229,15 +229,7 @@
       <select class="filtro-input" id="filtroEstado">
         <option value="">Todos los estados</option>
         <option value="__sin_leer">💬 Con mensajes sin leer (0)</option>
-        <option value="pendiente">Pendiente</option>
-        <option value="aprobada">Aprobada</option>
-        <option value="en_proceso">En proceso</option>
-        <option value="alistamiento">Alistamiento</option>
-        <option value="en_espera">En espera</option>
-        <option value="completada">Completada</option>
-        <option value="parcial">Parcial</option>
-        <option value="terminada">Terminada</option>
-        <option value="cancelada">Cancelada</option>
+        <!-- Estados y subestados: js/estados-orden.js (opcionesFiltroEstado) -->
       </select>
       <div class="filtro-date-wrap" id="grupoDesde">
         <input type="date" class="filtro-input filtro-date" id="filtroDesde">
@@ -483,6 +475,6 @@
       });
     });
   </script>
-  <script type="module" src="js/vendedor.js?v=2026-10-26"></script>
+  <script type="module" src="js/vendedor.js?v=20261026b"></script>
 </body>
 </html>

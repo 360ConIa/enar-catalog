@@ -9,11 +9,12 @@ y qué implica. Una decisión solo se cambia registrando otra nueva aquí.
 | D-00 | Arquitectura: **Next.js completo en Firebase App Hosting** | Decidida | 2026-10-25 |
 | D-01 | Precio faltante: el producto no se vende | Decidida | 2026-10-25 |
 | D-02 | Número de orden único, consecutivo, generado en el servidor | Decidida | 2026-10-25 |
-| D-03 | Se eliminan los estados `aprobada` y `en_espera` | Decidida | 2026-10-25 |
+| D-03 | Se eliminan los estados `aprobada` y `en_espera` | **Reemplazada por D-08** | 2026-10-25 |
 | D-04 | Admin solo por `rol: admin` | Decidida | 2026-10-25 |
 | D-05 | Rol de `ventas@enar.com.co` (Henry) | **Pendiente** | — |
 | D-06 | Cotizaciones: cada cliente las suyas, el personal todas | Decidida y **aplicada en producción** | 2026-10-25 |
 | D-07 | Clientes con `tipo_cliente` que no es lista: equivalencia explícita | Decidida; **falta la tabla de equivalencias** | 2026-10-25 |
+| D-08 | Estados: Pendiente · Aprobada · Alistamiento · Cerrada (Completa / Parcial) · Cancelada | Decidida y **aplicada en producción** (datos migrados) | 2026-10-26 |
 
 ## D-00 Next.js completo en Firebase App Hosting
 Las tres apps actuales (B2B, CRM y portal) se reemplazan por una aplicación **Next.js**
@@ -39,10 +40,26 @@ Formato único **`ORD-AAAA-nnnnn`**, consecutivo, generado en el servidor con un
 (como el agente IA hoy). Se abandonan `OC-AAMMDD-xxxx` y `ORD-AAMMDD-xxxxx` (aleatorio, puede
 repetirse). Las órdenes existentes conservan su número.
 
-## D-03 Estados `aprobada` y `en_espera` (RN-30)
+## D-03 Estados `aprobada` y `en_espera` (RN-30) — reemplazada por D-08
 Se eliminan. Ninguna orden los usa. Estados vigentes: `pendiente`, `en_proceso`,
 `alistamiento`, `terminada`, `completada`, `parcial`, `cancelada`, con las transiciones y
 reversiones de la tabla del CRM.
+
+## D-08 Estados de orden (RN-30, RN-31, RN-32) — aplicada en producción
+- Cinco estados, en este orden: **Pendiente · Aprobada · Alistamiento · Cerrada · Cancelada**.
+  Cerrada tiene dos subestados (campo `subestado`): **Completa** y **Parcial**.
+- "En proceso" pasa a llamarse Aprobada; "Terminada", Cerrada; "Completada" y "Parcial" dejan
+  de ser estados y son subestados de Cerrada. Se retiran `en_espera`, `completo` y cualquier
+  otro nombre.
+- Tabla única `js/estados-orden.js` (misma copia en B2B y CRM): estados, subestados,
+  transiciones, reversiones, etiquetas, filtros y desplegables. firestore.rules solo acepta
+  esos valores (Cerrada exige subestado).
+- Datos migrados el 2026-10-26 (`migration/migrar-estados-orden.js`, respaldo local en
+  `migration/respaldos/`, fuera del repositorio): 396 de 413 órdenes. 380 `terminada` →
+  `cerrada` (358 completa, 22 parcial; el subestado salió de `resultado_alistamiento` en 351 y
+  de los ítems en 29), 6 `en_proceso` → `aprobada` (en papelera), 791 entradas de
+  `historial`. `resultado_alistamiento` se quitó (queda en `subestado`); `terminada_por` y
+  `fecha_terminada` pasaron a `cerrada_por` y `fecha_cerrada`.
 
 ## D-04 Admin (RN-02)
 Es admin **solo** quien tiene `rol: admin`. Se elimina la lista de correos del front

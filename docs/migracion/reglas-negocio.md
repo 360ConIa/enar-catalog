@@ -9,7 +9,7 @@ Fuente: código al commit `2656905` (2026-10-25) y decisiones del dueño registr
 historial del proyecto.
 
 **Decisiones tomadas el 2026-10-25** ([decisiones.md](decisiones.md)): RN-13 → D-01 (no se
-vende), RN-25 → D-02 (`ORD-AAAA-nnnnn`), RN-30 → D-03 (sin `aprobada`/`en_espera`), RN-02 → D-04
+vende), RN-25 → D-02 (`ORD-AAAA-nnnnn`), RN-30 → D-08 (5 estados y subestado; reemplaza D-03), RN-02 → D-04
 (solo `rol`), RN-65 → D-06 (aplicada en producción), RN-15 → D-07 (equivalencias pendientes).
 Sigue abierta RN-03 (D-05, Henry).
 
@@ -86,20 +86,27 @@ Sigue abierta RN-03 (D-05, Henry).
 
 ## 4. Órdenes: estados y despacho
 
-- **RN-30 Estados y transiciones (CRM, la que usa Despachos).**
-  `pendiente → en_proceso | cancelada`, `en_proceso → alistamiento | cancelada`,
-  `alistamiento → terminada | cancelada`, `completada → terminada`,
-  `parcial → terminada | alistamiento`; `terminada` y `cancelada` son finales.
-  ⚠ La copia del B2B además permite `aprobada` y `en_espera`; ningún dato actual las usa.
-- **RN-31 Reversión.** Un paso atrás (`en_proceso → pendiente`, `alistamiento → en_proceso`,
-  `terminada|completada|parcial → alistamiento`), solo admin o gestor, con motivo obligatorio que
-  queda en `historial`.
-- **RN-32 Etiquetas de estado.** Una sola tabla (texto, ícono y colores) para todas las vistas y
-  gráficos: `js/estados-orden.js` (aprobada el 2026-10-24).
+- **RN-30 Estados y transiciones** (D-08, 2026-10-26). Cinco estados, en este orden:
+  `pendiente · aprobada · alistamiento · cerrada · cancelada`. `cerrada` lleva siempre
+  **subestado** (`ordenes.subestado`): `completa` o `parcial`; los demás estados no llevan.
+  Transiciones: `pendiente → aprobada | cancelada`, `aprobada → alistamiento | cancelada`,
+  `alistamiento → cerrada | cancelada`; `cerrada` y `cancelada` son finales. Al cerrar, el
+  subestado es `parcial` si algún ítem quedó parcial o sin stock (o hay ítems sin registrar
+  junto a otros registrados) y `completa` en otro caso. firestore.rules rechaza cualquier otro
+  estado o subestado. Nombres retirados (datos migrados el 2026-10-26): `en_proceso` →
+  `aprobada`, `terminada` → `cerrada`, `completada`/`completo` → `cerrada` + `completa`,
+  `parcial` → `cerrada` + `parcial`, `en_espera`.
+- **RN-31 Reversión.** Un paso atrás (`aprobada → pendiente`, `alistamiento → aprobada`,
+  `cerrada → alistamiento`, que quita el subestado), solo admin o gestor, con motivo obligatorio
+  que queda en `historial`.
+- **RN-32 Etiquetas de estado.** Una sola tabla (texto, ícono, colores, transiciones y filtros)
+  para todas las vistas, menús, filtros, desplegables y gráficos de ambas apps:
+  `js/estados-orden.js`. Una orden cerrada muestra su subestado junto a Cerrada. Los filtros
+  ofrecen los 5 estados y, bajo Cerrada, Completa y Parcial.
 - **RN-33 Alistamiento por ítem.** Despachos marca cada ítem como `comp`, `parcial` o `sinstock` y
   registra `cantidad_real` (despachada). Se guarda al instante y se identifica el ítem por código
-  de producto (no por posición en pantalla). Al finalizar: `terminada` con
-  `resultado_alistamiento` `completada` o `parcial`.
+  de producto (no por posición en pantalla). Al finalizar: `cerrada` con `subestado`
+  `completa` o `parcial` (antes `terminada` + `resultado_alistamiento`, campo retirado).
 - **RN-34 Lo despachado manda.** El detalle de orden (admin, vendedor y cliente) muestra por ítem
   cantidad pedida y despachada, resalta diferencias y recalcula el total con lo despachado
   (ítems sin registrar cuentan con lo pedido).

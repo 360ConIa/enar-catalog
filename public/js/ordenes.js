@@ -33,7 +33,7 @@ import {
 import {
   getAuth
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { etiquetaEstado, htmlEstado } from './estados-orden.js';
+import { etiquetaEstado, etiquetaEstadoOrden, htmlEstado, subestadoAlCerrar } from './estados-orden.js?v=20261026';
 
 // Configuración Firebase
 const firebaseConfig = {
@@ -50,14 +50,12 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 // Estados de orden
+// Estados de orden: tabla única en estados-orden.js (cerrada lleva subestado completa/parcial)
 const ESTADOS_ORDEN = {
-  BORRADOR: 'borrador',
   PENDIENTE: 'pendiente',
-  EN_PROCESO: 'en_proceso',
+  APROBADA: 'aprobada',
   ALISTAMIENTO: 'alistamiento',
-  COMPLETO: 'completo',
-  PARCIAL: 'parcial',
-  EN_ESPERA: 'en_espera',
+  CERRADA: 'cerrada',
   CANCELADA: 'cancelada'
 };
 
@@ -581,15 +579,18 @@ async function actualizarEstadoOrden(ordenId, nuevoEstado, nota = '') {
       nota: nota
     });
 
-    await updateDoc(ordenRef, {
+    const cambios = {
       estado: nuevoEstado,
       historial: historial,
       updated_at: new Date().toISOString()
-    });
+    };
+    // Al cerrar se fija el subestado (completa/parcial) según lo despachado
+    if (nuevoEstado === ESTADOS_ORDEN.CERRADA) cambios.subestado = subestadoAlCerrar(orden.items || orden.productos || []);
+    await updateDoc(ordenRef, cambios);
 
     return {
       success: true,
-      mensaje: `Estado actualizado a ${nuevoEstado}`
+      mensaje: `Estado actualizado a ${etiquetaEstadoOrden({ estado: nuevoEstado, subestado: cambios.subestado })}`
     };
   } catch (error) {
     console.error('Error actualizando estado:', error);
@@ -602,103 +603,6 @@ async function actualizarEstadoOrden(ordenId, nuevoEstado, nota = '') {
  */
 async function cancelarOrden(ordenId, motivo = '') {
   return actualizarEstadoOrden(ordenId, ESTADOS_ORDEN.CANCELADA, `Cancelada: ${motivo}`);
-}
-
-/**
- * Confirma una orden (admin)
- */
-async function confirmarOrden(ordenId, nota = '') {
-  return actualizarEstadoOrden(ordenId, ESTADOS_ORDEN.CONFIRMADA, nota || 'Orden confirmada');
-}
-
-/**
- * Marca orden como en proceso
- */
-async function marcarEnProceso(ordenId, nota = '') {
-  return actualizarEstadoOrden(ordenId, ESTADOS_ORDEN.EN_PROCESO, nota || 'En preparación');
-}
-
-/**
- * Marca orden como enviada
- */
-async function marcarEnviada(ordenId, datosEnvio = {}) {
-  try {
-    const ordenRef = doc(db, COLECCION_ORDENES, ordenId);
-    const ordenDoc = await getDoc(ordenRef);
-
-    if (!ordenDoc.exists()) {
-      return { success: false, error: 'Orden no encontrada' };
-    }
-
-    const orden = ordenDoc.data();
-    const historial = orden.historial || [];
-
-    historial.push({
-      estado: ESTADOS_ORDEN.ENVIADA,
-      fecha: new Date().toISOString(),
-      nota: datosEnvio.nota || 'Orden enviada'
-    });
-
-    await updateDoc(ordenRef, {
-      estado: ESTADOS_ORDEN.ENVIADA,
-      historial: historial,
-      datos_envio: {
-        transportadora: datosEnvio.transportadora || '',
-        numero_guia: datosEnvio.numeroGuia || '',
-        fecha_envio: new Date().toISOString()
-      },
-      updated_at: new Date().toISOString()
-    });
-
-    return {
-      success: true,
-      mensaje: 'Orden marcada como enviada'
-    };
-  } catch (error) {
-    console.error('Error marcando como enviada:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Marca orden como entregada
- */
-async function marcarEntregada(ordenId, nota = '') {
-  return actualizarEstadoOrden(ordenId, ESTADOS_ORDEN.ENTREGADA, nota || 'Entregada');
-}
-
-/**
- * Obtiene estadísticas de órdenes
- */
-async function obtenerEstadisticasOrdenes() {
-  try {
-    const resultado = await obtenerTodasLasOrdenes();
-
-    if (!resultado.success) {
-      return resultado;
-    }
-
-    const ordenes = resultado.ordenes;
-
-    const stats = {
-      total: ordenes.length,
-      pendientes: ordenes.filter(o => o.estado === ESTADOS_ORDEN.PENDIENTE).length,
-      confirmadas: ordenes.filter(o => o.estado === ESTADOS_ORDEN.CONFIRMADA).length,
-      enProceso: ordenes.filter(o => o.estado === ESTADOS_ORDEN.EN_PROCESO).length,
-      enviadas: ordenes.filter(o => o.estado === ESTADOS_ORDEN.ENVIADA).length,
-      entregadas: ordenes.filter(o => o.estado === ESTADOS_ORDEN.ENTREGADA).length,
-      canceladas: ordenes.filter(o => o.estado === ESTADOS_ORDEN.CANCELADA).length,
-      montoTotal: ordenes.reduce((sum, o) => sum + (o.total || 0), 0),
-      montoEntregado: ordenes
-        .filter(o => o.estado === ESTADOS_ORDEN.ENTREGADA)
-        .reduce((sum, o) => sum + (o.total || 0), 0)
-    };
-
-    return { success: true, stats };
-  } catch (error) {
-    console.error('Error obteniendo estadísticas:', error);
-    return { success: false, error: error.message };
-  }
 }
 
 /**
@@ -875,11 +779,6 @@ export {
   actualizarItemsOrden,
   buscarProductos,
   cancelarOrden,
-  confirmarOrden,
-  marcarEnProceso,
-  marcarEnviada,
-  marcarEntregada,
-  obtenerEstadisticasOrdenes,
   formatearPrecio,
   textoEstado,
   claseEstado,

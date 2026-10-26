@@ -20,8 +20,8 @@ import {
   formatearPrecio, formatearFecha, formatearNumero,
   badgeSalud, badgeABC, badgeRiesgo, badgeTendencia, badgeEstado,
   showToast, debounce, buscarMultiCampo, mostrarLoader
-} from './crm-utils.js';
-import { etiquetaEstado, colorEstado } from './estados-orden.js';
+} from './crm-utils.js?v=20261026';
+import { etiquetaEstado, colorEstado, normalizarEstado } from './estados-orden.js?v=20261026';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -250,7 +250,7 @@ function renderGeneral() {
 
   // Chart: Distribución Estados (doughnut)
   const estadoCounts = {};
-  ordenes.forEach(o => { estadoCounts[o.estado] = (estadoCounts[o.estado] || 0) + 1; });
+  ordenes.forEach(o => { const e = normalizarEstado(o.estado); estadoCounts[e] = (estadoCounts[e] || 0) + 1; });
 
   renderChart('chartEstados', 'doughnut', {
     labels: Object.keys(estadoCounts).map(k => etiquetaEstado(k)),
@@ -692,9 +692,9 @@ function renderComisiones() {
     default: fechaInicio = null;
   }
 
-  // Only terminada orders
+  // Solo órdenes cerradas (completas o parciales)
   const ordenesComisionables = ordenes.filter(o => {
-    if (o.estado !== 'terminada') return false;
+    if (normalizarEstado(o.estado) !== 'cerrada') return false;
     if (!fechaInicio) return true;
     const f = toDate(o.created_at);
     return f && f >= fechaInicio;
@@ -771,7 +771,7 @@ function renderComisiones() {
 
   // Table
   $('tablaComisiones').innerHTML = vendedores.length === 0
-    ? '<p style="color:var(--crm-text-light);font-size:0.85rem;padding:12px;">Sin órdenes terminadas en este período</p>'
+    ? '<p style="color:var(--crm-text-light);font-size:0.85rem;padding:12px;">Sin órdenes cerradas en este período</p>'
     : `
     <div class="crm-tabla-wrapper">
       <table class="crm-tabla">

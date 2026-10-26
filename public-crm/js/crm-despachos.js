@@ -22,7 +22,8 @@ import {
   tiempoRelativo, badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   obtenerReversion, puedeRegresarEstado,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
-} from './crm-utils.js';
+} from './crm-utils.js?v=20261026';
+import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado } from './estados-orden.js?v=20261026';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -87,9 +88,9 @@ function toDate(val) {
 
 const TAB_SIN_LEER = 'sin_leer';
 const TAB_ESTADOS = {
-  proceso: ['en_proceso'],
+  proceso: ['aprobada'],
   alistamiento: ['alistamiento'],
-  terminadas: ['terminada', 'completada', 'parcial']
+  terminadas: ['cerrada']
 };
 
 // ═══════════ AUTH ═══════════
@@ -430,7 +431,7 @@ function actualizarTabCounts() {
     terminadas: 'tabCountTerminadas'
   };
   Object.entries(TAB_ESTADOS).forEach(([tab, estados]) => {
-    const count = todasLasOrdenes.filter(o => estados.includes(o.estado)).length;
+    const count = todasLasOrdenes.filter(o => estados.includes(normalizarEstado(o.estado))).length;
     const el = $(countMap[tab]);
     if (el) el.textContent = count;
   });
@@ -443,7 +444,7 @@ function aplicarFiltrosYRender() {
   const estadosTab = TAB_ESTADOS[tabActual] || [];
   let filtradas = tabActual === TAB_SIN_LEER
     ? todasLasOrdenes.filter(o => contarMensajesNoLeidos(o.id) > 0)
-    : todasLasOrdenes.filter(o => estadosTab.includes(o.estado));
+    : todasLasOrdenes.filter(o => estadosTab.includes(normalizarEstado(o.estado)));
 
   // Filtro texto
   const texto = $('filtroTexto')?.value;
@@ -492,9 +493,9 @@ function renderizarOrdenes() {
   container.innerHTML = paginadas.map(o => renderCardOrden(o)).join('');
   paginador.renderControles('paginacionDespachos', () => renderizarOrdenes());
 
-  // Auto-expandir dropdown de items para órdenes terminadas/completadas/parciales
+  // Auto-expandir dropdown de items para órdenes cerradas
   paginadas.forEach(o => {
-    if (['terminada', 'completada', 'parcial'].includes(o.estado)) {
+    if (normalizarEstado(o.estado) === 'cerrada') {
       window.toggleDetalle(o.id);
     }
   });
@@ -530,8 +531,7 @@ function renderCardOrden(orden) {
             <div class="crm-despacho-fecha-creacion">${formatearFechaHora(orden.created_at)}</div>
           </div>
           <span class="crm-despacho-sep"></span>
-          ${badgeEstado(orden.estado)}
-          ${renderBadgeResultado(orden)}
+          ${badgeEstado(orden)}
           <span class="crm-despacho-sep"></span>
           ${ubicacion ? `<span class="crm-despacho-ubicacion"><i class="bi bi-pin-map-fill"></i> ${ubicacion}</span><span class="crm-despacho-sep"></span>` : ''}
           <div class="crm-despacho-header-cliente">
@@ -600,26 +600,20 @@ function renderCardOrden(orden) {
   `;
 }
 
-function renderBadgeResultado(orden) {
-  const resultado = orden.resultado_alistamiento
-    || (orden.estado === 'completada' ? 'completada' : orden.estado === 'parcial' ? 'parcial' : '');
-  if (!resultado) return '';
-  return badgeEstado(resultado === 'completada' ? 'completada' : 'parcial');
-}
-
 // ═══════════ ACCIONES POR TAB ═══════════
 function renderAccionesTab(orden) {
-  if (orden.estado === 'en_proceso') {
+  const estado = normalizarEstado(orden.estado);
+  if (estado === 'aprobada') {
     return `<button class="crm-despacho-action-btn crm-despacho-action-btn--red" onclick="iniciarAlistamiento('${orden.id}')">
       <i class="bi bi-clipboard-check"></i> Iniciar Alistamiento
     </button>`;
   }
-  if (orden.estado === 'alistamiento') {
+  if (estado === 'alistamiento') {
     return `<button class="crm-despacho-action-btn crm-despacho-action-btn--red" onclick="abrirAlistamiento('${orden.id}')">
       <i class="bi bi-eye"></i> Alistamiento
     </button>`;
   }
-  if (orden.estado === 'terminada' || orden.estado === 'completada' || orden.estado === 'parcial') {
+  if (estado === 'cerrada') {
     return `<button class="crm-despacho-action-btn crm-despacho-action-btn--green" onclick="toggleDetalle('${orden.id}')">
       <i class="bi bi-list-ul"></i> Ver detalle
     </button>`;
@@ -677,14 +671,13 @@ window.guardarParcial = async function(ordenId) {
       nota: `Alistamiento parcial (${marcados}/${items.length} items) por ${userPerfil.nombre || currentUser.email}`
     });
 
+    // Avance guardado: la orden sigue en alistamiento (el subestado se fija al cerrar)
     await updateDoc(doc(db, 'ordenes', ordenId), {
       historial: historial,
-      resultado_alistamiento: 'parcial',
       updated_at: new Date().toISOString()
     });
 
     orden.historial = historial;
-    orden.resultado_alistamiento = 'parcial';
 
     $('modalAlistamiento')?.classList.remove('open');
     showToast(`Alistamiento parcial guardado (${marcados}/${items.length})`, 'info');
@@ -699,36 +692,20 @@ window.finalizarAlistamiento = async function(ordenId) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
   if (!orden) return;
 
-  const items = orden.items || orden.productos || [];
-  const todosComp = items.every(i => i.estado_alistamiento === 'comp');
-  const resultado = todosComp ? 'completada' : 'parcial';
-  const label = todosComp ? 'Completa' : 'Parcial';
-
   try {
-    const historial = orden.historial || [];
-    historial.push({
-      estado: 'terminada',
-      fecha: new Date().toISOString(),
-      nota: `Alistamiento ${label} finalizado por ${userPerfil.nombre || currentUser.email}`
-    });
+    const cambios = cambiosDeEstado(orden, 'cerrada', '');
+    const label = cambios.subestado === 'completa' ? 'Completa' : 'Parcial';
+    cambios.historial[cambios.historial.length - 1].nota = `Alistamiento ${label} finalizado por ${userPerfil.nombre || currentUser.email}`;
+    cambios.cerrada_por = currentUser.email;
+    cambios.fecha_cerrada = cambios.updated_at;
 
-    await updateDoc(doc(db, 'ordenes', ordenId), {
-      estado: 'terminada',
-      resultado_alistamiento: resultado,
-      historial: historial,
-      terminada_por: currentUser.email,
-      fecha_terminada: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
-
-    orden.estado = 'terminada';
-    orden.resultado_alistamiento = resultado;
-    orden.historial = historial;
+    await updateDoc(doc(db, 'ordenes', ordenId), cambios);
+    Object.assign(orden, cambios);
 
     $('modalAlistamiento')?.classList.remove('open');
     actualizarTabCounts();
     aplicarFiltrosYRender();
-    showToast(`Orden terminada (${label}) — CSV descargado`, 'success');
+    showToast(`Orden cerrada (${label})`, 'success');
   } catch (error) {
     console.error('Error finalizando alistamiento:', error);
     showToast('Error al finalizar alistamiento', 'error');
@@ -868,7 +845,7 @@ function renderModalFooter(orden) {
           <i class="bi bi-pause-circle"></i> Parcial (${marcados}/${total})
         </button>
         <button class="crm-btn crm-btn--success crm-btn--sm" onclick="finalizarAlistamiento('${orden.id}')">
-          <i class="bi bi-check2-all"></i> Terminada
+          <i class="bi bi-check-circle"></i> Cerrar
         </button>`;
     } else {
       botonesHTML = `<span style="font-size:0.82rem;color:var(--crm-text-light);align-self:center;">Marca items para habilitar acciones</span>`;
@@ -1056,7 +1033,7 @@ window.toggleDetalle = function(ordenId) {
     if (!orden) return;
 
     const items = sortItemsPorCargue(orden.items || orden.productos || []);
-    const esTerminada = ['terminada', 'completada', 'parcial'].includes(orden.estado);
+    const esTerminada = normalizarEstado(orden.estado) === 'cerrada';
 
     const estadoIconos = {
       comp: '<i class="bi bi-check-circle-fill" style="color:#28a745;"></i>',
@@ -1123,22 +1100,7 @@ window.toggleChat = function(ordenId, btn) {
 
 function renderBotonesEstado(orden) {
   const transiciones = obtenerTransicionesPermitidas(orden.estado).filter(e => e !== 'cancelada');
-  const colores = {
-    alistamiento: 'background:#fef9c3;color:#854d0e;',
-    completada: 'background:#d1fae5;color:#065f46;',
-    parcial: 'background:#ffedd5;color:#9a3412;',
-    terminada: 'background:#d1fae5;color:#065f46;',
-    en_espera: 'background:#f3e8ff;color:#6b21a8;',
-    en_proceso: 'background:#e0e7ff;color:#3730a3;',
-    cancelada: 'background:#fee2e2;color:#991b1b;',
-    aprobada: 'background:#dbeafe;color:#1e40af;'
-  };
-  const botonesAvance = transiciones.map(estado => {
-    const estilo = colores[estado] || 'background:var(--crm-primary-light);color:white;';
-    return `<button class="crm-btn crm-btn--sm" style="${estilo}" onclick="cambiarEstado('${orden.id}', '${estado}')">
-      ${ESTADOS_ORDEN_LABELS[estado]}
-    </button>`;
-  }).join('');
+  const botonesAvance = transiciones.map(estado => htmlBotonEstado(estado, `cambiarEstado('${orden.id}', '${estado}')`)).join('');
 
   const reversion = obtenerReversion(orden.estado);
   const btnRegresar = (reversion && puedeRegresarEstado(userPerfil?.rol))
@@ -1162,7 +1124,7 @@ window.regresarEstado = async function(ordenId) {
     showToast('No hay estado previo al cual regresar', 'error');
     return;
   }
-  const motivo = prompt(`Regresar orden ${orden.numero_orden || ordenId} de "${ESTADOS_ORDEN_LABELS[orden.estado]}" a "${ESTADOS_ORDEN_LABELS[reversion]}".\n\nMotivo (obligatorio):`);
+  const motivo = prompt(`Regresar orden ${orden.numero_orden || ordenId} de "${etiquetaEstadoOrden(orden)}" a "${ESTADOS_ORDEN_LABELS[reversion]}".\n\nMotivo (obligatorio):`);
   if (motivo === null) return;
   const motivoLimpio = motivo.trim();
   if (!motivoLimpio) {
@@ -1171,22 +1133,10 @@ window.regresarEstado = async function(ordenId) {
   }
 
   try {
-    const historial = orden.historial || [];
-    historial.push({
-      estado: reversion,
-      fecha: new Date().toISOString(),
-      tipo: 'reversion',
-      nota: `Reversión a ${ESTADOS_ORDEN_LABELS[reversion]} por ${userPerfil.nombre || currentUser.email}. Motivo: ${motivoLimpio}`
-    });
-
-    await updateDoc(doc(db, 'ordenes', ordenId), {
-      estado: reversion,
-      historial: historial,
-      updated_at: new Date().toISOString()
-    });
-
-    orden.estado = reversion;
-    orden.historial = historial;
+    const cambios = cambiosDeEstado(orden, reversion, `Reversión a ${ESTADOS_ORDEN_LABELS[reversion]} por ${userPerfil.nombre || currentUser.email}. Motivo: ${motivoLimpio}`);
+    cambios.historial[cambios.historial.length - 1].tipo = 'reversion';
+    await updateDoc(doc(db, 'ordenes', ordenId), cambios);
+    Object.assign(orden, cambios);
 
     actualizarTabCounts();
     aplicarFiltrosYRender();
@@ -1264,21 +1214,9 @@ window.cambiarEstado = async function(ordenId, nuevoEstado) {
   }
 
   try {
-    const historial = orden.historial || [];
-    historial.push({
-      estado: nuevoEstado,
-      fecha: new Date().toISOString(),
-      nota: `Cambio a ${ESTADOS_ORDEN_LABELS[nuevoEstado]} por ${userPerfil.nombre || currentUser.email}`
-    });
-
-    await updateDoc(doc(db, 'ordenes', ordenId), {
-      estado: nuevoEstado,
-      historial: historial,
-      updated_at: new Date().toISOString()
-    });
-
-    orden.estado = nuevoEstado;
-    orden.historial = historial;
+    const cambios = cambiosDeEstado(orden, nuevoEstado, `Cambio a ${ESTADOS_ORDEN_LABELS[nuevoEstado]} por ${userPerfil.nombre || currentUser.email}`);
+    await updateDoc(doc(db, 'ordenes', ordenId), cambios);
+    Object.assign(orden, cambios);
 
     // Close modals if open
     $('modalAlistamiento')?.classList.remove('open');
@@ -1286,7 +1224,7 @@ window.cambiarEstado = async function(ordenId, nuevoEstado) {
     actualizarTabCounts();
     aplicarFiltrosYRender();
 
-    showToast(`Orden cambiada a ${ESTADOS_ORDEN_LABELS[nuevoEstado]}`, 'success');
+    showToast(`Orden cambiada a ${etiquetaEstadoOrden(orden)}`, 'success');
   } catch (error) {
     console.error('Error cambiando estado:', error);
     showToast('Error al cambiar estado', 'error');

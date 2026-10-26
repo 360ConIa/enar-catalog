@@ -76,3 +76,6 @@ node_modules/
 imagenes-originales/
 imagenes-web/
 imagenes-recortes/
+
+# Respaldos de datos de producción (datos de clientes): nunca al repositorio
+migration/respaldos/

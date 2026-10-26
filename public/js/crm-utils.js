@@ -8,24 +8,29 @@
  * ============================================
  */
 
-import { htmlEstado } from './estados-orden.js';
+import { htmlEstado } from './estados-orden.js?v=20261026';
 
 // ═══════════ CONSTANTES ═══════════
 
 export const ESTADOS_ORDEN = {
   PENDIENTE: 'pendiente',
   APROBADA: 'aprobada',
-  EN_PROCESO: 'en_proceso',
-  EN_ESPERA: 'en_espera',
   ALISTAMIENTO: 'alistamiento',
-  COMPLETADA: 'completada',
-  PARCIAL: 'parcial',
-  TERMINADA: 'terminada',
+  CERRADA: 'cerrada',
   CANCELADA: 'cancelada'
 };
 
-// Etiquetas, íconos y colores de estado: tabla única en estados-orden.js (misma copia en B2B y CRM)
-export { ESTADOS_ORDEN_LABELS } from './estados-orden.js';
+// Etiquetas, íconos, colores y transiciones de estado: tabla única en estados-orden.js
+// (misma copia en B2B y CRM)
+export {
+  ESTADOS_ORDEN_LABELS,
+  transicionesDe as obtenerTransicionesPermitidas,
+  puedeTransicionar,
+  reversionDe as obtenerReversion,
+  puedeRegresarEstado,
+  subestadoDe,
+  subestadoAlCerrar
+} from './estados-orden.js?v=20261026';
 
 export const ROLES = {
   ADMIN: 'admin',
@@ -155,32 +160,13 @@ export function formatearPeso(kg) {
 }
 
 // ═══════════ STATE MACHINE ═══════════
-
-const TRANSICIONES_ESTADO = {
-  pendiente: ['en_proceso', 'cancelada'],
-  aprobada: ['en_proceso', 'en_espera', 'cancelada'],
-  en_proceso: ['alistamiento', 'cancelada'],
-  en_espera: ['en_proceso', 'aprobada', 'cancelada'],
-  alistamiento: ['terminada', 'cancelada'],
-  completada: ['terminada'],
-  parcial: ['terminada', 'alistamiento'],
-  terminada: [],
-  cancelada: []
-};
-
-export function obtenerTransicionesPermitidas(estadoActual) {
-  return TRANSICIONES_ESTADO[estadoActual] || [];
-}
-
-export function puedeTransicionar(estadoActual, estadoNuevo) {
-  const permitidas = TRANSICIONES_ESTADO[estadoActual] || [];
-  return permitidas.includes(estadoNuevo);
-}
+// Transiciones y reversiones: estados-orden.js (reexportadas arriba)
 
 // ═══════════ BADGES ═══════════
 
-export function badgeEstado(estado) {
-  return htmlEstado(estado);
+/** Etiqueta de estado: badgeEstado(orden) muestra además el subestado de una cerrada */
+export function badgeEstado(estadoUOrden, subestado) {
+  return htmlEstado(estadoUOrden, subestado);
 }
 
 export function badgeSalud(salud) {

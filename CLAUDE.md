@@ -98,7 +98,7 @@ enar-catalog/
 - Órdenes CRM: `clienteNombre`, `clienteNit`, `creadaPor`, `creadaPorEmail`, `tipo: 'orden-vendedor'`
 - Órdenes B2B: `cliente: { nombre, razon_social, nit, email, ... }`, `user_id`
 - Items: `cod_interno`/`titulo` (CRM/B2B) o `sku`/`nombre` (migrados)
-- Estados: pendiente → aprobada → en_proceso → completada/parcial/cancelada
+- Estados (tabla única `js/estados-orden.js`): pendiente → aprobada → alistamiento → cerrada (subestado `completa`/`parcial`) | cancelada. Nombres anteriores (en_proceso, terminada, completada) migrados el 2026-10-26; firestore.rules los rechaza
 
 ### Otras colecciones
 - `metricas_clientes/{uid}` — salud, ABC, riesgo, tendencia, dias_sin_compra

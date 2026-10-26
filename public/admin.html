@@ -852,11 +852,11 @@
           </div>
           <div class="stat-card">
             <div class="stat-number" id="ordenesEnProceso">0</div>
-            <div class="stat-label">En Proceso</div>
+            <div class="stat-label">Aprobadas</div>
           </div>
           <div class="stat-card">
             <div class="stat-number success" id="ordenesTerminadas">0</div>
-            <div class="stat-label">Terminadas</div>
+            <div class="stat-label">Cerradas</div>
           </div>
           <div class="stat-card">
             <div class="stat-number danger" id="montoTotal">$0</div>
@@ -885,22 +885,8 @@
                     💬 Con mensajes sin leer (<span id="filtroSinLeerCuenta">0</span>)
                   </a></li>
                   <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('pendiente'); return false;">
-                    <span data-pintar-estado="pendiente"></span>
-                  </a></li>
-                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('en_proceso'); return false;">
-                    <span data-pintar-estado="en_proceso"></span>
-                  </a></li>
-                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('alistamiento'); return false;">
-                    <span data-pintar-estado="alistamiento"></span>
-                  </a></li>
-                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('terminada'); return false;">
-                    <span data-pintar-estado="terminada"></span>
-                  </a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('cancelada'); return false;">
-                    <span data-pintar-estado="cancelada"></span>
-                  </a></li>
+                  <!-- Estados, subestados de Cerrada y Cancelada: los pinta js/estados-orden.js (FILTROS_ESTADO) -->
+                  <li id="filtroEstadoOpciones" style="display:contents;"></li>
                 </ul>
               </div>
             </div>
@@ -1681,21 +1667,11 @@
               <span class="custom-dropdown-arrow">▼</span>
             </div>
             <div class="custom-dropdown-options">
-              <div class="custom-dropdown-option" data-value="pendiente">
-                <span data-pintar-estado="pendiente"></span>
-              </div>
-              <div class="custom-dropdown-option" data-value="en_proceso">
-                <span data-pintar-estado="en_proceso"></span>
-              </div>
-              <div class="custom-dropdown-option" data-value="alistamiento">
-                <span data-pintar-estado="alistamiento"></span>
-              </div>
-              <div class="custom-dropdown-option" data-value="terminada">
-                <span data-pintar-estado="terminada"></span>
-              </div>
-              <div class="custom-dropdown-option" data-value="cancelada">
-                <span data-pintar-estado="cancelada"></span>
-              </div>
+              <div class="custom-dropdown-option" data-value="pendiente"><span data-pintar-estado="pendiente"></span></div>
+              <div class="custom-dropdown-option" data-value="aprobada"><span data-pintar-estado="aprobada"></span></div>
+              <div class="custom-dropdown-option" data-value="alistamiento"><span data-pintar-estado="alistamiento"></span></div>
+              <div class="custom-dropdown-option" data-value="cerrada"><span data-pintar-estado="cerrada"></span></div>
+              <div class="custom-dropdown-option" data-value="cancelada"><span data-pintar-estado="cancelada"></span></div>
             </div>
           </div>
         </div>
@@ -2024,14 +2000,14 @@
       ESTADOS_USUARIO,
       TIPOS_CLIENTE
     } from './js/user-manager.js';
-    import { htmlEstado, etiquetaEstado } from './js/estados-orden.js';
+    import { htmlEstado, htmlFiltroEstado, etiquetaEstado, normalizarEstado, transicionesDe, coincideFiltroEstado, FILTROS_ESTADO } from './js/estados-orden.js?v=20261026';
     import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './js/despacho.js';
     import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './js/chat-ordenes.js';
     import {
       obtenerTodasLasOrdenes,
       actualizarEstadoOrden,
       formatearPrecio
-    } from './js/ordenes.js';
+    } from './js/ordenes.js?v=20261026';
     import { DEPARTAMENTOS_CIUDADES } from './js/colombia-data.js';
     import { obtenerDatosUsuario } from './js/auth.js';
     import { nombreLista, formatearNombreLista, setListasPrecios } from './js/firebase-config.js';
@@ -3218,8 +3194,8 @@
       const stats = {
         total: ordenes.length,
         pendientes: ordenes.filter(o => o.estado === 'pendiente').length,
-        enProceso: ordenes.filter(o => o.estado === 'en_proceso' || o.estado === 'confirmada').length,
-        terminadas: ordenes.filter(o => o.estado === 'terminada').length,
+        enProceso: ordenes.filter(o => normalizarEstado(o.estado) === 'aprobada').length,
+        terminadas: ordenes.filter(o => normalizarEstado(o.estado) === 'cerrada').length,
         monto: ordenes.reduce((sum, o) => sum + (o.total || 0), 0)
       };
 
@@ -3231,21 +3207,11 @@
       document.getElementById('ordenesBadge').textContent = stats.pendientes;
     }
 
-    // Transiciones de estado permitidas (misma lógica que CRM)
-    const TRANSICIONES_ESTADO = {
-      pendiente: ['en_proceso', 'cancelada'],
-      en_proceso: ['alistamiento', 'cancelada'],
-      alistamiento: ['completo', 'cancelada'],
-      completo: ['terminada'],
-      parcial: ['alistamiento', 'cancelada'],
-      en_espera: ['en_proceso', 'cancelada'],
-      terminada: [],
-      cancelada: []
-    };
+    // Transiciones de estado permitidas: tabla única (js/estados-orden.js, igual que el CRM)
 
     // Dropdown dinámico de cambio de estado
     function renderDropdownEstado(orden) {
-      const transiciones = TRANSICIONES_ESTADO[orden.estado] || [];
+      const transiciones = transicionesDe(orden.estado);
       if (transiciones.length === 0) {
         return `<button class="btn btn-outline-info btn-sm" disabled style="opacity:0.4;cursor:not-allowed;" title="Sin transiciones">
           <i class="bi bi-arrow-repeat"></i>
@@ -3279,7 +3245,7 @@
           (o.cliente?.nombre || '').toLowerCase().includes(busqueda) ||
           (o.cliente?.email || '').toLowerCase().includes(busqueda);
         const matchEstado = !filtroEstado ||
-          (filtroEstado === FILTRO_SIN_LEER ? avisosChat?.noLeidos(o.id) > 0 : o.estado === filtroEstado);
+          (filtroEstado === FILTRO_SIN_LEER ? avisosChat?.noLeidos(o.id) > 0 : coincideFiltroEstado(o, filtroEstado));
         return matchBusqueda && matchEstado;
       });
 
@@ -3306,7 +3272,7 @@
           <td>${origen}</td>
           <td>${o.items?.length || o.productos?.length || o.cantidad_items || 0}</td>
           <td><strong style="color: #D9232D;">${formatearPrecio(o.total)}</strong></td>
-          <td>${htmlEstado(o.estado)}</td>
+          <td>${htmlEstado(o)}</td>
           <td>${formatearFecha(o.created_at)}</td>
           <td class="text-end">
             <div class="btn-group btn-group-sm">
@@ -3329,6 +3295,11 @@
     const estadoDropdown = document.getElementById('estadoDropdown');
     const estadoHiddenInput = document.getElementById('nuevoEstado');
     const selectedEstadoBadge = document.getElementById('selectedEstadoBadge');
+
+    // Opciones del filtro de estado: los 5 estados y, bajo Cerrada, Completa y Parcial
+    document.getElementById('filtroEstadoOpciones').outerHTML = FILTROS_ESTADO.map(f =>
+      `${f.valor === 'cancelada' ? '<li><hr class="dropdown-divider"></li>' : ''}<li><a class="dropdown-item" href="#"${f.sub ? ' style="padding-left:32px;"' : ''} onclick="filtrarPorEstado('${f.valor}'); return false;">${htmlFiltroEstado(f.valor)}</a></li>`
+    ).join('');
 
     // Etiquetas de estado: tabla única (js/estados-orden.js). Pinta las fijas del HTML.
     document.querySelectorAll('[data-pintar-estado]').forEach(el => { el.innerHTML = htmlEstado(el.dataset.pintarEstado); });
@@ -3405,7 +3376,7 @@
 
       // Estado
       const estadoEl = document.getElementById('detalleEstado');
-      estadoEl.innerHTML = htmlEstado(orden.estado);
+      estadoEl.innerHTML = htmlEstado(orden);
       estadoEl.className = '';
 
       // Fecha
@@ -3618,7 +3589,7 @@
         const n = avisosChat ? avisosChat.ordenesConNoLeidos(ordenes.map(o => o.id)) : 0;
         btnTexto.textContent = `💬 Con mensajes sin leer (${n})`;
       } else if (estado) {
-        btnTexto.innerHTML = htmlEstado(estado);
+        btnTexto.innerHTML = htmlFiltroEstado(estado);
       } else {
         btnTexto.textContent = texto;
       }

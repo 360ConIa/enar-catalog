@@ -675,7 +675,8 @@
       formatearPrecio,
       textoEstado,
       htmlEstado
-    } from './js/ordenes.js';
+    } from './js/ordenes.js?v=20261026';
+    import { normalizarEstado } from './js/estados-orden.js?v=20261026';
     import { obtenerPrecioCliente, inicializarUsuario } from './js/usuario.js';
     // Solo cantidades despachadas: los mensajes internos de despacho no se muestran al cliente
     import { resumenDespacho, htmlCantidad, htmlTotalesDespacho } from './js/despacho.js';
@@ -732,7 +733,7 @@
               <div class="order-number">${orden.numero_orden}</div>
               <div class="order-date">${formatearFecha(orden.created_at)}</div>
             </div>
-            ${htmlEstado(orden.estado)}
+            ${htmlEstado(orden)}
           </div>
 
           <div class="order-summary">
@@ -775,7 +776,7 @@
     // Historial para el cliente: solo cambios de estado con su fecha. Las notas
     // (alistamiento, reversiones, motivos, quién lo hizo) son internas.
     function historialCliente(historial) {
-      return (historial || []).filter((h, i, arr) => h.estado && (i === 0 || h.estado !== arr[i - 1].estado));
+      return (historial || []).filter((h, i, arr) => h.estado && (i === 0 || normalizarEstado(h.estado) !== normalizarEstado(arr[i - 1].estado)));
     }
 
     // Render read-only detail view
@@ -798,7 +799,7 @@
           </div>
           <div class="detail-row">
             <span class="detail-label">Estado</span>
-            ${htmlEstado(orden.estado)}
+            ${htmlEstado(orden)}
           </div>
           <div class="detail-row">
             <span class="detail-label">Total</span>

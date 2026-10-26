@@ -23,7 +23,8 @@ import {
   badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio
-} from './crm-utils.js';
+} from './crm-utils.js?v=20261026';
+import { normalizarEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado } from './estados-orden.js?v=20261026';
 import { cargarListasPrecios, nombreLista } from './firebase-config.js';
 import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './despacho.js';
 import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './chat-ordenes.js';
@@ -202,7 +203,7 @@ function actualizarKPIs() {
     .reduce((s, o) => s + (o.total || 0), 0);
   $('kpiVentas').textContent = formatearPrecio(ventasMes);
   $('kpiAlistamiento').textContent = todasLasOrdenes.filter(o => o.estado === 'alistamiento').length;
-  $('kpiTerminadas').textContent = todasLasOrdenes.filter(o => o.estado === 'terminada').length;
+  $('kpiTerminadas').textContent = todasLasOrdenes.filter(o => normalizarEstado(o.estado) === 'cerrada').length;
 }
 
 // ═══════════ PERMISOS ═══════════
@@ -237,7 +238,7 @@ function aplicarFiltros() {
 
   const estado = $('filtroEstado')?.value;
   if (estado === FILTRO_SIN_LEER) filtradas = filtradas.filter(o => avisosChat?.noLeidos(o.id) > 0);
-  else if (estado) filtradas = filtradas.filter(o => o.estado === estado);
+  else if (estado) filtradas = filtradas.filter(o => coincideFiltroEstado(o, estado));
 
   const desde = $('filtroDesde')?.value;
   if (desde) {
@@ -262,7 +263,7 @@ function refrescarAvisosChat() {
   const n = avisosChat ? avisosChat.ordenesConNoLeidos(todasLasOrdenes.map(o => o.id)) : 0;
   pintarBadgeChat($('navChatBadge'), n);
   const opcion = document.querySelector(`#filtroEstado option[value="${FILTRO_SIN_LEER}"]`);
-  if (opcion) opcion.textContent = `💬 Con mensajes sin leer (${n})`;
+  if (opcion) { opcion.textContent = `💬 Con mensajes sin leer (${n})`; mejorarSelectorEstado($('filtroEstado')); }
   if (!todasLasOrdenes.length) return; // aún cargando
   if ($('filtroEstado')?.value === FILTRO_SIN_LEER) aplicarFiltros();
   else renderizarOrdenes();
@@ -272,7 +273,7 @@ window.verOrdenesSinLeer = function(event) {
   event?.preventDefault();
   event?.stopPropagation();
   const sel = $('filtroEstado');
-  if (sel) { sel.value = FILTRO_SIN_LEER; aplicarFiltros(); }
+  if (sel) { sel.value = FILTRO_SIN_LEER; mejorarSelectorEstado(sel); aplicarFiltros(); }
 };
 
 // ═══════════ HELPERS ORDEN→CLIENTE ═══════════
@@ -287,7 +288,7 @@ function nitCliente(o) {
 function renderBtnCambioEstado(orden) {
   const transiciones = obtenerTransicionesPermitidas(orden.estado);
   if (transiciones.length === 0) {
-    if (orden.estado === 'terminada') {
+    if (normalizarEstado(orden.estado) === 'cerrada') {
       return `<button class="crm-btn crm-btn--sm" style="background:#217346;color:white;font-size:0.65rem;font-weight:300;min-width:auto;aspect-ratio:1;padding:5px;display:inline-flex;align-items:center;justify-content:center;" onclick="event.stopPropagation();window.generarCSVOrden('${orden.id}')" title="Descargar CSV">CSV</button>`;
     }
     return `<button class="crm-btn crm-btn--primary crm-btn--sm" disabled style="opacity:0.4;cursor:not-allowed;" title="Sin transiciones disponibles">
@@ -335,7 +336,7 @@ window.enviarAPapelera = function(ordenId) {
   $('papeleraOrdenInfo').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div><span style="color:var(--crm-text-light);">Orden</span><br><strong>${orden.numero_orden || orden.id.substring(0, 8)}</strong></div>
-      <div><span style="color:var(--crm-text-light);">Estado</span><br>${badgeEstado(orden.estado)}</div>
+      <div><span style="color:var(--crm-text-light);">Estado</span><br>${badgeEstado(orden)}</div>
       <div><span style="color:var(--crm-text-light);">Cliente</span><br><strong>${nombreCliente(orden)}</strong></div>
       <div><span style="color:var(--crm-text-light);">Total</span><br><strong>${formatearPrecio(orden.total || 0)}</strong></div>
     </div>`;
@@ -375,7 +376,7 @@ function renderizarOrdenes() {
       <td style="white-space:nowrap;">${formatearFecha(o.created_at)}</td>
       <td style="text-align:center;">${o.cantidad_productos || (o.items || o.productos || []).length}</td>
       <td style="text-align:right;font-weight:600;">${formatearPrecio(o.total || 0)}</td>
-      <td>${badgeEstado(o.estado)}</td>
+      <td>${badgeEstado(o)}</td>
       <td style="text-align:left;white-space:nowrap;">
         <button class="crm-btn crm-btn--sm" style="position:relative;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">
           <i class="bi bi-eye"></i>${htmlBadgeChat(avisosChat?.noLeidos(o.id))}
@@ -407,7 +408,7 @@ window.verDetalleOrden = async function(ordenId) {
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Cliente</span><br><strong>${nombreCliente(orden)}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">NIT</span><br><strong>${nitCliente(orden)}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Fecha</span><br><strong>${formatearFecha(orden.created_at)}</strong></div>
-      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Estado</span><br>${badgeEstado(orden.estado)}</div>
+      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Estado</span><br>${badgeEstado(orden)}</div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Creada por</span><br><strong>${orden.creadaPorNombre || orden.creadaPorEmail || '-'}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">CSV Generado</span><br><strong>${orden.csv_generado ? 'Sí' : 'No'}</strong></div>
     </div>
@@ -445,9 +446,8 @@ window.verDetalleOrden = async function(ordenId) {
     <div id="detalleMensajesDespacho"></div>
   `;
 
-  // Botones de cambio de estado (completada/parcial/en_espera se gestionan desde Despachos)
-  const transiciones = obtenerTransicionesPermitidas(orden.estado)
-    .filter(e => !['completada', 'parcial', 'en_espera', 'en_proceso'].includes(e));
+  // Botones de cambio de estado: las mismas transiciones que el menú de la tabla
+  const transiciones = obtenerTransicionesPermitidas(orden.estado);
   $('modalDetalleFooter').innerHTML = `
     <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalDetalle')">Cerrar</button>
     <button class="crm-btn crm-btn--sm" style="background:#217346;color:white;" onclick="window.generarCSVOrden('${orden.id}')">
@@ -455,13 +455,7 @@ window.verDetalleOrden = async function(ordenId) {
     </button>
     ${!puedeModificarOrden(orden) ? `<span style="color:#64748b;font-size:0.82rem;"><i class="bi bi-lock"></i> Solo lectura: orden de otro vendedor</span>` : `
     ${orden.estado === 'pendiente' ? `<button class="crm-btn crm-btn--primary" onclick="cerrarModal('modalDetalle');editarOrden('${orden.id}')"><i class="bi bi-pencil"></i> Editar</button>` : ''}
-    ${transiciones.map(estado => {
-      const esCancelada = estado === 'cancelada';
-      const clase = esCancelada ? 'crm-btn--danger' : 'crm-btn--primary';
-      return `<button class="crm-btn ${clase}" onclick="cambiarEstadoOrden('${orden.id}', '${estado}')">
-        ${ESTADOS_ORDEN_LABELS[estado]}
-      </button>`;
-    }).join('')}`}
+    ${transiciones.map(estado => htmlBotonEstado(estado, `cambiarEstadoOrden('${orden.id}', '${estado}')`)).join('')}`}
   `;
 
   $('modalDetalle').classList.add('open');
@@ -493,26 +487,14 @@ window.cambiarEstadoOrden = async function(ordenId, nuevoEstado) {
   }
 
   try {
-    const historial = orden.historial || [];
-    historial.push({
-      estado: nuevoEstado,
-      fecha: new Date().toISOString(),
-      nota: `Cambio a ${ESTADOS_ORDEN_LABELS[nuevoEstado]} por ${userPerfil.nombre || currentUser.email}`
-    });
-
-    await updateDoc(doc(db, 'ordenes', ordenId), {
-      estado: nuevoEstado,
-      historial: historial,
-      updated_at: new Date().toISOString()
-    });
-
-    orden.estado = nuevoEstado;
-    orden.historial = historial;
+    const cambios = cambiosDeEstado(orden, nuevoEstado, `Cambio a ${ESTADOS_ORDEN_LABELS[nuevoEstado]} por ${userPerfil.nombre || currentUser.email}`);
+    await updateDoc(doc(db, 'ordenes', ordenId), cambios);
+    Object.assign(orden, cambios);
 
     cerrarModal('modalDetalle');
     actualizarKPIs();
     aplicarFiltros();
-    showToast(`Orden cambiada a ${ESTADOS_ORDEN_LABELS[nuevoEstado]}`, 'success');
+    showToast(`Orden cambiada a ${etiquetaEstadoOrden(orden)}`, 'success');
   } catch (error) {
     console.error('Error cambiando estado:', error);
     showToast('Error al cambiar estado', 'error');
@@ -1146,7 +1128,9 @@ window.ModalCierre?.registrar('modalProductos', () => JSON.stringify(productosOr
 // ═══════════ EVENT LISTENERS ═══════════
 function initEventListeners() {
   $('filtroTexto')?.addEventListener('input', debounce(() => aplicarFiltros(), 400));
+  $('filtroEstado')?.insertAdjacentHTML('beforeend', opcionesFiltroEstado());
   $('filtroEstado')?.addEventListener('change', () => aplicarFiltros());
+  mejorarSelectorEstado($('filtroEstado'));
   $('filtroAlcance')?.addEventListener('change', () => aplicarFiltros());
   $('filtroDesde')?.addEventListener('change', () => aplicarFiltros());
   $('filtroHasta')?.addEventListener('change', () => aplicarFiltros());

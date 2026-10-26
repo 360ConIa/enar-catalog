@@ -23,7 +23,7 @@ import {
   badgeEstado, badgeSalud, badgeABC, badgeRiesgo, badgeTendencia,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio,
   cargarListasPrecios, listasActivas, nombreLista, esListaValida, formatearNombreLista
-} from './crm-utils.js';
+} from './crm-utils.js?v=20261026';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -351,7 +351,7 @@ window.verDetalle = async function(clienteId) {
                 <td>${formatearFecha(o.created_at)}</td>
                 <td>${o.cantidad_productos || (o.items || []).length}</td>
                 <td>${formatearPrecio(o.total || 0)}</td>
-                <td>${badgeEstado(o.estado)}</td>
+                <td>${badgeEstado(o)}</td>
               </tr>
             `).join('')}
           </tbody>

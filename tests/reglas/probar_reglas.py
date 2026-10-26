@@ -70,7 +70,7 @@ DES_P = {
     'K': {'rol': 'cliente', 'estado': 'aprobado', 'email': 'k@test.co'},
     'K2': {'rol': 'cliente', 'estado': 'aprobado', 'email': 'k2@test.co'},
 }
-_ORDEN_DES = {'user_id': 'K', 'creadaPor': 'V', 'estado': 'terminada',
+_ORDEN_DES = {'user_id': 'K', 'creadaPor': 'V', 'estado': 'cerrada', 'subestado': 'parcial',
               'items': [{'cod_interno': 'SD', 'cantidad': 12, 'cantidad_real': 10, 'estado_alistamiento': 'parcial'}]}
 _MSG = {'orden_id': 'o1', 'mensaje': 'Comentario interno', 'usuario_id': 'D', 'created_at': '2026-10-24T22:45:19Z'}
 DESPACHO = {'perfiles': DES_P, 'documentos': {'ordenes/o1': _ORDEN_DES}, 'casos': [
@@ -239,8 +239,41 @@ MENSAJERIA = {'perfiles': MSJ_P, 'documentos': _ORD_MSJ, 'casos': [
     caso('Vendedor sigue editando datos de un cliente', 'VI', 'update', 'usuarios/K', MSJ_P['K'], 'ALLOW', {'telefono': '300'}),
 ]}
 
+# ─── Batería: estados de orden (2026-10-26): 5 estados, subestado solo en cerrada ───
+EST_P = {
+    'ADM': {'rol': 'admin', 'email': 'a@test.co'}, 'G': {'rol': 'gestor', 'email': 'g@test.co'},
+    'V': {'rol': 'vendedor', 'estado': 'aprobado', 'email': 'v@test.co'},
+    'D': {'rol': 'despachos', 'email': 'd@test.co'},
+    'K': {'rol': 'cliente', 'estado': 'aprobado', 'email': 'k@test.co'},
+}
+_O = lambda estado, **extra: {'creadaPor': 'V', 'user_id': 'K', 'estado': estado, **extra}
+_RO = 'ordenes/o1'
+ESTADOS = {'perfiles': EST_P, 'casos': [
+    caso('Vendedor aprueba su orden (pendiente → aprobada)', 'V', 'update', _RO, _O('pendiente'), 'ALLOW', {'estado': 'aprobada'}),
+    caso('Despachos pasa a alistamiento', 'D', 'update', _RO, _O('aprobada'), 'ALLOW', {'estado': 'alistamiento'}),
+    caso('Despachos cierra completa', 'D', 'update', _RO, _O('alistamiento'), 'ALLOW', {'estado': 'cerrada', 'subestado': 'completa'}),
+    caso('Despachos cierra parcial', 'D', 'update', _RO, _O('alistamiento'), 'ALLOW', {'estado': 'cerrada', 'subestado': 'parcial'}),
+    caso('Gestor regresa cerrada → alistamiento (subestado null)', 'G', 'update', _RO, _O('cerrada', subestado='parcial'), 'ALLOW', {'estado': 'alistamiento', 'subestado': None}),
+    caso('Cancelar', 'V', 'update', _RO, _O('pendiente'), 'ALLOW', {'estado': 'cancelada'}),
+    caso('Cliente edita su orden pendiente', 'K', 'update', _RO, _O('pendiente'), 'ALLOW', {'observaciones': 'x'}),
+    caso('Cliente crea orden pendiente', 'K', 'create', _RO, {'user_id': 'K', 'estado': 'pendiente'}, 'ALLOW'),
+    caso('Editar otra cosa de una cerrada con subestado', 'ADM', 'update', _RO, _O('cerrada', subestado='completa'), 'ALLOW', {'eliminado': True}),
+    caso('Escribir en_proceso (nombre anterior)', 'V', 'update', _RO, _O('pendiente'), 'DENY', {'estado': 'en_proceso'}),
+    caso('Escribir terminada (nombre anterior)', 'D', 'update', _RO, _O('alistamiento'), 'DENY', {'estado': 'terminada'}),
+    caso('Escribir completada como estado', 'D', 'update', _RO, _O('alistamiento'), 'DENY', {'estado': 'completada'}),
+    caso('Escribir parcial como estado', 'D', 'update', _RO, _O('alistamiento'), 'DENY', {'estado': 'parcial'}),
+    caso('Escribir en_espera', 'ADM', 'update', _RO, _O('aprobada'), 'DENY', {'estado': 'en_espera'}),
+    caso('Cerrar sin subestado', 'D', 'update', _RO, _O('alistamiento'), 'DENY', {'estado': 'cerrada'}),
+    caso('Subestado con nombre anterior (completada)', 'D', 'update', _RO, _O('alistamiento'), 'DENY', {'estado': 'cerrada', 'subestado': 'completada'}),
+    caso('Subestado en una orden no cerrada', 'D', 'update', _RO, _O('aprobada'), 'DENY', {'estado': 'alistamiento', 'subestado': 'parcial'}),
+    caso('Regresar de cerrada dejando el subestado', 'G', 'update', _RO, _O('cerrada', subestado='completa'), 'DENY', {'estado': 'alistamiento'}),
+    caso('Vendedor crea orden en_proceso', 'V', 'create', _RO, _O('en_proceso'), 'DENY'),
+    caso('Admin crea orden en estado inventado', 'ADM', 'create', _RO, _O('enviada'), 'DENY'),
+    caso('Sin migrar: tocar una orden terminada', 'ADM', 'update', _RO, _O('terminada'), 'DENY', {'eliminado': True}),
+]}
+
 BATERIAS = {'visibilidad': VISIBILIDAD, 'despacho': DESPACHO, 'externo': EXTERNO,
-            'chat': CHAT, 'cotizaciones': COTIZACIONES, 'mensajeria': MENSAJERIA}
+            'chat': CHAT, 'cotizaciones': COTIZACIONES, 'mensajeria': MENSAJERIA, 'estados': ESTADOS}
 
 
 def a_test_case(c, perfiles, mocks):

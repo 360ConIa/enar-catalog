@@ -141,11 +141,22 @@ service cloud.firestore {
       );
     }
 
+    // Estados de orden (js/estados-orden.js): pendiente, aprobada, alistamiento, cerrada,
+    // cancelada. Cerrada lleva siempre subestado completa | parcial; los demás estados no
+    // (null al regresar de cerrada). Los nombres anteriores (en_proceso, terminada,
+    // completada, parcial como estado...) ya no se aceptan.
+    function estadoOrdenValido(d) {
+      return d.get('estado', 'pendiente') in ['pendiente', 'aprobada', 'alistamiento', 'cerrada', 'cancelada'] &&
+        (d.get('estado', 'pendiente') == 'cerrada'
+          ? d.get('subestado', null) in ['completa', 'parcial']
+          : d.get('subestado', null) == null);
+    }
+
     // Órdenes: usuarios aprobados pueden crear y leer sus propias órdenes
     match /ordenes/{ordenId} {
       // Usuarios aprobados pueden crear órdenes (solo sus propias)
       // Admin y vendedores pueden crear órdenes en nombre de clientes
-      allow create: if isAuthenticated() && (
+      allow create: if isAuthenticated() && estadoOrdenValido(request.resource.data) && (
         (isApproved() && request.resource.data.user_id == request.auth.uid) ||
         isAdmin() ||
         ((isVendedor() || isGestor()) && request.resource.data.creadaPor == request.auth.uid)
@@ -169,14 +180,14 @@ service cloud.firestore {
       // Admin, gestores, despachos y comercial_lider pueden actualizar órdenes
       // Usuarios aprobados pueden actualizar sus propias órdenes pendientes
       // Vendedores pueden actualizar órdenes que ellos crearon o de sus clientes asignados
-      allow update: if isAdmin() || isUserManager() || isDespachos() || esComercialLider() ||
+      allow update: if estadoOrdenValido(request.resource.data) && (isAdmin() || isUserManager() || isDespachos() || esComercialLider() ||
         (isVendedor() && (
           resource.data.creadaPor == request.auth.uid ||
           (resource.data.user_id != null &&
             exists(/databases/$(database)/documents/usuarios/$(resource.data.user_id)) &&
             get(/databases/$(database)/documents/usuarios/$(resource.data.user_id)).data.vendedor_asignado == request.auth.uid)
         )) ||
-        (isApproved() && resource.data.user_id == request.auth.uid && resource.data.estado == 'pendiente');
+        (isApproved() && resource.data.user_id == request.auth.uid && resource.data.estado == 'pendiente'));
 
       // Solo admin puede eliminar órdenes
       allow delete: if isAdmin();

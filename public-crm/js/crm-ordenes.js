@@ -25,7 +25,8 @@ import {
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio,
   cargarListasPrecios, nombreLista
-} from './crm-utils.js';
+} from './crm-utils.js?v=20261026';
+import { normalizarEstado, subestadoDe, etiquetaEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado } from './estados-orden.js?v=20261026';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -298,7 +299,7 @@ function actualizarBadgeGlobalChat() {
     if (contarMensajesNoLeidos(ordenId) > 0) total++;
   }
   const opcion = document.querySelector(`#filtroEstado option[value="${FILTRO_SIN_LEER}"]`);
-  if (opcion) opcion.textContent = `💬 Con mensajes sin leer (${total})`;
+  if (opcion) { opcion.textContent = `💬 Con mensajes sin leer (${total})`; mejorarSelectorEstado($('filtroEstado')); }
   const label = total > 99 ? '99+' : String(total);
   ['navChatBadgeOrdenes', 'navChatBadgeDespachos'].forEach(id => {
     const el = $(id);
@@ -374,7 +375,7 @@ function actualizarKPIs() {
     .filter(o => { const f = toDate(o.created_at); return f && f >= inicioMes && o.estado !== 'cancelada'; })
     .reduce((s, o) => s + (o.total || 0), 0);
   $('kpiVentas').textContent = formatearPrecio(ventasMes);
-  $('kpiCompletadas').textContent = todasLasOrdenes.filter(o => o.estado === 'completada').length;
+  $('kpiCompletadas').textContent = todasLasOrdenes.filter(o => subestadoDe(o) === 'completa').length;
 }
 
 // ═══════════ FILTROS ═══════════
@@ -409,7 +410,7 @@ function aplicarFiltros() {
 
   const estado = $('filtroEstado')?.value;
   if (estado === FILTRO_SIN_LEER) filtradas = filtradas.filter(o => contarMensajesNoLeidos(o.id) > 0);
-  else if (estado) filtradas = filtradas.filter(o => o.estado === estado);
+  else if (estado) filtradas = filtradas.filter(o => coincideFiltroEstado(o, estado));
 
   const desde = $('filtroDesde')?.value;
   if (desde) {
@@ -476,7 +477,7 @@ function renderMenuAccionesMas(orden) {
   const reversion = obtenerReversion(orden.estado);
   if (modificable && reversion && puedeRegresarEstado(userPerfil?.rol)) {
     items.push(`<button class="crm-estado-opcion" style="color:#92400e;" onclick="window.cerrarMenuMas();regresarEstadoOrden('${orden.id}')">
-      <i class="bi bi-arrow-counterclockwise"></i> Regresar a ${ESTADOS_ORDEN_LABELS[reversion]}
+      <i class="bi bi-arrow-counterclockwise"></i> Regresar a ${badgeEstado(reversion)}
     </button>`);
   }
 
@@ -521,7 +522,7 @@ window.regresarEstadoOrden = async function(ordenId) {
     showToast('No hay estado previo al cual regresar', 'error');
     return;
   }
-  const motivo = prompt(`Regresar orden ${orden.numero_orden || ordenId} de "${ESTADOS_ORDEN_LABELS[orden.estado]}" a "${ESTADOS_ORDEN_LABELS[reversion]}".\n\nMotivo (obligatorio):`);
+  const motivo = prompt(`Regresar orden ${orden.numero_orden || ordenId} de "${etiquetaEstadoOrden(orden)}" a "${ESTADOS_ORDEN_LABELS[reversion]}".\n\nMotivo (obligatorio):`);
   if (motivo === null) return;
   const motivoLimpio = motivo.trim();
   if (!motivoLimpio) {
@@ -530,22 +531,10 @@ window.regresarEstadoOrden = async function(ordenId) {
   }
 
   try {
-    const historial = orden.historial || [];
-    historial.push({
-      estado: reversion,
-      fecha: new Date().toISOString(),
-      tipo: 'reversion',
-      nota: `Reversión a ${ESTADOS_ORDEN_LABELS[reversion]} por ${userPerfil.nombre || currentUser.email}. Motivo: ${motivoLimpio}`
-    });
-
-    await updateDoc(doc(db, 'ordenes', ordenId), {
-      estado: reversion,
-      historial: historial,
-      updated_at: new Date().toISOString()
-    });
-
-    orden.estado = reversion;
-    orden.historial = historial;
+    const cambios = cambiosDeEstado(orden, reversion, `Reversión a ${ESTADOS_ORDEN_LABELS[reversion]} por ${userPerfil.nombre || currentUser.email}. Motivo: ${motivoLimpio}`);
+    cambios.historial[cambios.historial.length - 1].tipo = 'reversion';
+    await updateDoc(doc(db, 'ordenes', ordenId), cambios);
+    Object.assign(orden, cambios);
 
     cerrarModal('modalDetalle');
     actualizarKPIs();
@@ -583,7 +572,7 @@ window.enviarAPapelera = function(ordenId) {
   $('papeleraOrdenInfo').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <div><span style="color:var(--crm-text-light);">Orden</span><br><strong>${orden.numero_orden || orden.id.substring(0, 8)}</strong></div>
-      <div><span style="color:var(--crm-text-light);">Estado</span><br>${badgeEstado(orden.estado)}</div>
+      <div><span style="color:var(--crm-text-light);">Estado</span><br>${badgeEstado(orden)}</div>
       <div><span style="color:var(--crm-text-light);">Cliente</span><br><strong>${nombreCliente(orden)}</strong></div>
       <div><span style="color:var(--crm-text-light);">Total</span><br><strong>${formatearPrecio(orden.total || 0)}</strong></div>
     </div>`;
@@ -624,7 +613,7 @@ function renderizarOrdenes() {
       <td style="white-space:nowrap;">${formatearFecha(o.created_at)}</td>
       <td style="text-align:center;">${o.cantidad_productos || (o.items || o.productos || []).length}</td>
       <td style="text-align:right;font-weight:600;">${formatearPrecio(o.total || 0)}</td>
-      <td>${badgeEstado(o.estado)}</td>
+      <td>${badgeEstado(o)}</td>
       <td style="text-align:center;white-space:nowrap;">
         <span style="position:relative;display:inline-block;">
           <button class="crm-btn crm-btn--sm" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;" onclick="verDetalleOrden('${o.id}')" title="Detalles">
@@ -654,7 +643,7 @@ window.verDetalleOrden = function(ordenId) {
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Cliente</span><br><strong>${nombreCliente(orden)}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">NIT</span><br><strong>${nitCliente(orden)}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Fecha</span><br><strong>${formatearFecha(orden.created_at)}</strong></div>
-      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Estado</span><br>${badgeEstado(orden.estado)}</div>
+      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Estado</span><br>${badgeEstado(orden)}</div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Creada por</span><br><strong>${orden.creadaPorNombre || orden.creadaPorEmail || '-'}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">CSV Generado</span><br><strong>${orden.csv_generado ? 'Sí' : 'No'}</strong></div>
     </div>
@@ -701,13 +690,12 @@ window.verDetalleOrden = function(ordenId) {
     </div>
   `;
 
-  // Botones de cambio de estado (completada/parcial/en_espera se gestionan desde Despachos)
-  const transiciones = obtenerTransicionesPermitidas(orden.estado)
-    .filter(e => !['completada', 'parcial', 'en_espera', 'en_proceso'].includes(e));
+  // Botones de cambio de estado: las mismas transiciones que el menú de la tabla
+  const transiciones = obtenerTransicionesPermitidas(orden.estado);
   const reversionModal = obtenerReversion(orden.estado);
   const modificable = puedeModificarOrden(orden);
   const btnRegresarModal = (modificable && reversionModal && puedeRegresarEstado(userPerfil?.rol))
-    ? `<button class="crm-btn" style="background:#fef3c7;color:#92400e;" onclick="regresarEstadoOrden('${orden.id}')"><i class="bi bi-arrow-counterclockwise"></i> Regresar a ${ESTADOS_ORDEN_LABELS[reversionModal]}</button>`
+    ? `<button class="crm-btn" style="background:#fef3c7;color:#92400e;" onclick="regresarEstadoOrden('${orden.id}')"><i class="bi bi-arrow-counterclockwise"></i> Regresar a ${badgeEstado(reversionModal)}</button>`
     : '';
   $('modalDetalleFooter').innerHTML = `
     <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalDetalle')">Cerrar</button>
@@ -717,13 +705,7 @@ window.verDetalleOrden = function(ordenId) {
     ${btnRegresarModal}
     ${!modificable ? `<span style="color:#64748b;font-size:0.82rem;"><i class="bi bi-lock"></i> Solo lectura: orden de otro vendedor</span>` : `
     ${orden.estado === 'pendiente' ? `<button class="crm-btn crm-btn--primary" onclick="cerrarModal('modalDetalle');editarOrden('${orden.id}')"><i class="bi bi-pencil"></i> Editar</button>` : ''}
-    ${transiciones.map(estado => {
-      const esCancelada = estado === 'cancelada';
-      const clase = esCancelada ? 'crm-btn--danger' : 'crm-btn--primary';
-      return `<button class="crm-btn ${clase}" onclick="cambiarEstadoOrden('${orden.id}', '${estado}')">
-        ${ESTADOS_ORDEN_LABELS[estado]}
-      </button>`;
-    }).join('')}`}
+    ${transiciones.map(estado => htmlBotonEstado(estado, `cambiarEstadoOrden('${orden.id}', '${estado}')`)).join('')}`}
   `;
 
   $('modalDetalle').classList.add('open');
@@ -815,26 +797,14 @@ window.cambiarEstadoOrden = async function(ordenId, nuevoEstado) {
   }
 
   try {
-    const historial = orden.historial || [];
-    historial.push({
-      estado: nuevoEstado,
-      fecha: new Date().toISOString(),
-      nota: `Cambio a ${ESTADOS_ORDEN_LABELS[nuevoEstado]} por ${userPerfil.nombre || currentUser.email}`
-    });
-
-    await updateDoc(doc(db, 'ordenes', ordenId), {
-      estado: nuevoEstado,
-      historial: historial,
-      updated_at: new Date().toISOString()
-    });
-
-    orden.estado = nuevoEstado;
-    orden.historial = historial;
+    const cambios = cambiosDeEstado(orden, nuevoEstado, `Cambio a ${ESTADOS_ORDEN_LABELS[nuevoEstado]} por ${userPerfil.nombre || currentUser.email}`);
+    await updateDoc(doc(db, 'ordenes', ordenId), cambios);
+    Object.assign(orden, cambios);
 
     cerrarModal('modalDetalle');
     actualizarKPIs();
     aplicarFiltros();
-    showToast(`Orden cambiada a ${ESTADOS_ORDEN_LABELS[nuevoEstado]}`, 'success');
+    showToast(`Orden cambiada a ${etiquetaEstadoOrden(orden)}`, 'success');
   } catch (error) {
     console.error('Error cambiando estado:', error);
     showToast('Error al cambiar estado', 'error');
@@ -1498,7 +1468,9 @@ window.ModalCierre?.registrar('modalProductos', () => JSON.stringify(productosOr
 // ═══════════ EVENT LISTENERS ═══════════
 function initEventListeners() {
   $('filtroTexto')?.addEventListener('input', debounce(() => aplicarFiltros(), 400));
+  $('filtroEstado')?.insertAdjacentHTML('beforeend', opcionesFiltroEstado());
   $('filtroEstado')?.addEventListener('change', () => aplicarFiltros());
+  mejorarSelectorEstado($('filtroEstado'));
   $('filtroAlcance')?.addEventListener('change', () => aplicarFiltros());
   $('filtroDesde')?.addEventListener('change', () => aplicarFiltros());
   $('filtroHasta')?.addEventListener('change', () => aplicarFiltros());

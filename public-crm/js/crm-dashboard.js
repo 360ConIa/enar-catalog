@@ -20,8 +20,8 @@ import {
   formatearPrecio, formatearFecha, formatearNumero, tiempoRelativo,
   badgeEstado, badgeSalud, badgeRiesgo,
   showToast
-} from './crm-utils.js';
-import { etiquetaEstado, colorEstado } from './estados-orden.js';
+} from './crm-utils.js?v=20261026';
+import { etiquetaEstado, colorEstado, normalizarEstado } from './estados-orden.js?v=20261026';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -152,7 +152,7 @@ async function cargarDashboard(user, perfil, esAdmin) {
     const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
 
     const ordenesActivas = ordenes.filter(o =>
-      !['completada', 'cancelada'].includes(o.estado)
+      !['cerrada', 'cancelada'].includes(normalizarEstado(o.estado))
     ).length;
 
     const ventasMes = ordenes
@@ -162,7 +162,7 @@ async function cargarDashboard(user, perfil, esAdmin) {
       })
       .reduce((s, o) => s + (o.total || 0), 0);
 
-    const ordenesCompletadas = ordenes.filter(o => o.estado === 'completada');
+    const ordenesCompletadas = ordenes.filter(o => normalizarEstado(o.estado) === 'cerrada');
     const ticketPromedio = ordenesCompletadas.length > 0
       ? ordenesCompletadas.reduce((s, o) => s + (o.total || 0), 0) / ordenesCompletadas.length
       : 0;
@@ -180,7 +180,7 @@ async function cargarDashboard(user, perfil, esAdmin) {
     $('kpiRiesgo').textContent = formatearNumero(clientesEnRiesgo);
 
     $('kpiTicket').textContent = formatearPrecio(ticketPromedio);
-    $('kpiTicketSub').textContent = `${ordenesCompletadas.length} completas`;
+    $('kpiTicketSub').textContent = `${ordenesCompletadas.length} cerradas`;
 
     // ─── Chart: Ventas por Mes (line) ───
     const ventasPorMes = [];
@@ -220,7 +220,7 @@ async function cargarDashboard(user, perfil, esAdmin) {
 
     // ─── Chart: Distribución Estados (doughnut) ───
     const estadoCounts = {};
-    ordenes.forEach(o => { estadoCounts[o.estado] = (estadoCounts[o.estado] || 0) + 1; });
+    ordenes.forEach(o => { const e = normalizarEstado(o.estado); estadoCounts[e] = (estadoCounts[e] || 0) + 1; });
 
     // Etiquetas y colores: tabla única (estados-orden.js)
     renderChart('chartDistribucion', 'doughnut', {
@@ -259,7 +259,7 @@ async function cargarDashboard(user, perfil, esAdmin) {
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <span style="font-weight:600;">${formatearPrecio(o.total || 0)}</span>
-            ${badgeEstado(o.estado)}
+            ${badgeEstado(o)}
           </div>
         </div>
       `).join('');

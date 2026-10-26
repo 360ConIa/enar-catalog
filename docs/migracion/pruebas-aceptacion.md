@@ -7,8 +7,8 @@ de prueba, nunca contra producción.
 Tipos de verificación:
 - **R** — reglas de Firestore con la API de prueba de reglas (`firebaserules.googleapis.com …:test`)
   o el emulador. Las baterías actuales están en `tests/reglas/probar_reglas.py` y pasan contra
-  producción: 106 casos (visibilidad 9, despacho 11, vendedor externo 22, chat 13,
-  cotizaciones 18, mensajería 33). Ejecutar: `python3 tests/reglas/probar_reglas.py`.
+  producción: 127 casos (visibilidad 9, despacho 11, vendedor externo 22, chat 13,
+  cotizaciones 18, mensajería 33, estados 21). Ejecutar: `python3 tests/reglas/probar_reglas.py`.
 - **E** — extremo a extremo en navegador (Playwright), con usuarios de prueba por rol.
 - **U** — prueba unitaria de una función pura (precio, totales, estados).
 
@@ -57,9 +57,10 @@ Usuarios de prueba en staging: `admin`, `gestor`, `vendedor-interno`, `vendedor-
 
 | ID | Dado / Cuando / Entonces | RN | Tipo |
 |---|---|---|---|
-| PA-4.1 | Desde cada estado solo se ofrecen las transiciones de RN-30; una transición no permitida se rechaza | 30 | U, E |
-| PA-4.2 | Gestor regresa una orden `alistamiento → en_proceso` sin motivo → rechazado; con motivo → hecho y queda en `historial`; un vendedor no ve la opción | 31 | E |
-| PA-4.3 | Mismo estado se ve idéntico (texto, ícono, colores) en admin, vendedor, mis-ordenes, crm-ordenes, despachos, dashboard y reportes | 32 | E (captura) |
+| PA-4.1 | Desde cada estado solo se ofrecen las transiciones de RN-30; una transición no permitida se rechaza; un estado o subestado fuera de la tabla (p. ej. `en_proceso`, `terminada`) lo rechaza firestore.rules | 30 | U, E, R |
+| PA-4.1b | Cerrar una orden con un ítem sin stock → `cerrada` + `parcial`; todo completo → `completa`; regresarla a alistamiento quita el subestado | 30, 31 | U, E |
+| PA-4.2 | Gestor regresa una orden `alistamiento → aprobada` sin motivo → rechazado; con motivo → hecho y queda en `historial`; un vendedor no ve la opción | 31 | E |
+| PA-4.3 | Mismo estado se ve idéntico (texto, ícono, colores) en etiquetas, menús, filtros y desplegables de admin, vendedor, mis-ordenes, crm-ordenes, despachos, dashboard, reportes y clientes; una cerrada muestra Completa o Parcial al lado | 32 | E (captura) |
 | PA-4.4 | Despachos marca en el alistamiento, con ítems en orden de cargue distinto al guardado: cada `cantidad_real` queda en el producto correcto | 33 | E |
 | PA-4.5 | Orden con un ítem 12 → 10 y otro 3 → 0 (sin stock): el detalle muestra pedida/despachada resaltadas y total recalculado (caso real: ORD-261024-88956, total pedido 1.003.194 → despachado 785.782) | 34 | U, E |
 | PA-4.6 | El cliente ve las cantidades despachadas pero **no** los mensajes internos ni las notas del historial | 34, 35, 36 | E, R |
