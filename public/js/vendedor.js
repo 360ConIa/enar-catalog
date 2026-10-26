@@ -25,7 +25,8 @@ import {
   showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js';
 import { cargarListasPrecios, nombreLista } from './firebase-config.js';
-import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual, cargarMensajesDespacho, htmlMensajesDespacho } from './despacho.js';
+import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './despacho.js';
+import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './chat-ordenes.js';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -57,6 +58,9 @@ let unsubOrdenes = null;
 let ordenEditandoId = null;
 let productosPorCodigo = new Map(); // cod_interno → producto (O(1) lookup)
 const paginador = new Paginador(25);
+let avisosChat = null;          // mensajes sin leer de chat_ordenes (chat-ordenes.js)
+let cerrarConversacion = null;  // listener de la conversación abierta en el detalle
+const FILTRO_SIN_LEER = '__sin_leer';
 const ROLES_EXCLUIDOS = ['vendedor', 'despachos', 'admin', 'gestor', 'administrador'];
 
 function sortItemsPorCargue(items) {
@@ -117,6 +121,13 @@ onAuthStateChanged(auth, async (user) => {
   const navAdmin = $('navAdmin');
   if (navAdmin) navAdmin.style.display = '';
 
+  avisosChat = crearAvisosChat({
+    uid: user.uid,
+    externo: perfil.rol === 'vendedor' && perfil.vendedor_externo === true,
+    lecturas: perfil.chat_lecturas,
+    alCambiar: refrescarAvisosChat
+  });
+
   await Promise.all([
     cargarClientes(),
     cargarProductos(),
@@ -137,6 +148,8 @@ onAuthStateChanged(auth, async (user) => {
 
 $('btnLogout').addEventListener('click', async () => {
   if (unsubOrdenes) unsubOrdenes();
+  avisosChat?.detener();
+  if (cerrarConversacion) cerrarConversacion();
   localStorage.removeItem('enar_user_name');
   localStorage.removeItem('enar_user_rol');
   localStorage.removeItem('enar_user_privileged');
@@ -168,6 +181,7 @@ function cargarOrdenes() {
       if (!data.eliminado) todasLasOrdenes.push({ id: d.id, ...data });
     });
 
+    avisosChat?.sincronizarOrdenes(todasLasOrdenes.map(o => o.id));
     actualizarKPIs();
     aplicarFiltros();
   }, (error) => {
@@ -222,7 +236,8 @@ function aplicarFiltros() {
   }
 
   const estado = $('filtroEstado')?.value;
-  if (estado) filtradas = filtradas.filter(o => o.estado === estado);
+  if (estado === FILTRO_SIN_LEER) filtradas = filtradas.filter(o => avisosChat?.noLeidos(o.id) > 0);
+  else if (estado) filtradas = filtradas.filter(o => o.estado === estado);
 
   const desde = $('filtroDesde')?.value;
   if (desde) {
@@ -240,6 +255,25 @@ function aplicarFiltros() {
   paginador.paginaActual = 1;
   renderizarOrdenes();
 }
+
+// ═══════════ AVISOS DE MENSAJES SIN LEER ═══════════
+// Contador en la cabecera y en la opción del filtro; al hacer clic se filtran esas órdenes.
+function refrescarAvisosChat() {
+  const n = avisosChat ? avisosChat.ordenesConNoLeidos(todasLasOrdenes.map(o => o.id)) : 0;
+  pintarBadgeChat($('navChatBadge'), n);
+  const opcion = document.querySelector(`#filtroEstado option[value="${FILTRO_SIN_LEER}"]`);
+  if (opcion) opcion.textContent = `💬 Con mensajes sin leer (${n})`;
+  if (!todasLasOrdenes.length) return; // aún cargando
+  if ($('filtroEstado')?.value === FILTRO_SIN_LEER) aplicarFiltros();
+  else renderizarOrdenes();
+}
+
+window.verOrdenesSinLeer = function(event) {
+  event?.preventDefault();
+  event?.stopPropagation();
+  const sel = $('filtroEstado');
+  if (sel) { sel.value = FILTRO_SIN_LEER; aplicarFiltros(); }
+};
 
 // ═══════════ HELPERS ORDEN→CLIENTE ═══════════
 function nombreCliente(o) {
@@ -343,8 +377,8 @@ function renderizarOrdenes() {
       <td style="text-align:right;font-weight:600;">${formatearPrecio(o.total || 0)}</td>
       <td>${badgeEstado(o.estado)}</td>
       <td style="text-align:left;white-space:nowrap;">
-        <button class="crm-btn crm-btn--sm" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">
-          <i class="bi bi-eye"></i>
+        <button class="crm-btn crm-btn--sm" style="position:relative;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">
+          <i class="bi bi-eye"></i>${htmlBadgeChat(avisosChat?.noLeidos(o.id))}
         </button>
         ${puedeModificarOrden(o) ? renderBtnCambioEstado(o) : `<span title="Solo lectura: orden de otro vendedor" style="color:#94a3b8;padding:0 6px;"><i class="bi bi-lock"></i></span>`}
         ${!puedeModificarOrden(o) ? '' : `<button class="crm-btn crm-btn--danger crm-btn--sm" onclick="enviarAPapelera('${o.id}')" title="Enviar a papelera">
@@ -432,15 +466,18 @@ window.verDetalleOrden = async function(ordenId) {
 
   $('modalDetalle').classList.add('open');
 
-  // Mensajes internos de despacho (solo personal; las reglas de chat_ordenes lo exigen)
-  try {
-    const mensajes = await cargarMensajesDespacho(ordenId);
-    if ($('modalDetalleTitulo').textContent === `Orden ${orden.numero_orden || ''}`) {
-      const el = $('detalleMensajesDespacho');
-      if (el) el.innerHTML = htmlMensajesDespacho(mensajes);
-    }
-  } catch (e) {
-    console.warn('No se pudieron cargar los mensajes de despacho:', e);
+  // Mensajes internos (solo personal; firestore.rules: quien los lee puede responder).
+  // En vivo mientras el detalle esté abierto; al abrirlo se marcan como leídos.
+  if (cerrarConversacion) cerrarConversacion();
+  const titulo = $('modalDetalleTitulo').textContent;
+  const contenedor = $('detalleMensajesDespacho');
+  if (contenedor) {
+    cerrarConversacion = montarConversacion(contenedor, ordenId, {
+      usuario: { uid: currentUser.uid, email: currentUser.email, nombre: userPerfil.nombre, rol: userPerfil.rol },
+      avisos: avisosChat,
+      estaAbierto: () => $('modalDetalle').classList.contains('open') && $('modalDetalleTitulo').textContent === titulo,
+      alFallarEnvio: () => showToast('No se pudo enviar el mensaje', 'error')
+    });
   }
 };
 

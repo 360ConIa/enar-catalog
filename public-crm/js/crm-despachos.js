@@ -85,6 +85,7 @@ function toDate(val) {
   return isNaN(d.getTime()) ? null : d;
 }
 
+const TAB_SIN_LEER = 'sin_leer';
 const TAB_ESTADOS = {
   proceso: ['en_proceso'],
   alistamiento: ['alistamiento'],
@@ -222,6 +223,11 @@ function iniciarChatNotifListener(perfil) {
   });
 }
 
+// Los mensajes se muestran como texto, nunca como HTML (local: crm-utils.js puede estar en caché)
+function escaparTexto(texto) {
+  return String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
 function contarMensajesNoLeidos(ordenId) {
   const mensajes = mensajesPorOrden.get(ordenId);
   if (!mensajes || mensajes.length === 0) return 0;
@@ -233,16 +239,15 @@ function contarMensajesNoLeidos(ordenId) {
 }
 
 function actualizarBadgeGlobalChat() {
-  // Solo contar órdenes que aparecen como tarjeta en algún tab de Despachos
-  const estadosVisibles = new Set(Object.values(TAB_ESTADOS).flat());
-  const idsVisibles = new Set(
-    todasLasOrdenes.filter(o => estadosVisibles.has(o.estado)).map(o => o.id)
-  );
+  // Todas las órdenes cargadas, sin importar su estado (igual que la pestaña "Sin leer")
+  const idsVisibles = new Set(todasLasOrdenes.map(o => o.id));
   let total = 0;
   for (const ordenId of mensajesPorOrden.keys()) {
     if (!idsVisibles.has(ordenId)) continue;
     if (contarMensajesNoLeidos(ordenId) > 0) total++;
   }
+  const cuentaTab = $('tabCountSinLeer');
+  if (cuentaTab) cuentaTab.textContent = total;
   const label = total > 99 ? '99+' : String(total);
   ['navChatBadgeOrdenes', 'navChatBadgeDespachos'].forEach(id => {
     const el = $(id);
@@ -278,10 +283,7 @@ function renderBadgeChatNoLeidos(ordenId) {
 }
 
 window.marcarTodasLasVisiblesLeidas = async function() {
-  const estadosVisibles = new Set(Object.values(TAB_ESTADOS).flat());
-  const idsVisibles = new Set(
-    todasLasOrdenes.filter(o => estadosVisibles.has(o.estado)).map(o => o.id)
-  );
+  const idsVisibles = new Set(todasLasOrdenes.map(o => o.id));
   const ahoraIso = new Date().toISOString();
   const updates = {};
   for (const ordenId of mensajesPorOrden.keys()) {
@@ -302,8 +304,16 @@ window.marcarTodasLasVisiblesLeidas = async function() {
   }
 };
 
-async function marcarOrdenLeida(ordenId) {
+// Marca = ahora, o el último mensaje si el reloj de quien lo envió iba adelantado
+// (si no, ese mensaje seguiría contando como no leído).
+function marcaLectura(ordenId) {
   const ahoraIso = new Date().toISOString();
+  const ultimo = (mensajesPorOrden.get(ordenId) || []).reduce((max, m) => (m.created_at || '') > max ? m.created_at : max, '');
+  return ultimo > ahoraIso ? ultimo : ahoraIso;
+}
+
+async function marcarOrdenLeida(ordenId) {
+  const ahoraIso = marcaLectura(ordenId);
   chatLecturas.set(ordenId, ahoraIso);
   actualizarBadgeGlobalChat();
   actualizarBadgesEnCards();
@@ -428,8 +438,12 @@ function actualizarTabCounts() {
 
 // ═══════════ FILTROS ═══════════
 function aplicarFiltrosYRender() {
+  // Pestaña "Con mensajes sin leer": cualquier estado. La lista se calcula al entrar en la
+  // pestaña (o al cambiar órdenes/filtros), no al leer: así la tarjeta cuyo chat se abre no desaparece.
   const estadosTab = TAB_ESTADOS[tabActual] || [];
-  let filtradas = todasLasOrdenes.filter(o => estadosTab.includes(o.estado));
+  let filtradas = tabActual === TAB_SIN_LEER
+    ? todasLasOrdenes.filter(o => contarMensajesNoLeidos(o.id) > 0)
+    : todasLasOrdenes.filter(o => estadosTab.includes(o.estado));
 
   // Filtro texto
   const texto = $('filtroTexto')?.value;
@@ -1318,8 +1332,8 @@ function renderMensajes(ordenId, mensajes) {
     const esPropio = m.usuario === currentUser.email || m.usuario_id === currentUser.uid;
     return `
       <div class="crm-chat-msg ${esPropio ? 'crm-chat-msg--own' : 'crm-chat-msg--other'}">
-        <div class="crm-chat-msg-user">${m.usuario_nombre || m.usuario || 'Sistema'}</div>
-        <div>${m.mensaje}</div>
+        <div class="crm-chat-msg-user">${escaparTexto(m.usuario_nombre || m.usuario || 'Sistema')}</div>
+        <div style="white-space:pre-wrap;">${escaparTexto(m.mensaje)}</div>
         <div class="crm-chat-msg-time">${tiempoRelativo(m.created_at)}</div>
       </div>
     `;
@@ -1349,6 +1363,7 @@ window.enviarMensaje = async function(ordenId) {
     });
   } catch (error) {
     console.error('Error enviando mensaje:', error);
+    if (!input.value) input.value = mensaje; // no perder lo escrito
     showToast('Error al enviar mensaje', 'error');
   }
 };

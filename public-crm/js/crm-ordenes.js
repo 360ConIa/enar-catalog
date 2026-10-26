@@ -58,6 +58,7 @@ let unsubOrdenesList = []; // múltiples listeners para vendedor (propias + asig
 let unsubChatNotif = null;
 let mensajesPorOrden = new Map(); // ordenId -> [{id, created_at, usuario_id}]
 let chatLecturas = new Map(); // ordenId -> lastReadIso
+const FILTRO_SIN_LEER = '__sin_leer'; // opción del filtro de estado: órdenes con mensajes sin leer
 let ordenEditandoId = null;
 let productosPorCodigo = new Map(); // cod_interno → producto (O(1) lookup)
 let chatUnsubDetalle = null; // listener del chat del modal detalle
@@ -273,6 +274,11 @@ function iniciarChatNotifListener(perfil) {
   });
 }
 
+// Los mensajes se muestran como texto, nunca como HTML (local: crm-utils.js puede estar en caché)
+function escaparTexto(texto) {
+  return String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
 function contarMensajesNoLeidos(ordenId) {
   const mensajes = mensajesPorOrden.get(ordenId);
   if (!mensajes || mensajes.length === 0) return 0;
@@ -291,6 +297,8 @@ function actualizarBadgeGlobalChat() {
     if (!idsVisibles.has(ordenId)) continue;
     if (contarMensajesNoLeidos(ordenId) > 0) total++;
   }
+  const opcion = document.querySelector(`#filtroEstado option[value="${FILTRO_SIN_LEER}"]`);
+  if (opcion) opcion.textContent = `💬 Con mensajes sin leer (${total})`;
   const label = total > 99 ? '99+' : String(total);
   ['navChatBadgeOrdenes', 'navChatBadgeDespachos'].forEach(id => {
     const el = $(id);
@@ -333,8 +341,16 @@ window.marcarTodasLasVisiblesLeidas = async function() {
   }
 };
 
-async function marcarOrdenLeida(ordenId) {
+// Marca = ahora, o el último mensaje si el reloj de quien lo envió iba adelantado
+// (si no, ese mensaje seguiría contando como no leído).
+function marcaLectura(ordenId) {
   const ahoraIso = new Date().toISOString();
+  const ultimo = (mensajesPorOrden.get(ordenId) || []).reduce((max, m) => (m.created_at || '') > max ? m.created_at : max, '');
+  return ultimo > ahoraIso ? ultimo : ahoraIso;
+}
+
+async function marcarOrdenLeida(ordenId) {
+  const ahoraIso = marcaLectura(ordenId);
   chatLecturas.set(ordenId, ahoraIso);
   actualizarBadgeGlobalChat();
   aplicarFiltros();
@@ -392,7 +408,8 @@ function aplicarFiltros() {
   }
 
   const estado = $('filtroEstado')?.value;
-  if (estado) filtradas = filtradas.filter(o => o.estado === estado);
+  if (estado === FILTRO_SIN_LEER) filtradas = filtradas.filter(o => contarMensajesNoLeidos(o.id) > 0);
+  else if (estado) filtradas = filtradas.filter(o => o.estado === estado);
 
   const desde = $('filtroDesde')?.value;
   if (desde) {
@@ -750,8 +767,8 @@ function renderMensajesDetalle(mensajes) {
     const esPropio = m.usuario === currentUser.email || m.usuario_id === currentUser.uid;
     return `
       <div class="crm-chat-msg ${esPropio ? 'crm-chat-msg--own' : 'crm-chat-msg--other'}">
-        <div class="crm-chat-msg-user">${m.usuario_nombre || m.usuario || 'Sistema'}</div>
-        <div>${m.mensaje}</div>
+        <div class="crm-chat-msg-user">${escaparTexto(m.usuario_nombre || m.usuario || 'Sistema')}</div>
+        <div style="white-space:pre-wrap;">${escaparTexto(m.mensaje)}</div>
         <div class="crm-chat-msg-time">${tiempoRelativo(m.created_at)}</div>
       </div>
     `;
@@ -781,6 +798,7 @@ window.enviarMensajeDetalle = async function(ordenId) {
     });
   } catch (error) {
     console.error('Error enviando mensaje:', error);
+    if (!input.value) input.value = mensaje; // no perder lo escrito
     showToast('Error al enviar mensaje', 'error');
   }
 };

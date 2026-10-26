@@ -188,8 +188,59 @@ COTIZACIONES = {'perfiles': COT_P, 'casos': [
     caso('Vendedor borra cotización', 'V', 'delete', _R, _C1, 'DENY'),
 ]}
 
+# ─── Batería: mensajería interna — quien lee responde, lecturas por usuario (2026-10-26) ───
+MSJ_P = {
+    'ADM': {'rol': 'admin', 'email': 'a@test.co'}, 'G': {'rol': 'gestor', 'email': 'g@test.co'},
+    'VI': {'rol': 'vendedor', 'email': 'vi@test.co', 'vendedor_externo': False},
+    'VS': {'rol': 'vendedor', 'email': 'vs@test.co'},
+    'VE': {'rol': 'vendedor', 'email': 've@test.co', 'vendedor_externo': True},
+    'D': {'rol': 'despachos', 'email': 'd@test.co'},
+    'K': {'rol': 'cliente', 'estado': 'aprobado', 'email': 'k@test.co'},
+}
+_ORD_MSJ = {'ordenes/oVE': {'creadaPor': 'VE', 'user_id': 'K'}, 'ordenes/oVI': {'creadaPor': 'VI', 'user_id': 'K'}}
+_LEC = {'chat_lecturas': {'oVI': '2026-10-26T10:00:00.000Z'}}
+_LEC_NUEVA = {'chat_lecturas': {'oVI': '2026-10-26T11:00:00.000Z'}}
+MENSAJERIA = {'perfiles': MSJ_P, 'documentos': _ORD_MSJ, 'casos': [
+    # Quien lee, responde (misma condición)
+    caso('Admin lee mensajes de una orden', 'ADM', 'get', 'chat_ordenes/m1', _m('oVI', 'D'), 'ALLOW'),
+    caso('Admin responde', 'ADM', 'create', 'chat_ordenes/m1', _m('oVI', 'ADM'), 'ALLOW'),
+    caso('Gestor consulta mensajes sin filtro', 'G', 'list', 'chat_ordenes/m1', _m('oVE', 'D'), 'ALLOW'),
+    caso('Gestor responde', 'G', 'create', 'chat_ordenes/m1', _m('oVE', 'G'), 'ALLOW'),
+    caso('Vendedor interno consulta mensajes sin filtro', 'VI', 'list', 'chat_ordenes/m1', _m('oVE', 'D'), 'ALLOW'),
+    caso('Vendedor interno responde en su orden', 'VI', 'create', 'chat_ordenes/m1', _m('oVI', 'VI'), 'ALLOW'),
+    caso('Vendedor interno responde en orden de otro', 'VI', 'create', 'chat_ordenes/m1', _m('oVE', 'VI'), 'ALLOW'),
+    caso('Vendedor sin el campo (= interno) lee y responde', 'VS', 'create', 'chat_ordenes/m1', _m('oVE', 'VS'), 'ALLOW'),
+    caso('Despachos lee', 'D', 'get', 'chat_ordenes/m1', _m('oVE', 'VI'), 'ALLOW'),
+    caso('Despachos responde', 'D', 'create', 'chat_ordenes/m1', _m('oVE', 'D'), 'ALLOW'),
+    caso('Externo lee su orden', 'VE', 'get', 'chat_ordenes/m1', _m('oVE', 'D'), 'ALLOW'),
+    caso('Externo responde en su orden', 'VE', 'create', 'chat_ordenes/m1', _m('oVE', 'VE'), 'ALLOW'),
+    caso('Externo lee orden ajena', 'VE', 'get', 'chat_ordenes/m1', _m('oVI', 'D'), 'DENY'),
+    caso('Externo responde en orden ajena', 'VE', 'create', 'chat_ordenes/m1', _m('oVI', 'VE'), 'DENY'),
+    caso('Externo consulta todos los mensajes sin filtro', 'VE', 'list', 'chat_ordenes/m1', _m('oVI', 'D'), 'DENY'),
+    caso('Cliente lee mensajes de su orden', 'K', 'get', 'chat_ordenes/m1', _m('oVI', 'D'), 'DENY'),
+    caso('Cliente consulta mensajes', 'K', 'list', 'chat_ordenes/m1', _m('oVI', 'D'), 'DENY'),
+    caso('Cliente escribe en su orden', 'K', 'create', 'chat_ordenes/m1', _m('oVI', 'K'), 'DENY'),
+    caso('Sin sesión escribe', None, 'create', 'chat_ordenes/m1', _m('oVI', 'VI'), 'DENY'),
+    # El mensaje va a nombre de quien lo escribe; no se editan; borrar solo admin
+    caso('Vendedor escribe a nombre de despachos', 'VI', 'create', 'chat_ordenes/m1', _m('oVI', 'D'), 'DENY'),
+    caso('Externo escribe a nombre de otro en su orden', 'VE', 'create', 'chat_ordenes/m1', _m('oVE', 'VI'), 'DENY'),
+    caso('Vendedor edita un mensaje ajeno', 'VI', 'update', 'chat_ordenes/m1', _m('oVI', 'D'), 'DENY', {'mensaje': 'y'}),
+    caso('Despachos marca leído en el mensaje (no se usa)', 'D', 'update', 'chat_ordenes/m1', _m('oVI', 'VI'), 'DENY', {'leido_por': ['D']}),
+    caso('Admin borra un mensaje', 'ADM', 'delete', 'chat_ordenes/m1', _m('oVI', 'D'), 'ALLOW'),
+    caso('Vendedor borra un mensaje', 'VI', 'delete', 'chat_ordenes/m1', _m('oVI', 'VI'), 'DENY'),
+    # Lecturas por usuario: usuarios/{uid}.chat_lecturas, solo su dueño
+    caso('Vendedor interno guarda su lectura', 'VI', 'update', 'usuarios/VI', {**MSJ_P['VI'], **_LEC}, 'ALLOW', _LEC_NUEVA),
+    caso('Externo guarda su lectura', 'VE', 'update', 'usuarios/VE', MSJ_P['VE'], 'ALLOW', _LEC_NUEVA),
+    caso('Despachos guarda su lectura', 'D', 'update', 'usuarios/D', MSJ_P['D'], 'ALLOW', _LEC_NUEVA),
+    caso('Gestor guarda su lectura', 'G', 'update', 'usuarios/G', MSJ_P['G'], 'ALLOW', _LEC_NUEVA),
+    caso('Admin guarda su lectura', 'ADM', 'update', 'usuarios/ADM', MSJ_P['ADM'], 'ALLOW', _LEC_NUEVA),
+    caso('Vendedor cambia la lectura de despachos', 'VI', 'update', 'usuarios/D', {**MSJ_P['D'], **_LEC}, 'DENY', _LEC_NUEVA),
+    caso('Despachos cambia la lectura de un vendedor', 'D', 'update', 'usuarios/VI', {**MSJ_P['VI'], **_LEC}, 'DENY', _LEC_NUEVA),
+    caso('Vendedor sigue editando datos de un cliente', 'VI', 'update', 'usuarios/K', MSJ_P['K'], 'ALLOW', {'telefono': '300'}),
+]}
+
 BATERIAS = {'visibilidad': VISIBILIDAD, 'despacho': DESPACHO, 'externo': EXTERNO,
-            'chat': CHAT, 'cotizaciones': COTIZACIONES}
+            'chat': CHAT, 'cotizaciones': COTIZACIONES, 'mensajeria': MENSAJERIA}
 
 
 def a_test_case(c, perfiles, mocks):

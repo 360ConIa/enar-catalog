@@ -103,8 +103,17 @@ Sigue abierta RN-03 (D-05, Henry).
 - **RN-34 Lo despachado manda.** El detalle de orden (admin, vendedor y cliente) muestra por ítem
   cantidad pedida y despachada, resalta diferencias y recalcula el total con lo despachado
   (ítems sin registrar cuentan con lo pedido).
-- **RN-35 Mensajes internos de despacho** (`chat_ordenes`): solo personal (admin, gestor,
-  vendedor, despachos) y solo de órdenes que ese usuario puede leer. **El cliente nunca los ve.**
+- **RN-35 Mensajes internos** (`chat_ordenes`): solo personal (admin, gestor, vendedor,
+  despachos) y solo de órdenes que ese usuario puede leer. **Quien los lee puede responderlos**
+  (misma condición en firestore.rules; vendedor externo solo en las órdenes que creó). Cada
+  mensaje va a nombre de quien lo escribe (`usuario_id`), no se edita y solo el admin lo borra.
+  **El cliente nunca los ve.** Se responde desde el detalle de orden (admin, vendedor, CRM
+  Órdenes) y desde la tarjeta en Despachos.
+- **RN-38 Mensajes sin leer.** Por usuario: `usuarios/{uid}.chat_lecturas.{ordenId}` = momento
+  en que vio esa conversación; sin leer = mensajes **de otros** posteriores a esa marca. Solo su
+  dueño cambia su `chat_lecturas`. Contador en la cabecera y en cada orden, en tiempo real; se
+  limpia al abrir el chat de esa orden. Opción de filtro "Con mensajes sin leer (N)" en admin,
+  vendedor y CRM Órdenes, y pestaña equivalente en Despachos, sin importar el estado.
 - **RN-36 Historial para el cliente.** El cliente ve solo los cambios de estado con su fecha, sin
   notas internas (quién, alistamiento, reversiones, motivos).
 - **RN-37 CSV de despacho.** Por orden, con precio sin IVA por línea (para el ERP).

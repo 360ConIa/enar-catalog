@@ -110,12 +110,13 @@ service cloud.firestore {
       // Usuario puede actualizar su propio doc (datos limitados)
       // Admin, gestor y vendedores pueden actualizar cualquier usuario
       // Ni el propio usuario ni los vendedores pueden cambiar campos sensibles: comerciales
-      // (estado, tipo_cliente, crédito...) ni de permisos (rol, comercial_lider, vendedor_externo)
+      // (estado, tipo_cliente, crédito...) ni de permisos (rol, comercial_lider, vendedor_externo).
+      // chat_lecturas (mensajes leídos) solo lo cambia su dueño: un vendedor no toca el de otro.
       allow update: if isAuthenticated() && (
         (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional', 'rol', 'comercial_lider', 'vendedor_externo'])) ||
         isAdmin() ||
         isUserManager() ||
-        (isVendedor() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional', 'rol', 'comercial_lider', 'vendedor_externo']))
+        (isVendedor() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'tipo_cliente', 'limite_credito', 'plazo_pago', 'descuento_adicional', 'rol', 'comercial_lider', 'vendedor_externo', 'chat_lecturas']))
       );
 
       // Solo admin puede eliminar usuarios
@@ -198,22 +199,30 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Chat de órdenes (mensajes internos): solo personal (CRM users), nunca clientes,
-    // y solo de órdenes que ese usuario puede leer. Hoy solo restringe al vendedor
-    // externo (únicamente sus órdenes, creadaPor); el resto del personal lee todas.
-    // Dos reglas separadas: la del personal no depende del documento, así sus consultas
-    // sin filtro (avisos de chat del CRM) se aprueban; las del externo deben filtrar por
-    // orden_id. Eliminar solo admin.
+    // Chat de órdenes (mensajes internos): solo personal, nunca clientes. Quien puede
+    // leer los mensajes de una orden también puede responderlos: lectura y escritura usan
+    // la misma condición, esPersonalChat() || esExternoDeLaOrden(orden del mensaje).
+    //   - Personal interno (admin, gestor, vendedor interno, despachos): todas las órdenes.
+    //     Va primero y no depende del documento: `||` corta ahí, así sus consultas sin
+    //     filtro (avisos de mensajes sin leer) se aprueban.
+    //   - Vendedor externo: solo órdenes que él creó (creadaPor); sus consultas deben
+    //     filtrar por orden_id.
+    // Al escribir, el mensaje va a su nombre (usuario_id). Los mensajes no se editan;
+    // borrar solo admin. Lo leído por cada usuario va en usuarios/{uid}.chat_lecturas.
+    function esPersonalChat() {
+      return isCRM() && !esVendedorExterno();
+    }
+
     function esExternoDeLaOrden(ordenId) {
       return esVendedorExterno() &&
         get(/databases/$(database)/documents/ordenes/$(ordenId)).data.creadaPor == request.auth.uid;
     }
 
     match /chat_ordenes/{mensajeId} {
-      allow read, update: if isCRM() && !esVendedorExterno();
-      allow read, update: if esExternoDeLaOrden(resource.data.orden_id);
-      allow create: if isCRM() && !esVendedorExterno();
-      allow create: if esExternoDeLaOrden(request.resource.data.orden_id);
+      allow read: if esPersonalChat() || esExternoDeLaOrden(resource.data.orden_id);
+      allow create: if (esPersonalChat() || esExternoDeLaOrden(request.resource.data.orden_id)) &&
+        request.resource.data.usuario_id == request.auth.uid;
+      allow update: if false;
       allow delete: if isAdmin();
     }
 

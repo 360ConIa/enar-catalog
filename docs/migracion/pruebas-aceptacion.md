@@ -7,8 +7,8 @@ de prueba, nunca contra producción.
 Tipos de verificación:
 - **R** — reglas de Firestore con la API de prueba de reglas (`firebaserules.googleapis.com …:test`)
   o el emulador. Las baterías actuales están en `tests/reglas/probar_reglas.py` y pasan contra
-  producción: 73 casos (visibilidad 9, despacho 11, vendedor externo 22, chat 13,
-  cotizaciones 18). Ejecutar: `python3 tests/reglas/probar_reglas.py`.
+  producción: 106 casos (visibilidad 9, despacho 11, vendedor externo 22, chat 13,
+  cotizaciones 18, mensajería 33). Ejecutar: `python3 tests/reglas/probar_reglas.py`.
 - **E** — extremo a extremo en navegador (Playwright), con usuarios de prueba por rol.
 - **U** — prueba unitaria de una función pura (precio, totales, estados).
 
@@ -63,8 +63,11 @@ Usuarios de prueba en staging: `admin`, `gestor`, `vendedor-interno`, `vendedor-
 | PA-4.4 | Despachos marca en el alistamiento, con ítems en orden de cargue distinto al guardado: cada `cantidad_real` queda en el producto correcto | 33 | E |
 | PA-4.5 | Orden con un ítem 12 → 10 y otro 3 → 0 (sin stock): el detalle muestra pedida/despachada resaltadas y total recalculado (caso real: ORD-261024-88956, total pedido 1.003.194 → despachado 785.782) | 34 | U, E |
 | PA-4.6 | El cliente ve las cantidades despachadas pero **no** los mensajes internos ni las notas del historial | 34, 35, 36 | E, R |
-| PA-4.7 | `vendedor-externo` lee y escribe mensajes solo de sus órdenes; personal interno, de todas; cliente, de ninguna | 35 | R |
+| PA-4.7 | `vendedor-externo` lee y escribe mensajes solo de sus órdenes; personal interno, de todas; cliente, de ninguna. Nadie escribe a nombre de otro ni edita mensajes | 35 | R |
 | PA-4.8 | CSV de despacho: precio sin IVA por línea y totales coherentes con RN-12 | 37 | U |
+| PA-4.9 | Despachos escribe en una orden: a `vendedor-interno` y `gestor` les aparece el contador (cabecera, orden y filtro) sin recargar; el autor no lo ve; al abrir el chat se limpia solo para quien lo abrió | 38 | E, U |
+| PA-4.10 | `vendedor-interno` responde desde el detalle de orden del B2B; el mensaje aparece en el CRM en vivo | 35 | E |
+| PA-4.11 | Un usuario no puede cambiar el `chat_lecturas` de otro | 38 | R |
 
 ## PA-5 Catálogo, imágenes y agente
 

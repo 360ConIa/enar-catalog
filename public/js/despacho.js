@@ -98,7 +98,8 @@ export async function leerOrdenActual(ordenId) {
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
-/** Mensajes internos de despacho. Solo para personal (admin, gestor, vendedor) */
+/** Mensajes internos de despacho. Solo para personal (admin, gestor, vendedor).
+ *  Las pantallas actuales usan chat-ordenes.js; se conserva para páginas en caché. */
 export async function cargarMensajesDespacho(ordenId) {
   const snap = await getDocs(query(collection(db(), 'chat_ordenes'), where('orden_id', '==', ordenId), orderBy('created_at', 'asc')));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
