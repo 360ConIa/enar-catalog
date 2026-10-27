@@ -221,6 +221,42 @@
   min-width: 250px;
 }
 
+/* Interruptor "Con mensaje" de Despachos: mismo aspecto que el subestado Con mensaje
+   (contorno azul, ícono de chat relleno) y misma caja que .crm-input/.crm-select */
+.crm-filtro-mensaje {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--subestado-color, #1d4ed8);
+  border-radius: var(--crm-radius-sm);
+  background: white;
+  color: var(--subestado-color, #1d4ed8);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: normal;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.crm-filtro-mensaje:hover { background: #eff6ff; }
+.crm-filtro-mensaje.activo {
+  background: #dbeafe;
+  box-shadow: inset 0 0 0 1px var(--subestado-color, #1d4ed8);
+}
+.crm-filtro-mensaje-cuenta {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--subestado-color, #1d4ed8);
+  color: white;
+  font-size: 0.72rem;
+  line-height: 18px;
+  text-align: center;
+}
+
 /* ═══════════ BADGES DE ESTADO ═══════════ */
 
 /* Etiquetas de estado de orden: tabla única en js/estados-orden.js */
@@ -1485,6 +1521,7 @@
   .crm-filtros .crm-input,
   .crm-filtros .crm-select,
   .crm-filtros .crm-btn,
+  .crm-filtros .crm-filtro-mensaje,
   .crm-filtros .selector-estado {
     width: 100%;
     min-width: 0;

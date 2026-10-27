@@ -23,7 +23,7 @@ import {
   obtenerReversion, puedeRegresarEstado,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js?v=20261026e';
-import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261026e';
+import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, usarContadorNoLeidos, infoSubestado } from './estados-orden.js?v=20261026e';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -262,7 +262,26 @@ function actualizarBadgeGlobalChat() {
   });
 }
 
+// ═══════════ INTERRUPTOR "CON MENSAJE" ═══════════
+// Mismo contenido y colores que el subestado Con mensaje (estados-orden.js). El contador es
+// el de órdenes de la pestaña actual con mensajes sin leer del usuario.
+let soloConMensaje = false;
+
+function pintarFiltroConMensaje() {
+  const btn = $('filtroConMensaje');
+  if (!btn) return;
+  const sub = infoSubestado('con_mensaje');
+  const estadosTab = TAB_ESTADOS[tabActual] || [];
+  const n = todasLasOrdenes.filter(o => estadosTab.includes(normalizarEstado(o.estado)) && contarMensajesNoLeidos(o.id) > 0).length;
+  btn.style.setProperty('--subestado-color', sub.texto);
+  btn.classList.toggle('activo', soloConMensaje);
+  btn.setAttribute('aria-pressed', String(soloConMensaje));
+  btn.title = soloConMensaje ? 'Mostrando solo órdenes con mensajes sin leer. Clic para ver todas' : 'Ver solo órdenes con mensajes sin leer';
+  btn.innerHTML = `<i class="bi ${sub.icono}" aria-hidden="true"></i>${sub.etiqueta}<span class="crm-filtro-mensaje-cuenta">${n}</span>`;
+}
+
 function actualizarBadgesEnCards() {
+  pintarFiltroConMensaje();
   todasLasOrdenes.forEach(o => {
     // Subestado de Alistamiento (Con mensaje / Sin mensaje) en la tarjeta
     const estado = $(`estadoCard-${o.id}`);
@@ -442,10 +461,13 @@ function actualizarTabCounts() {
 
 // ═══════════ FILTROS ═══════════
 function aplicarFiltrosYRender() {
-  // Pestaña "Con mensajes sin leer": cualquier estado. La lista se calcula al entrar en la
-  // pestaña (o al cambiar órdenes/filtros), no al leer: así la tarjeta cuyo chat se abre no desaparece.
   const estadosTab = TAB_ESTADOS[tabActual] || [];
   let filtradas = todasLasOrdenes.filter(o => estadosTab.includes(normalizarEstado(o.estado)));
+
+  // Interruptor "Con mensaje": solo órdenes de la pestaña con mensajes sin leer. La lista se
+  // calcula al cambiar pestaña, filtros u órdenes, no al leer: así la tarjeta cuyo chat se
+  // abre no desaparece mientras se lee.
+  if (soloConMensaje) filtradas = filtradas.filter(o => contarMensajesNoLeidos(o.id) > 0);
 
   // Filtro texto
   const texto = $('filtroTexto')?.value;
@@ -477,6 +499,7 @@ function aplicarFiltrosYRender() {
 
   ordenesFiltradas = filtradas;
   paginador.paginaActual = 1;
+  pintarFiltroConMensaje(); // el contador es de la pestaña actual
   renderizarOrdenes();
 }
 
@@ -1397,6 +1420,12 @@ function initEventListeners() {
   $('filtroRuta')?.addEventListener('change', () => aplicarFiltrosYRender());
   $('filtroDesde')?.addEventListener('change', () => aplicarFiltrosYRender());
   $('filtroHasta')?.addEventListener('change', () => aplicarFiltrosYRender());
+  $('filtroConMensaje')?.addEventListener('click', () => {
+    soloConMensaje = !soloConMensaje;
+    pintarFiltroConMensaje();
+    aplicarFiltrosYRender();
+  });
+  pintarFiltroConMensaje();
 }
 
 // Cleanup on page leave
