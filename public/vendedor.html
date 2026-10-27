@@ -166,7 +166,7 @@
       </div>
     </div>
     <nav class="crm-header-nav">
-      <a href="vendedor.html" style="background:#D9232D;color:white;">Órdenes<span id="navChatBadge" class="chat-badge-cabecera" title="Ver órdenes con mensajes sin leer" onclick="verOrdenesSinLeer(event)"></span></a>
+      <a href="vendedor.html" style="background:#D9232D;color:white;">Órdenes<span id="navChatBadge" class="chat-badge-cabecera" title="Órdenes con mensajes sin leer"></span></a>
       <a href="/">Catálogo</a>
       <div class="nav-user-dropdown">
         <a onclick="document.getElementById('navUserMenu').classList.toggle('open');event.stopPropagation();" id="navUserName"><i class="bi bi-person-circle"></i> <i class="bi bi-caret-down-fill"></i></a>
@@ -229,7 +229,6 @@
       </select>
       <select class="filtro-input" id="filtroEstado">
         <option value="">Todos los estados</option>
-        <option value="__sin_leer">💬 Con mensajes sin leer (0)</option>
         <!-- Estados y subestados: js/estados-orden.js (opcionesFiltroEstado) -->
       </select>
       <div class="filtro-date-wrap" id="grupoDesde">
@@ -476,6 +475,6 @@
       });
     });
   </script>
-  <script type="module" src="js/vendedor.js?v=20261026d"></script>
+  <script type="module" src="js/vendedor.js?v=20261026e"></script>
 </body>
 </html>

@@ -33,7 +33,7 @@ import {
 import {
   getAuth
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { etiquetaEstado, etiquetaEstadoOrden, htmlEstado, subestadoAlCerrar } from './estados-orden.js?v=20261026d';
+import { etiquetaEstado, etiquetaEstadoOrden, htmlEstado, subestadoAlCerrar } from './estados-orden.js?v=20261026e';
 
 // Configuración Firebase
 const firebaseConfig = {

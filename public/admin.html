@@ -694,7 +694,7 @@
       </div>
     </div>
     <nav class="crm-header-nav">
-      <a href="vendedor.html" id="navOrdenes">Órdenes<span id="navChatBadge" class="chat-badge-cabecera" title="Ver órdenes con mensajes sin leer" onclick="verOrdenesSinLeer(event)"></span></a>
+      <a href="vendedor.html" id="navOrdenes">Órdenes<span id="navChatBadge" class="chat-badge-cabecera" title="Órdenes con mensajes sin leer"></span></a>
       <a href="/">Catálogo</a>
       <div class="nav-user-dropdown">
         <a onclick="document.getElementById('navUserMenu').classList.toggle('open');event.stopPropagation();" id="navUserName"><i class="bi bi-person-circle"></i> <i class="bi bi-caret-down-fill"></i></a>
@@ -738,7 +738,7 @@
         <button class="admin-tab" data-tab="ordenes">
           Órdenes
           <span class="badge" id="ordenesBadge">0</span>
-          <span id="ordenesChatBadge" class="chat-badge-cabecera" title="Ver órdenes con mensajes sin leer" onclick="verOrdenesSinLeer(event)"></span>
+          <span id="ordenesChatBadge" class="chat-badge-cabecera" title="Órdenes con mensajes sin leer"></span>
         </button>
         <button class="admin-tab" data-tab="productos">
           Productos
@@ -882,11 +882,8 @@
                   <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('', 'Todos los estados'); return false;">
                     Todos los estados
                   </a></li>
-                  <li><a class="dropdown-item" href="#" onclick="filtrarPorEstado('__sin_leer'); return false;">
-                    💬 Con mensajes sin leer (<span id="filtroSinLeerCuenta">0</span>)
-                  </a></li>
                   <li><hr class="dropdown-divider"></li>
-                  <!-- Estados, subestados de Cerrada y Cancelada: los pinta js/estados-orden.js (FILTROS_ESTADO) -->
+                  <!-- Estados y subestados (Alistamiento, Cerrada): los pinta js/estados-orden.js (FILTROS_ESTADO) -->
                   <li id="filtroEstadoOpciones" style="display:contents;"></li>
                 </ul>
               </div>
@@ -2001,14 +1998,14 @@
       ESTADOS_USUARIO,
       TIPOS_CLIENTE
     } from './js/user-manager.js';
-    import { htmlEstado, htmlFiltroEstado, etiquetaEstado, normalizarEstado, transicionesDe, coincideFiltroEstado, FILTROS_ESTADO } from './js/estados-orden.js?v=20261026d';
+    import { htmlEstado, htmlFiltroEstado, etiquetaEstado, normalizarEstado, transicionesDe, coincideFiltroEstado, FILTROS_ESTADO, usarContadorNoLeidos } from './js/estados-orden.js?v=20261026e';
     import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './js/despacho.js';
     import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './js/chat-ordenes.js';
     import {
       obtenerTodasLasOrdenes,
       actualizarEstadoOrden,
       formatearPrecio
-    } from './js/ordenes.js?v=20261026d';
+    } from './js/ordenes.js?v=20261026e';
     import { DEPARTAMENTOS_CIUDADES } from './js/colombia-data.js';
     import { obtenerDatosUsuario } from './js/auth.js';
     import { nombreLista, formatearNombreLista, setListasPrecios } from './js/firebase-config.js';
@@ -2046,7 +2043,7 @@
     let usuarioActual = null;          // { uid, email, nombre, rol } para los mensajes internos
     let avisosChat = null;             // mensajes sin leer de chat_ordenes (js/chat-ordenes.js)
     let cerrarConversacion = null;     // listener de la conversación abierta en el detalle
-    const FILTRO_SIN_LEER = '__sin_leer';
+    let ordenEnDetalle = null;         // orden abierta en el detalle (su subestado de alistamiento cambia al leer)
 
     // Toggle input "Otro" para selects de producto
     window.toggleOtroInput = function(select, inputId) {
@@ -3245,8 +3242,7 @@
           (o.numero_orden || '').toLowerCase().includes(busqueda) ||
           (o.cliente?.nombre || '').toLowerCase().includes(busqueda) ||
           (o.cliente?.email || '').toLowerCase().includes(busqueda);
-        const matchEstado = !filtroEstado ||
-          (filtroEstado === FILTRO_SIN_LEER ? avisosChat?.noLeidos(o.id) > 0 : coincideFiltroEstado(o, filtroEstado));
+        const matchEstado = coincideFiltroEstado(o, filtroEstado);
         return matchBusqueda && matchEstado;
       });
 
@@ -3379,6 +3375,7 @@
       const estadoEl = document.getElementById('detalleEstado');
       estadoEl.innerHTML = htmlEstado(orden);
       estadoEl.className = '';
+      ordenEnDetalle = orden;
 
       // Fecha
       document.getElementById('detalleFecha').textContent = formatearFecha(orden.created_at);
@@ -3445,25 +3442,17 @@
       });
     };
 
-    // Avisos de mensajes sin leer: cabecera, pestaña Órdenes y opción del filtro
+    // Avisos de mensajes sin leer: cabecera, pestaña Órdenes y cada fila (cualquier estado).
+    // En Alistamiento cambia además el subestado Con mensaje / Sin mensaje.
     function refrescarAvisosChat() {
       const n = avisosChat ? avisosChat.ordenesConNoLeidos(ordenes.map(o => o.id)) : 0;
       pintarBadgeChat(document.getElementById('navChatBadge'), n);
       pintarBadgeChat(document.getElementById('ordenesChatBadge'), n);
-      const cuenta = document.getElementById('filtroSinLeerCuenta');
-      if (cuenta) cuenta.textContent = n;
-      if (document.getElementById('filtroEstadoOrden').value === FILTRO_SIN_LEER) {
-        document.getElementById('filtroEstadoTexto').textContent = `💬 Con mensajes sin leer (${n})`;
+      if (ordenEnDetalle && document.getElementById('modalDetalleOrden').classList.contains('active')) {
+        document.getElementById('detalleEstado').innerHTML = htmlEstado(ordenEnDetalle);
       }
       if (ordenes.length) renderizarOrdenes(); // antes de cargar se mantiene 'Cargando órdenes...'
     }
-
-    window.verOrdenesSinLeer = function(event) {
-      event?.preventDefault();
-      event?.stopPropagation();
-      document.querySelector('.admin-tab[data-tab="ordenes"]')?.click();
-      filtrarPorEstado(FILTRO_SIN_LEER);
-    };
 
     // Cambiar estado rápido desde dropdown
     window.cambiarEstadoRapido = async function(ordenId, nuevoEstado) {
@@ -3586,10 +3575,7 @@
     window.filtrarPorEstado = function(estado, texto) {
       document.getElementById('filtroEstadoOrden').value = estado;
       const btnTexto = document.getElementById('filtroEstadoTexto');
-      if (estado === FILTRO_SIN_LEER) {
-        const n = avisosChat ? avisosChat.ordenesConNoLeidos(ordenes.map(o => o.id)) : 0;
-        btnTexto.textContent = `💬 Con mensajes sin leer (${n})`;
-      } else if (estado) {
+      if (estado) {
         btnTexto.innerHTML = htmlFiltroEstado(estado);
       } else {
         btnTexto.textContent = texto;
@@ -4694,6 +4680,8 @@
         lecturas: userData?.chat_lecturas,
         alCambiar: refrescarAvisosChat
       });
+      // Subestado de Alistamiento (Con mensaje / Sin mensaje): del contador de no leídos
+      usarContadorNoLeidos(id => avisosChat.noLeidos(id));
 
       // Mostrar nombre del usuario en link Perfil
       const navUserName = document.getElementById('navUserName');

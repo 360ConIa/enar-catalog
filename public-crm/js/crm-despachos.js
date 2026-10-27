@@ -22,8 +22,8 @@ import {
   tiempoRelativo, badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   obtenerReversion, puedeRegresarEstado,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
-} from './crm-utils.js?v=20261026d';
-import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado } from './estados-orden.js?v=20261026d';
+} from './crm-utils.js?v=20261026e';
+import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261026e';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -86,7 +86,6 @@ function toDate(val) {
   return isNaN(d.getTime()) ? null : d;
 }
 
-const TAB_SIN_LEER = 'sin_leer';
 const TAB_ESTADOS = {
   proceso: ['aprobada'],
   alistamiento: ['alistamiento'],
@@ -229,6 +228,9 @@ function escaparTexto(texto) {
   return String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
+// Subestado de Alistamiento (Con mensaje / Sin mensaje): del contador de no leídos
+usarContadorNoLeidos(id => (currentUser ? contarMensajesNoLeidos(id) : 0));
+
 function contarMensajesNoLeidos(ordenId) {
   const mensajes = mensajesPorOrden.get(ordenId);
   if (!mensajes || mensajes.length === 0) return 0;
@@ -247,8 +249,6 @@ function actualizarBadgeGlobalChat() {
     if (!idsVisibles.has(ordenId)) continue;
     if (contarMensajesNoLeidos(ordenId) > 0) total++;
   }
-  const cuentaTab = $('tabCountSinLeer');
-  if (cuentaTab) cuentaTab.textContent = total;
   const label = total > 99 ? '99+' : String(total);
   ['navChatBadgeOrdenes', 'navChatBadgeDespachos'].forEach(id => {
     const el = $(id);
@@ -264,6 +264,9 @@ function actualizarBadgeGlobalChat() {
 
 function actualizarBadgesEnCards() {
   todasLasOrdenes.forEach(o => {
+    // Subestado de Alistamiento (Con mensaje / Sin mensaje) en la tarjeta
+    const estado = $(`estadoCard-${o.id}`);
+    if (estado) estado.innerHTML = badgeEstado(o);
     const badge = $(`chatBadge-${o.id}`);
     if (!badge) return;
     const count = contarMensajesNoLeidos(o.id);
@@ -442,9 +445,7 @@ function aplicarFiltrosYRender() {
   // Pestaña "Con mensajes sin leer": cualquier estado. La lista se calcula al entrar en la
   // pestaña (o al cambiar órdenes/filtros), no al leer: así la tarjeta cuyo chat se abre no desaparece.
   const estadosTab = TAB_ESTADOS[tabActual] || [];
-  let filtradas = tabActual === TAB_SIN_LEER
-    ? todasLasOrdenes.filter(o => contarMensajesNoLeidos(o.id) > 0)
-    : todasLasOrdenes.filter(o => estadosTab.includes(normalizarEstado(o.estado)));
+  let filtradas = todasLasOrdenes.filter(o => estadosTab.includes(normalizarEstado(o.estado)));
 
   // Filtro texto
   const texto = $('filtroTexto')?.value;
@@ -531,7 +532,7 @@ function renderCardOrden(orden) {
             <div class="crm-despacho-fecha-creacion">${formatearFechaHora(orden.created_at)}</div>
           </div>
           <span class="crm-despacho-sep"></span>
-          ${badgeEstado(orden)}
+          <span id="estadoCard-${orden.id}">${badgeEstado(orden)}</span>
           <span class="crm-despacho-sep"></span>
           ${ubicacion ? `<span class="crm-despacho-ubicacion"><i class="bi bi-pin-map-fill"></i> ${ubicacion}</span><span class="crm-despacho-sep"></span>` : ''}
           <div class="crm-despacho-header-cliente">

@@ -12,6 +12,10 @@
  *
  * Estados (en este orden): pendiente · aprobada · alistamiento · cerrada · cancelada
  * Subestados de cerrada (campo ordenes.subestado): completa · parcial
+ * Subestados de alistamiento (calculados, NO se guardan): con_mensaje · sin_mensaje,
+ *   según el usuario actual tenga mensajes internos sin leer en esa orden. Cada página
+ *   que tiene el contador de no leídos lo conecta con usarContadorNoLeidos(); donde no
+ *   hay contador (vista del cliente, dashboard) Alistamiento se muestra sin subestado.
  *
  * Nombres anteriores (antes del 2026-10-26; los datos se migraron, pero pueden
  * llegar de páginas en caché o de datos viejos): en_proceso → aprobada,
@@ -38,7 +42,22 @@ export const SUBESTADOS_CERRADA = [
 ];
 
 export const ESTADOS = ESTADOS_ORDEN_TABLA.map(e => e.estado);
+// Subestados de alistamiento: mismo estilo; se calculan por usuario en tiempo real
+export const SUBESTADOS_ALISTAMIENTO = [
+  { subestado: 'con_mensaje', etiqueta: 'Con mensaje', icono: 'bi-chat-dots-fill', fondo: 'transparent', texto: '#1d4ed8', color: '#1d4ed8' },
+  { subestado: 'sin_mensaje', etiqueta: 'Sin mensaje', icono: 'bi-chat',           fondo: 'transparent', texto: '#6b7280', color: '#6b7280' },
+];
+
 export const SUBESTADOS = SUBESTADOS_CERRADA.map(s => s.subestado);
+const SUBESTADOS_POR_ESTADO = {
+  cerrada: SUBESTADOS,
+  alistamiento: SUBESTADOS_ALISTAMIENTO.map(s => s.subestado),
+};
+
+// Contador de mensajes sin leer del usuario actual (ordenId → número), lo conecta cada
+// página con chat (admin, vendedor, CRM Órdenes, Despachos).
+let contadorNoLeidos = null;
+export function usarContadorNoLeidos(fn) { contadorNoLeidos = typeof fn === 'function' ? fn : null; }
 
 // Nombres anteriores → { estado, subestado }
 const LEGADO = {
@@ -51,7 +70,7 @@ const LEGADO = {
 const SUB_LEGADO = { completada: 'completa', completo: 'completa' };
 
 const POR_ESTADO = Object.fromEntries(ESTADOS_ORDEN_TABLA.map(e => [e.estado, e]));
-const POR_SUB = Object.fromEntries(SUBESTADOS_CERRADA.map(s => [s.subestado, s]));
+const POR_SUB = Object.fromEntries([...SUBESTADOS_CERRADA, ...SUBESTADOS_ALISTAMIENTO].map(s => [s.subestado, s]));
 const DESCONOCIDO = { icono: 'bi-question-circle', fondo: '#f1f5f9', texto: '#475569', color: '#94a3b8' };
 
 /** Estado vigente (traduce los nombres anteriores) */
@@ -61,7 +80,13 @@ export function normalizarEstado(estado) {
 
 /** Subestado de una orden cerrada ('completa' | 'parcial' | null) */
 export function subestadoDe(orden) {
-  if (!orden || normalizarEstado(orden.estado) !== 'cerrada') return null;
+  if (!orden) return null;
+  const estado = normalizarEstado(orden.estado);
+  if (estado === 'alistamiento') {
+    if (!contadorNoLeidos || !orden.id) return null;
+    return contadorNoLeidos(orden.id) > 0 ? 'con_mensaje' : 'sin_mensaje';
+  }
+  if (estado !== 'cerrada') return null;
   const s = orden.subestado;
   if (s) return SUB_LEGADO[s] || s;
   return LEGADO[orden.estado]?.subestado || null;
@@ -139,9 +164,13 @@ export function cambiosDeEstado(orden, nuevoEstado, nota = '') {
 }
 
 // ═══════════ FILTROS ═══════════
-// Valores del filtro de estado: los 5 estados y, bajo Cerrada, sus subestados.
+// Valores del filtro de estado: los 5 estados y, bajo Alistamiento y Cerrada, sus subestados.
 export const FILTROS_ESTADO = [
-  ...ESTADOS.slice(0, 4).map(e => ({ valor: e })),
+  { valor: 'pendiente' },
+  { valor: 'aprobada' },
+  { valor: 'alistamiento' },
+  ...SUBESTADOS_POR_ESTADO.alistamiento.map(s => ({ valor: `alistamiento/${s}`, sub: true })),
+  { valor: 'cerrada' },
   ...SUBESTADOS.map(s => ({ valor: `cerrada/${s}`, sub: true })),
   { valor: 'cancelada' },
 ];
@@ -227,7 +256,7 @@ export function htmlEstado(estadoUOrden, subestado, { enLinea = false } = {}) {
   const e = infoEstado(estado);
   const principal = pastilla(e, '', `data-estado="${e.estado}"`);
   const sub = orden ? subestadoDe(orden) : (subestado || LEGADO[estado]?.subestado || null);
-  if (e.estado !== 'cerrada' || !sub) return principal;
+  if (!sub || !(SUBESTADOS_POR_ESTADO[e.estado] || []).includes(sub)) return principal;
   return `<span class="estado-orden-grupo${enLinea ? ' estado-orden-grupo--linea' : ''}">${principal}${htmlSubestado(sub)}</span>`;
 }
 

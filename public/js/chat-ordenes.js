@@ -251,6 +251,6 @@ if (!document.getElementById('estilo-chat-badge')) {
   const s = document.createElement('style');
   s.id = 'estilo-chat-badge';
   s.textContent = `.chat-badge-no-leidos{position:absolute;top:-6px;right:-6px;background:#D9232D;color:#fff;border-radius:10px;padding:0 5px;font-size:10px;font-weight:700;min-width:16px;text-align:center;line-height:15px;pointer-events:none;border:1.5px solid #fff;}
-.chat-badge-cabecera{display:none;margin-left:6px;background:#fff;color:#D9232D;border:1.5px solid #D9232D;border-radius:10px;padding:0 6px;font-size:11px;font-weight:700;line-height:16px;cursor:pointer;vertical-align:middle;}`;
+.chat-badge-cabecera{display:none;margin-left:6px;background:#fff;color:#D9232D;border:1.5px solid #D9232D;border-radius:10px;padding:0 6px;font-size:11px;font-weight:700;line-height:16px;cursor:default;vertical-align:middle;}`;
   document.head.appendChild(s);
 }

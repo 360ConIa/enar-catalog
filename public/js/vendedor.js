@@ -23,8 +23,8 @@ import {
   badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio
-} from './crm-utils.js?v=20261026d';
-import { normalizarEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado } from './estados-orden.js?v=20261026d';
+} from './crm-utils.js?v=20261026e';
+import { normalizarEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261026e';
 import { cargarListasPrecios, nombreLista } from './firebase-config.js';
 import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './despacho.js';
 import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './chat-ordenes.js';
@@ -61,7 +61,7 @@ let productosPorCodigo = new Map(); // cod_interno → producto (O(1) lookup)
 const paginador = new Paginador(25);
 let avisosChat = null;          // mensajes sin leer de chat_ordenes (chat-ordenes.js)
 let cerrarConversacion = null;  // listener de la conversación abierta en el detalle
-const FILTRO_SIN_LEER = '__sin_leer';
+let ordenEnDetalle = null;      // orden abierta en el detalle (su subestado de alistamiento cambia al leer)
 const ROLES_EXCLUIDOS = ['vendedor', 'despachos', 'admin', 'gestor', 'administrador'];
 
 function sortItemsPorCargue(items) {
@@ -128,6 +128,8 @@ onAuthStateChanged(auth, async (user) => {
     lecturas: perfil.chat_lecturas,
     alCambiar: refrescarAvisosChat
   });
+  // Subestado de Alistamiento (Con mensaje / Sin mensaje): del contador de no leídos
+  usarContadorNoLeidos(id => avisosChat.noLeidos(id));
 
   await Promise.all([
     cargarClientes(),
@@ -237,8 +239,7 @@ function aplicarFiltros() {
   }
 
   const estado = $('filtroEstado')?.value;
-  if (estado === FILTRO_SIN_LEER) filtradas = filtradas.filter(o => avisosChat?.noLeidos(o.id) > 0);
-  else if (estado) filtradas = filtradas.filter(o => coincideFiltroEstado(o, estado));
+  if (estado) filtradas = filtradas.filter(o => coincideFiltroEstado(o, estado));
 
   const desde = $('filtroDesde')?.value;
   if (desde) {
@@ -258,23 +259,17 @@ function aplicarFiltros() {
 }
 
 // ═══════════ AVISOS DE MENSAJES SIN LEER ═══════════
-// Contador en la cabecera y en la opción del filtro; al hacer clic se filtran esas órdenes.
+// Contador en la cabecera y en cada fila (órdenes de cualquier estado). En Alistamiento
+// también cambia el subestado Con mensaje / Sin mensaje, que se recalcula aquí.
 function refrescarAvisosChat() {
   const n = avisosChat ? avisosChat.ordenesConNoLeidos(todasLasOrdenes.map(o => o.id)) : 0;
   pintarBadgeChat($('navChatBadge'), n);
-  const opcion = document.querySelector(`#filtroEstado option[value="${FILTRO_SIN_LEER}"]`);
-  if (opcion) { opcion.textContent = `💬 Con mensajes sin leer (${n})`; mejorarSelectorEstado($('filtroEstado')); }
+  const det = $('detalleEstadoOrden');
+  if (det && ordenEnDetalle && $('modalDetalle')?.classList.contains('open')) det.innerHTML = badgeEstado(ordenEnDetalle);
   if (!todasLasOrdenes.length) return; // aún cargando
-  if ($('filtroEstado')?.value === FILTRO_SIN_LEER) aplicarFiltros();
+  if (($('filtroEstado')?.value || '').includes('/')) aplicarFiltros(); // filtro por subestado
   else renderizarOrdenes();
 }
-
-window.verOrdenesSinLeer = function(event) {
-  event?.preventDefault();
-  event?.stopPropagation();
-  const sel = $('filtroEstado');
-  if (sel) { sel.value = FILTRO_SIN_LEER; mejorarSelectorEstado(sel); aplicarFiltros(); }
-};
 
 // ═══════════ HELPERS ORDEN→CLIENTE ═══════════
 function nombreCliente(o) {
@@ -408,7 +403,7 @@ window.verDetalleOrden = async function(ordenId) {
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Cliente</span><br><strong>${nombreCliente(orden)}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">NIT</span><br><strong>${nitCliente(orden)}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Fecha</span><br><strong>${formatearFecha(orden.created_at)}</strong></div>
-      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Estado</span><br>${badgeEstado(orden)}</div>
+      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Estado</span><br><span id="detalleEstadoOrden">${badgeEstado(orden)}</span></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Creada por</span><br><strong>${orden.creadaPorNombre || orden.creadaPorEmail || '-'}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">CSV Generado</span><br><strong>${orden.csv_generado ? 'Sí' : 'No'}</strong></div>
     </div>
@@ -458,6 +453,7 @@ window.verDetalleOrden = async function(ordenId) {
     ${transiciones.map(estado => htmlBotonEstado(estado, `cambiarEstadoOrden('${orden.id}', '${estado}')`)).join('')}`}
   `;
 
+  ordenEnDetalle = orden;
   $('modalDetalle').classList.add('open');
 
   // Mensajes internos (solo personal; firestore.rules: quien los lee puede responder).

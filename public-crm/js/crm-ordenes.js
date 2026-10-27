@@ -25,8 +25,8 @@ import {
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio,
   cargarListasPrecios, nombreLista
-} from './crm-utils.js?v=20261026d';
-import { normalizarEstado, subestadoDe, etiquetaEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado } from './estados-orden.js?v=20261026d';
+} from './crm-utils.js?v=20261026e';
+import { normalizarEstado, subestadoDe, etiquetaEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261026e';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -59,7 +59,7 @@ let unsubOrdenesList = []; // múltiples listeners para vendedor (propias + asig
 let unsubChatNotif = null;
 let mensajesPorOrden = new Map(); // ordenId -> [{id, created_at, usuario_id}]
 let chatLecturas = new Map(); // ordenId -> lastReadIso
-const FILTRO_SIN_LEER = '__sin_leer'; // opción del filtro de estado: órdenes con mensajes sin leer
+let ordenEnDetalle = null; // orden abierta en el detalle (su subestado de alistamiento cambia al leer)
 let ordenEditandoId = null;
 let productosPorCodigo = new Map(); // cod_interno → producto (O(1) lookup)
 let chatUnsubDetalle = null; // listener del chat del modal detalle
@@ -280,6 +280,9 @@ function escaparTexto(texto) {
   return String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
 
+// Subestado de Alistamiento (Con mensaje / Sin mensaje): del contador de no leídos
+usarContadorNoLeidos(id => (currentUser ? contarMensajesNoLeidos(id) : 0));
+
 function contarMensajesNoLeidos(ordenId) {
   const mensajes = mensajesPorOrden.get(ordenId);
   if (!mensajes || mensajes.length === 0) return 0;
@@ -298,8 +301,9 @@ function actualizarBadgeGlobalChat() {
     if (!idsVisibles.has(ordenId)) continue;
     if (contarMensajesNoLeidos(ordenId) > 0) total++;
   }
-  const opcion = document.querySelector(`#filtroEstado option[value="${FILTRO_SIN_LEER}"]`);
-  if (opcion) { opcion.textContent = `💬 Con mensajes sin leer (${total})`; mejorarSelectorEstado($('filtroEstado')); }
+  // Detalle abierto: el subestado de Alistamiento (Con mensaje / Sin mensaje) cambia al leer
+  const det = $('detalleEstadoOrden');
+  if (det && ordenEnDetalle && $('modalDetalle')?.classList.contains('open')) det.innerHTML = badgeEstado(ordenEnDetalle);
   const label = total > 99 ? '99+' : String(total);
   ['navChatBadgeOrdenes', 'navChatBadgeDespachos'].forEach(id => {
     const el = $(id);
@@ -409,8 +413,7 @@ function aplicarFiltros() {
   }
 
   const estado = $('filtroEstado')?.value;
-  if (estado === FILTRO_SIN_LEER) filtradas = filtradas.filter(o => contarMensajesNoLeidos(o.id) > 0);
-  else if (estado) filtradas = filtradas.filter(o => coincideFiltroEstado(o, estado));
+  if (estado) filtradas = filtradas.filter(o => coincideFiltroEstado(o, estado));
 
   const desde = $('filtroDesde')?.value;
   if (desde) {
@@ -643,7 +646,7 @@ window.verDetalleOrden = function(ordenId) {
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Cliente</span><br><strong>${nombreCliente(orden)}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">NIT</span><br><strong>${nitCliente(orden)}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Fecha</span><br><strong>${formatearFecha(orden.created_at)}</strong></div>
-      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Estado</span><br>${badgeEstado(orden)}</div>
+      <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Estado</span><br><span id="detalleEstadoOrden">${badgeEstado(orden)}</span></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Creada por</span><br><strong>${orden.creadaPorNombre || orden.creadaPorEmail || '-'}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">CSV Generado</span><br><strong>${orden.csv_generado ? 'Sí' : 'No'}</strong></div>
     </div>
@@ -708,6 +711,7 @@ window.verDetalleOrden = function(ordenId) {
     ${transiciones.map(estado => htmlBotonEstado(estado, `cambiarEstadoOrden('${orden.id}', '${estado}')`)).join('')}`}
   `;
 
+  ordenEnDetalle = orden;
   $('modalDetalle').classList.add('open');
   iniciarChatDetalle(orden.id);
   marcarOrdenLeida(orden.id);
