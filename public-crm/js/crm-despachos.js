@@ -517,12 +517,8 @@ function renderizarOrdenes() {
   container.innerHTML = paginadas.map(o => renderCardOrden(o)).join('');
   paginador.renderControles('paginacionDespachos', () => renderizarOrdenes());
 
-  // Auto-expandir dropdown de items para órdenes cerradas
-  paginadas.forEach(o => {
-    if (normalizarEstado(o.estado) === 'cerrada') {
-      window.toggleDetalle(o.id);
-    }
-  });
+  // Las tarjetas salen contraídas en todas las pestañas; la lista de ítems se despliega
+  // solo con la flecha (toggleDetalle).
 
   // Recomputar badges de chat con los IDs actualmente visibles
   actualizarBadgeGlobalChat();
