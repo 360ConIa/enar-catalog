@@ -1229,6 +1229,41 @@
   max-width: 900px;
 }
 
+/* Modal de alistamiento: ítems + panel de mensajes de la orden. En escritorio el panel va
+   a la derecha y no tapa la lista; en pantallas angostas va debajo de los ítems. */
+.crm-modal--alist { max-width: 1240px; }
+.alist-layout { display: flex; gap: 16px; align-items: flex-start; }
+.alist-items { flex: 1 1 auto; min-width: 0; }
+.alist-chat {
+  flex: 0 0 320px;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--crm-border);
+  border-radius: var(--crm-radius-sm);
+  background: #f8fafc;
+  overflow: hidden;
+}
+.alist-chat-titulo {
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--crm-text);
+  border-bottom: 1px solid var(--crm-border);
+  background: white;
+}
+.alist-chat-titulo span { font-weight: 400; font-size: 0.72rem; color: var(--crm-text-light); }
+.alist-chat .crm-chat { border: 0; border-radius: 0; }
+.alist-chat .crm-chat-messages { max-height: 52vh; min-height: 160px; }
+.alist-chat .crm-chat-input input { min-width: 0; }
+.alist-chat .crm-chat-input button { flex: 0 0 36px; }
+@media (max-width: 1100px) {
+  .alist-layout { flex-direction: column; align-items: stretch; }
+  .alist-chat { flex: none; position: static; }
+  .alist-chat .crm-chat-messages { max-height: 280px; }
+}
+
 .crm-modal-header {
   padding: 16px 20px;
   background: var(--crm-red);

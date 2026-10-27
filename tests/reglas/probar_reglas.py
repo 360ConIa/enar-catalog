@@ -270,6 +270,13 @@ ESTADOS = {'perfiles': EST_P, 'casos': [
     caso('Vendedor crea orden en_proceso', 'V', 'create', _RO, _O('en_proceso'), 'DENY'),
     caso('Admin crea orden en estado inventado', 'ADM', 'create', _RO, _O('enviada'), 'DENY'),
     caso('Sin migrar: tocar una orden terminada', 'ADM', 'update', _RO, _O('terminada'), 'DENY', {'eliminado': True}),
+    # Alistamiento (2026-10-26): abrir no cambia nada; el primer ítem registrado pasa a alistamiento
+    caso('Despachos registra el primer ítem y pasa a alistamiento', 'D', 'update', _RO, _O('aprobada'), 'ALLOW',
+         {'estado': 'alistamiento', 'items': [{'cod_interno': 'A', 'estado_alistamiento': 'comp'}]}),
+    caso('Despachos guarda ítems con la orden aún aprobada', 'D', 'update', _RO, _O('aprobada'), 'ALLOW', {'items': []}),
+    caso('Gestor registra el primer ítem', 'G', 'update', _RO, _O('aprobada'), 'ALLOW',
+         {'estado': 'alistamiento', 'items': [{'cod_interno': 'A', 'estado_alistamiento': 'sinstock'}]}),
+    caso('Cliente pasa su orden a alistamiento', 'K', 'update', _RO, _O('aprobada'), 'DENY', {'estado': 'alistamiento'}),
 ]}
 
 BATERIAS = {'visibilidad': VISIBILIDAD, 'despacho': DESPACHO, 'externo': EXTERNO,

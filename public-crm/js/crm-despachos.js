@@ -10,7 +10,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
-  getFirestore, collection, doc, getDoc, getDocs, updateDoc,
+  getFirestore, collection, doc, getDoc, getDocs, updateDoc, runTransaction,
   query, where, orderBy, onSnapshot, addDoc, limit as fbLimit, documentId
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import {
@@ -646,38 +646,45 @@ function renderAccionesTab(orden) {
 }
 
 // ═══════════ INICIAR ALISTAMIENTO ═══════════
-window.iniciarAlistamiento = async function(ordenId) {
-  const orden = todasLasOrdenes.find(o => o.id === ordenId);
-  if (!orden) return;
-
-  try {
-    const historial = orden.historial || [];
-    historial.push({
-      estado: 'alistamiento',
-      fecha: new Date().toISOString(),
-      nota: `Alistamiento iniciado por ${userPerfil.nombre || currentUser.email}`
-    });
-
-    await updateDoc(doc(db, 'ordenes', ordenId), {
-      estado: 'alistamiento',
-      historial: historial,
-      updated_at: new Date().toISOString()
-    });
-
-    orden.estado = 'alistamiento';
-    orden.historial = historial;
-
-    actualizarTabCounts();
-    aplicarFiltrosYRender();
-    showToast('Alistamiento iniciado', 'success');
-
-    // Abrir modal de alistamiento directamente
-    window.abrirAlistamiento(ordenId);
-  } catch (error) {
-    console.error('Error iniciando alistamiento:', error);
-    showToast('Error al iniciar alistamiento', 'error');
-  }
+// Solo abre el modal: la orden sigue Aprobada hasta que se registra el primer ítem
+// (guardarItemsAlistamiento). Si se cierra sin registrar nada, no cambia.
+window.iniciarAlistamiento = function(ordenId) {
+  window.abrirAlistamiento(ordenId);
 };
+
+// ═══════════ GUARDAR ÍTEMS (y paso a Alistamiento con el primer registro) ═══════════
+// Guarda los ítems. Si es un registro (marcar Completo/Parcial/Sin stock o escribir una
+// cantidad) y la orden está Aprobada, en la misma escritura pasa a Alistamiento con su
+// entrada en el historial. La transacción lee el estado en el servidor: el cambio se
+// guarda una sola vez aunque haya dos clics seguidos o dos personas alistando.
+async function guardarItemsAlistamiento(ordenId, items, { registro }) {
+  let paso = false;
+  await runTransaction(db, async (tx) => {
+    const ref = doc(db, 'ordenes', ordenId);
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('Orden no encontrada');
+    const actual = snap.data();
+    const cambios = { items, productos: items, updated_at: new Date().toISOString() };
+    if (registro && normalizarEstado(actual.estado) === 'aprobada') {
+      Object.assign(cambios, cambiosDeEstado(actual, 'alistamiento', `Alistamiento iniciado por ${userPerfil.nombre || currentUser.email}`));
+      cambios.items = items; cambios.productos = items;
+      paso = true;
+    }
+    tx.update(ref, cambios);
+  });
+  const orden = todasLasOrdenes.find(o => o.id === ordenId);
+  if (orden) {
+    orden.items = items; orden.productos = items;
+    if (paso) {
+      orden.estado = 'alistamiento';
+      actualizarTabCounts();
+      aplicarFiltrosYRender();
+      showToast('Alistamiento iniciado', 'success');
+    }
+    if ($('modalAlistamiento')?.classList.contains('open')) renderModalFooter(orden);
+  }
+  return paso;
+}
 
 // ═══════════ GUARDAR PARCIAL (sigue en alistamiento) ═══════════
 window.guardarParcial = async function(ordenId) {
@@ -746,7 +753,10 @@ window.abrirAlistamiento = function(ordenId) {
 
   $('modalAlistamientoTitulo').textContent = `Alistamiento — ${orden.numero_orden || ordenId.substring(0, 8)}`;
 
+  // Ítems a la izquierda y mensajes de la orden a la derecha (debajo en pantallas angostas)
   $('modalAlistamientoBody').innerHTML = `
+    <div class="alist-layout">
+    <div class="alist-items">
     <div id="progresoAlistamiento-${ordenId}" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <span id="progresoTexto-${ordenId}" style="font-size:0.82rem;color:var(--crm-text-light);"></span>
       <span id="progresoPct-${ordenId}" style="font-size:0.82rem;font-weight:600;"></span>
@@ -842,6 +852,21 @@ window.abrirAlistamiento = function(ordenId) {
         </tbody>
       </table>
     </div>
+    </div>
+    <aside class="alist-chat" aria-label="Mensajes de la orden">
+      <div class="alist-chat-titulo"><i class="bi bi-chat-dots"></i> Mensajes de la orden <span>(no los ve el cliente)</span></div>
+      <div class="crm-chat">
+        <div class="crm-chat-messages" id="chatMessages-modal">
+          <p style="color:var(--crm-text-light);font-size:0.82rem;padding:12px;">Cargando...</p>
+        </div>
+        <div class="crm-chat-input">
+          <input type="text" placeholder="Escribir mensaje..." id="chatInput-modal"
+            onkeydown="if(event.key==='Enter')enviarMensajeModal('${ordenId}')">
+          <button onclick="enviarMensajeModal('${ordenId}')" title="Enviar"><i class="bi bi-send"></i></button>
+        </div>
+      </div>
+    </aside>
+    </div>
   `;
 
   actualizarProgresoAlistamiento(ordenId);
@@ -852,6 +877,54 @@ window.abrirAlistamiento = function(ordenId) {
   orden._updateFooter = () => renderModalFooter(orden);
 
   $('modalAlistamiento').classList.add('open');
+  iniciarChatModal(ordenId);
+};
+
+// ═══════════ MENSAJES EN EL MODAL DE ALISTAMIENTO ═══════════
+// Misma conversación que la tarjeta (chat_ordenes): leer y escribir. Los mensajes quedan
+// leídos para este usuario solo mientras la sección de chat se ve en pantalla: en escritorio
+// (panel lateral) desde que se abre; en celular (debajo de los ítems) cuando se baja hasta
+// ella. Contadores y subestado se actualizan al marcarlos.
+let chatModal = { ordenId: null, unsub: null, visible: false, observador: null };
+
+function detenerChatModal() {
+  if (chatModal.unsub) chatModal.unsub();
+  if (chatModal.observador) chatModal.observador.disconnect();
+  chatModal = { ordenId: null, unsub: null, visible: false, observador: null };
+}
+
+function iniciarChatModal(ordenId) {
+  detenerChatModal();
+  chatModal.ordenId = ordenId;
+  const zona = $('chatMessages-modal');
+  if (zona && 'IntersectionObserver' in window) {
+    chatModal.observador = new IntersectionObserver(([e]) => {
+      chatModal.visible = e.isIntersecting;
+      if (chatModal.visible && chatModal.ordenId === ordenId) marcarOrdenLeida(ordenId);
+    }, { threshold: 0.5 });
+    chatModal.observador.observe(zona);
+  } else {
+    chatModal.visible = true; // sin IntersectionObserver: como antes
+  }
+  const q = query(collection(db, 'chat_ordenes'), where('orden_id', '==', ordenId), orderBy('created_at', 'asc'));
+  chatModal.unsub = onSnapshot(q, (snap) => {
+    if (!$('modalAlistamiento')?.classList.contains('open') || chatModal.ordenId !== ordenId) {
+      if (chatModal.ordenId === ordenId) detenerChatModal();
+      return;
+    }
+    const mensajes = [];
+    snap.forEach(d => mensajes.push({ id: d.id, ...d.data() }));
+    renderMensajesEn($('chatMessages-modal'), mensajes);
+    if (chatModal.visible) marcarOrdenLeida(ordenId);
+  }, (error) => {
+    console.error('Error en chat del alistamiento:', error);
+    const c = $('chatMessages-modal');
+    if (c) c.innerHTML = '<p style="color:var(--crm-text-light);font-size:0.82rem;padding:12px;">No se pudieron cargar los mensajes</p>';
+  });
+}
+
+window.enviarMensajeModal = function(ordenId) {
+  return enviarMensajeDesde($('chatInput-modal'), ordenId);
 };
 
 function renderModalFooter(orden) {
@@ -874,6 +947,10 @@ function renderModalFooter(orden) {
     } else {
       botonesHTML = `<span style="font-size:0.82rem;color:var(--crm-text-light);align-self:center;">Marca items para habilitar acciones</span>`;
     }
+  } else if (normalizarEstado(orden.estado) === 'aprobada') {
+    // Sigue Aprobada hasta registrar el primer ítem; no se ofrece "Pasar a Alistamiento"
+    botonesHTML = `<span style="font-size:0.82rem;color:var(--crm-text-light);align-self:center;">Registra el primer ítem para iniciar el alistamiento</span>`
+      + renderBotonesEstado(orden, { sinAvance: true });
   } else {
     botonesHTML = renderBotonesEstado(orden);
   }
@@ -937,11 +1014,7 @@ window.cambiarEstadoItem = async function(ordenId, clave, tipo, btn) {
   actualizarProgresoAlistamiento(ordenId);
 
   try {
-    await updateDoc(doc(db, 'ordenes', ordenId), {
-      items: items, productos: items, updated_at: new Date().toISOString()
-    });
-    orden.items = items;
-    orden.productos = items;
+    await guardarItemsAlistamiento(ordenId, items, { registro: !yaActivo });
   } catch (error) {
     console.error('Error actualizando estado item:', error);
     showToast('Error al actualizar', 'error');
@@ -998,12 +1071,8 @@ window.seleccionarTodosEstado = async function(ordenId, tipo, seleccionar) {
   actualizarProgresoAlistamiento(ordenId);
 
   try {
-    await updateDoc(doc(db, 'ordenes', ordenId), {
-      items: items, productos: items, updated_at: new Date().toISOString()
-    });
-    orden.items = items;
-    orden.productos = items;
-    showToast(seleccionar ? `Todos marcados como ${tipo}` : 'Selección limpiada', 'success');
+    const paso = await guardarItemsAlistamiento(ordenId, items, { registro: seleccionar });
+    if (!paso) showToast(seleccionar ? `Todos marcados como ${tipo}` : 'Selección limpiada', 'success');
   } catch (error) {
     console.error('Error masivo:', error);
     showToast('Error al actualizar', 'error');
@@ -1122,8 +1191,8 @@ window.toggleChat = function(ordenId, btn) {
   }
 };
 
-function renderBotonesEstado(orden) {
-  const transiciones = obtenerTransicionesPermitidas(orden.estado).filter(e => e !== 'cancelada');
+function renderBotonesEstado(orden, { sinAvance = false } = {}) {
+  const transiciones = sinAvance ? [] : obtenerTransicionesPermitidas(orden.estado).filter(e => e !== 'cancelada');
   const botonesAvance = transiciones.map(estado => htmlBotonEstado(estado, `cambiarEstado('${orden.id}', '${estado}')`)).join('');
 
   const reversion = obtenerReversion(orden.estado);
@@ -1213,14 +1282,7 @@ window.actualizarCantidadReal = async function(ordenId, clave, cantidad) {
 
     items[itemIdx].cantidad_real = parseInt(cantidad) || 0;
 
-    await updateDoc(doc(db, 'ordenes', ordenId), {
-      items: items,
-      productos: items,
-      updated_at: new Date().toISOString()
-    });
-
-    orden.items = items;
-    orden.productos = items;
+    await guardarItemsAlistamiento(ordenId, items, { registro: true });
   } catch (error) {
     console.error('Error actualizando cantidad:', error);
     showToast('Error al actualizar cantidad', 'error');
@@ -1282,7 +1344,10 @@ function iniciarChatListener(ordenId) {
 }
 
 function renderMensajes(ordenId, mensajes) {
-  const container = $(`chatMessages-${ordenId}`);
+  renderMensajesEn($(`chatMessages-${ordenId}`), mensajes);
+}
+
+function renderMensajesEn(container, mensajes) {
   if (!container) return;
 
   if (mensajes.length === 0) {
@@ -1304,8 +1369,11 @@ function renderMensajes(ordenId, mensajes) {
   container.scrollTop = container.scrollHeight;
 }
 
-window.enviarMensaje = async function(ordenId) {
-  const input = $(`chatInput-${ordenId}`);
+window.enviarMensaje = function(ordenId) {
+  return enviarMensajeDesde($(`chatInput-${ordenId}`), ordenId);
+};
+
+async function enviarMensajeDesde(input, ordenId) {
   if (!input) return;
   const mensaje = input.value.trim();
   if (!mensaje) return;
@@ -1328,7 +1396,7 @@ window.enviarMensaje = async function(ordenId) {
     if (!input.value) input.value = mensaje; // no perder lo escrito
     showToast('Error al enviar mensaje', 'error');
   }
-};
+}
 
 // ═══════════ CSV (CLIENT-SIDE) ═══════════
 window.generarCSVOrden = async function(ordenId) {
@@ -1401,6 +1469,9 @@ window.generarCSVOrden = async function(ordenId) {
 window.cerrarModal = function(id) {
   const el = $(id);
   if (el) el.classList.remove('open');
+  // Al cerrar el alistamiento se deja de escuchar su chat (con Esc o clic en el fondo se
+  // detiene en el siguiente aviso: iniciarChatModal comprueba que el modal siga abierto)
+  if (id === 'modalAlistamiento') detenerChatModal();
 };
 
 // ═══════════ EVENT LISTENERS ═══════════
