@@ -1,0 +1,12 @@
+{
+  "_doc": "Imágenes que se recortan y centran con margen uniforme al convertir (migration/convertir-imagenes-webp.py, OCUPACION). Rutas relativas a imagenes-originales/. 2026-10-27: el envase llenaba 91-98 % de la imagen (mediana del catálogo 82 %) y se veía más grande que los demás.",
+  "imagenes": [
+    "ESTUCOS Y MASILLAS/ESTUCO PLASTICO/ESTUCO PLASTICO CUÑETE.png",
+    "ESTUCOS Y MASILLAS/ESTUCO PLASTICO/ESTUCO PLASTICO GALON.png",
+    "ESTUCOS Y MASILLAS/ESTUCO PLASTICO/ESTUCO PLASTICO MEDIO CUÑETE.png",
+    "TINTE MADERA/TINTE MADERA GRANDE.png",
+    "TINTE MADERA/TINTE MADERA MEDIANO.png",
+    "ADHESIVOS Y LIGANTES/PITBULL/BRILLANTE/Galon.png",
+    "HIDROFUGANTE/PINTURA-HIDROFUGA-pequeno.png"
+  ]
+}

@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="shortcut icon" href="/favicon.ico">
   <title>Admin - ENAR B2B</title>
-  <link rel="stylesheet" href="css/styles.css?v=5.0">
+  <link rel="stylesheet" href="css/styles.css?v=20261027">
   <link rel="stylesheet" href="css/crm-styles.css?v=2026-10-24b">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -2125,7 +2125,7 @@
       const preview = document.getElementById('prodImagenPreview');
       const reader = new FileReader();
       reader.onload = (e) => {
-        preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+        preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:contain;">`;
       };
       reader.readAsDataURL(file);
 
@@ -2186,7 +2186,7 @@
     function setImagenPreview(url) {
       const preview = document.getElementById('prodImagenPreview');
       if (url) {
-        preview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=\\'font-size:11px;color:#94a3b8;\\'>Error</span>'">`;
+        preview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentElement.innerHTML='<span style=\\'font-size:11px;color:#94a3b8;\\'>Error</span>'">`;
       } else {
         preview.innerHTML = '<span style="font-size:11px;color:#94a3b8;">Sin img</span>';
       }
