@@ -10,7 +10,7 @@
   <title>ENAR COMERCIAL - Portal Interno</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-  <link rel="stylesheet" href="css/crm-styles.css?v=20261028a">
+  <link rel="stylesheet" href="css/crm-styles.css?v=20261028b">
 
   <style>
     body {
@@ -271,8 +271,14 @@
           <label class="form-label">
             <i class="bi bi-lock me-2"></i>Contraseña
           </label>
-          <input type="password" class="form-control" id="inputPassword"
-                 placeholder="Ingresa tu contraseña" required autocomplete="current-password">
+          <div class="input-group">
+            <input type="password" class="form-control" id="inputPassword"
+                   placeholder="Ingresa tu contraseña" required autocomplete="current-password">
+            <button class="btn btn-outline-secondary" type="button" id="togglePassword" tabindex="-1"
+                    style="border-color:#dee2e6;">
+              <i class="bi bi-eye" id="togglePasswordIcon"></i>
+            </button>
+          </div>
         </div>
         <button type="submit" class="btn btn-login w-100" id="btnLogin">
           <i class="bi bi-box-arrow-in-right me-2"></i>
@@ -388,6 +394,20 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Toggle ver/ocultar contraseña (igual que el login de enar-b2b)
+    document.getElementById('togglePassword').addEventListener('click', function () {
+      const input = document.getElementById('inputPassword');
+      const icon = document.getElementById('togglePasswordIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+      } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+      }
+    });
+  </script>
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';

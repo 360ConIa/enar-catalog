@@ -23,7 +23,7 @@ import {
   obtenerReversion, puedeRegresarEstado,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js?v=20261026e';
-import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, usarContadorNoLeidos, infoSubestado } from './estados-orden.js?v=20261026e';
+import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, usarContadorNoLeidos, infoSubestado, subestadoAlCerrar, htmlSubestado } from './estados-orden.js?v=20261026e';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -74,6 +74,32 @@ function claveItem(items, item) {
 
 function indiceItem(items, clave) {
   return items.findIndex(i => claveItem(items, i) === clave);
+}
+
+// Estado de alistamiento de un ítem según lo despachado. Las cantidades se comparan como
+// número (pueden venir como texto). Un ítem marcado Parcial con la cantidad pedida completa
+// cuenta como Completo, y uno preparado sin estado_alistamiento (datos anteriores) se
+// clasifica por su cantidad real.
+function estadoItemAlistamiento(item) {
+  const ea = item.estado_alistamiento;
+  if (ea === 'sinstock') return 'sinstock';
+  if (!['comp', 'parcial'].includes(ea) && !item.preparado) return '';
+  const pedida = Number(item.cantidad) || 0;
+  const real = (item.cantidad_real ?? '') === '' ? pedida : (Number(item.cantidad_real) || 0);
+  return real >= pedida ? 'comp' : 'parcial';
+}
+
+// Ítems con el estado de alistamiento recalculado (lo que se guarda al cerrar)
+function itemsAlistamientoNormalizados(items) {
+  return items.map(i => {
+    const ea = estadoItemAlistamiento(i);
+    return ea ? { ...i, estado_alistamiento: ea } : i;
+  });
+}
+
+// Subestado que tendrá la orden al cerrarla con los ítems como están ahora
+function subestadoEnVivo(items) {
+  return subestadoAlCerrar(itemsAlistamientoNormalizados(items));
 }
 
 const claveJS = (clave) => clave.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -531,7 +557,7 @@ function renderCardOrden(orden) {
   const progreso = totalItems > 0 ? Math.round((marcados / totalItems) * 100) : 0;
 
   const pesoTotal = items.reduce((sum, i) => sum + ((i.peso_kg || 0) * (i.cantidad || 0)), 0);
-  const totalUnidades = items.reduce((sum, i) => sum + (i.cantidad || 0), 0);
+  const totalUnidades = items.reduce((sum, i) => sum + (Number(i.cantidad) || 0), 0);
 
   const ubicacion = orden._ubicacion || orden.direccion_entrega?.ciudad || '';
   const clienteNombre = orden.clienteNombre || orden.cliente?.razon_social || orden.cliente?.nombre || 'Sin cliente';
@@ -737,7 +763,7 @@ window.guardarParcial = async function(ordenId) {
     historial.push({
       estado: 'alistamiento',
       fecha: new Date().toISOString(),
-      nota: `Alistamiento parcial (${marcados}/${items.length} items) por ${userPerfil.nombre || currentUser.email}`
+      nota: `Avance de alistamiento (${marcados}/${items.length} items) por ${userPerfil.nombre || currentUser.email}`
     });
 
     // Avance guardado: la orden sigue en alistamiento (el subestado se fija al cerrar)
@@ -749,7 +775,7 @@ window.guardarParcial = async function(ordenId) {
     orden.historial = historial;
 
     $('modalAlistamiento')?.classList.remove('open');
-    showToast(`Alistamiento parcial guardado (${marcados}/${items.length})`, 'info');
+    showToast(`Avance de alistamiento guardado (${marcados}/${items.length})`, 'info');
   } catch (error) {
     console.error('Error guardando parcial:', error);
     showToast('Error al guardar', 'error');
@@ -762,7 +788,11 @@ window.finalizarAlistamiento = async function(ordenId) {
   if (!orden) return;
 
   try {
-    const cambios = cambiosDeEstado(orden, 'cerrada', '');
+    // Se guardan los ítems con su estado recalculado para que el subestado y el detalle cuadren
+    const items = itemsAlistamientoNormalizados(orden.items || orden.productos || []);
+    const cambios = cambiosDeEstado({ ...orden, items, productos: items }, 'cerrada', '');
+    cambios.items = items;
+    cambios.productos = items;
     const label = cambios.subestado === 'completa' ? 'Completa' : 'Parcial';
     cambios.historial[cambios.historial.length - 1].nota = `Alistamiento ${label} finalizado por ${userPerfil.nombre || currentUser.email}`;
     cambios.cerrada_por = currentUser.email;
@@ -836,13 +866,11 @@ window.abrirAlistamiento = function(ordenId) {
         </thead>
         <tbody>
           ${items.map((item, idx) => {
-            const cantPedida = item.cantidad || 0;
-            const cantReal = item.cantidad_real ?? cantPedida;
-            let estadoItem = '';
-            if (item.preparado && cantReal === cantPedida) estadoItem = 'comp';
-            else if (item.preparado && cantReal > 0 && cantReal < cantPedida) estadoItem = 'parcial';
-            else if (cantReal === 0 && item.estado_alistamiento === 'sinstock') estadoItem = 'sinstock';
-            else if (item.estado_alistamiento) estadoItem = item.estado_alistamiento;
+            const cantPedida = Number(item.cantidad) || 0;
+            const cantReal = (item.cantidad_real ?? '') === '' ? cantPedida : (Number(item.cantidad_real) || 0);
+            // El botón activo es el que se marcó; solo los ítems antiguos sin marca se deducen
+            // (un Parcial que ya tiene la cantidad pedida se muestra Completo)
+            const estadoItem = item.estado_alistamiento === 'sinstock' ? 'sinstock' : estadoItemAlistamiento(item);
 
             const imgSrc = item.imagen_principal || item.imagen || '';
             const prod = productosCache[item.cod_interno || item.sku];
@@ -884,7 +912,7 @@ window.abrirAlistamiento = function(ordenId) {
                 <input type="number" id="cantReal-${ordenId}-${idx}" value="${cantReal}" min="0"
                   style="width:70px;padding:4px 6px;border:1px solid var(--crm-border);border-radius:4px;text-align:center;font-size:0.85rem;${estadoItem !== 'parcial' ? 'background:#f8fafc;' : ''}"
                   ${estadoItem !== 'parcial' ? 'readonly' : ''}
-                  onchange="actualizarCantidadReal('${ordenId}','${clave}',this.value)">
+                  onchange="actualizarCantidadReal('${ordenId}','${clave}',this.value,this)">
               </td>
             </tr>`;
           }).join('')}
@@ -976,9 +1004,11 @@ function renderModalFooter(orden) {
 
   if (orden.estado === 'alistamiento') {
     if (hayMarcados) {
+      // Subestado con el que cerraría la orden, recalculado con cada marca o cantidad
       botonesHTML = `
+        <span class="alist-subestado-vivo" title="Subestado al cerrar">${htmlSubestado(subestadoEnVivo(items))}</span>
         <button class="crm-btn crm-btn--sm" style="background:#ffedd5;color:#9a3412;" onclick="guardarParcial('${orden.id}')">
-          <i class="bi bi-pause-circle"></i> Parcial (${marcados}/${total})
+          <i class="bi bi-pause-circle"></i> Guardar avance (${marcados}/${total})
         </button>
         <button class="crm-btn crm-btn--success crm-btn--sm" onclick="finalizarAlistamiento('${orden.id}')">
           <i class="bi bi-check-circle"></i> Cerrar
@@ -1018,7 +1048,7 @@ window.cambiarEstadoItem = async function(ordenId, clave, tipo, btn) {
   btns.forEach(b => { b.classList.remove('activo'); });
   tr.className = '';
 
-  const cantPedida = items[idx].cantidad || 0;
+  const cantPedida = Number(items[idx].cantidad) || 0;
   const inputCant = tr.querySelector('input[type="number"]');
 
   if (yaActivo) {
@@ -1073,7 +1103,7 @@ window.seleccionarTodosEstado = async function(ordenId, tipo, seleccionar) {
     if (idx === -1) return;
     const btns = tr.querySelectorAll('.alist-estado-btn');
     const inputCant = tr.querySelector('input[type="number"]');
-    const cantPedida = items[idx].cantidad || 0;
+    const cantPedida = Number(items[idx].cantidad) || 0;
 
     // Desactivar todos
     btns.forEach(b => b.classList.remove('activo'));
@@ -1311,7 +1341,7 @@ window.marcarPreparado = async function(ordenId, clave, preparado) {
   }
 };
 
-window.actualizarCantidadReal = async function(ordenId, clave, cantidad) {
+window.actualizarCantidadReal = async function(ordenId, clave, cantidad, input) {
   try {
     const orden = todasLasOrdenes.find(o => o.id === ordenId);
     if (!orden) return;
@@ -1320,7 +1350,24 @@ window.actualizarCantidadReal = async function(ordenId, clave, cantidad) {
     const itemIdx = indiceItem(items, clave);
     if (itemIdx === -1) return;
 
-    items[itemIdx].cantidad_real = parseInt(cantidad) || 0;
+    const item = items[itemIdx];
+    item.cantidad_real = Math.max(0, parseInt(cantidad, 10) || 0);
+
+    // Parcial que llega a la cantidad pedida: pasa a Completo (verde) en la fila
+    if (item.estado_alistamiento === 'parcial' && estadoItemAlistamiento(item) === 'comp') {
+      item.estado_alistamiento = 'comp';
+      item.preparado = true;
+      item.preparado_por = currentUser.email;
+      item.fecha_preparado = new Date().toISOString();
+      const tr = input?.closest('tr');
+      if (tr) {
+        tr.querySelectorAll('.alist-estado-btn').forEach(b => b.classList.toggle('activo', b.classList.contains('alist-comp')));
+        tr.className = 'alist-row-comp';
+        const inputCant = tr.querySelector('input[type="number"]');
+        if (inputCant) { inputCant.readOnly = true; inputCant.style.background = '#f8fafc'; }
+      }
+    }
+    actualizarProgresoAlistamiento(ordenId);
 
     await guardarItemsAlistamiento(ordenId, items, { registro: true });
   } catch (error) {
