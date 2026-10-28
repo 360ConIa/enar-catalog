@@ -42,6 +42,7 @@ const EJECUTAR = process.argv.includes('--ejecutar');
 const RAIZ = path.join(__dirname, '..');
 
 const url = ruta => `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o/${encodeURIComponent(ruta)}?alt=media`;
+const conVersionDe = (nueva, actual) => (actual || '').replace(/&v=[^&]*$/, '') === nueva ? actual : nueva;
 const esDrive = u => typeof u === 'string' && /googleusercontent\.com|drive\.google\.com/.test(u);
 
 // CSV con todos los campos entre comillas (formato de docs/*.csv)
@@ -137,8 +138,9 @@ function leerCSV(archivo) {
     const u = { updated_at: new Date().toISOString() };
     if (esDrive(d.imagen_principal) && !d.imagen_drive_anterior) u.imagen_drive_anterior = d.imagen_principal;
     if (p.archivo) {
-      u.imagen_principal = url(manifest[p.archivo].imagen);
-      u.imagen_miniatura = url(manifest[p.archivo].miniatura);
+      // Conserva el &v= de versionar-urls-imagenes.js si el archivo no cambió
+      u.imagen_principal = conVersionDe(url(manifest[p.archivo].imagen), d.imagen_principal);
+      u.imagen_miniatura = conVersionDe(url(manifest[p.archivo].miniatura), d.imagen_miniatura);
       u.imagen_tipo = p.tipo;
     } else {
       u.imagen_principal = FieldValue.delete();

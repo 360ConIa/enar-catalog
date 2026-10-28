@@ -39,7 +39,7 @@ NOTAS = {
     ('Soldadura CPVC', '1/16'): 'Existe una lata 1/16 en la foto de varios envases, pero con el texto de pegado en húmedo (error de diseño)',
     ('Hidrofugante Para Fachadas', None): 'Existe una garrafa sin tamaño indicado: confirmar si es galón o 5 galones antes de pedir la foto',
     ('Tintilla Madera', '200 CC'): 'Las fotos de galón y 1000 CC ya están asignadas',
-    ('Soldadura PVC Rápida', None): 'Pedir la foto con la etiqueta de Soldadura PVC Rápida sin el texto "pegado en Húmedo" (las fotos verdes actuales son de los R-A)',
+    ('Soldadura PVC Rápida', None): 'Pedir la foto de tapa verde y etiqueta sin el texto "pegado en Húmedo", como las de 1/64 y 1/128 (las que dicen "pegado en Húmedo" son de los R-A)',
 }
 
 
