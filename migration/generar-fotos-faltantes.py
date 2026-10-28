@@ -39,6 +39,7 @@ NOTAS = {
     ('Soldadura CPVC', '1/16'): 'Existe una lata 1/16 en la foto de varios envases, pero con el texto de pegado en húmedo (error de diseño)',
     ('Hidrofugante Para Fachadas', None): 'Existe una garrafa sin tamaño indicado: confirmar si es galón o 5 galones antes de pedir la foto',
     ('Tintilla Madera', '200 CC'): 'Las fotos de galón y 1000 CC ya están asignadas',
+    ('Soldadura PVC Rápida', None): 'Pedir la foto con la etiqueta de Soldadura PVC Rápida sin el texto "pegado en Húmedo" (las fotos verdes actuales son de los R-A)',
 }
 
 
@@ -68,6 +69,8 @@ def producto_y_tamano(titulo):
 
 def situacion(nota):
     n = nota.lower()
+    if 'pegado en húmedo' in n and 'sin imagen hasta' in n:
+        return 'Solo hay foto con la etiqueta de pegado en húmedo (es la del R-A)'
     if 'varios envases' in n:
         return 'Solo existe foto de varios envases'
     if 'etiquetas planas' in n:
