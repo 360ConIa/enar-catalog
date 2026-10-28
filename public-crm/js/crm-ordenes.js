@@ -25,9 +25,9 @@ import {
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio,
   cargarListasPrecios, nombreLista
-} from './crm-utils.js?v=20261026e';
+} from './crm-utils.js?v=20261028d';
 import { pesoOrden, htmlPesoOrden } from './peso-orden.js?v=20261028c';
-import { normalizarEstado, subestadoDe, etiquetaEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261026e';
+import { normalizarEstado, subestadoDe, etiquetaEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, htmlAccionEstado, confirmarCambioEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261028d';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -457,7 +457,7 @@ function renderBtnCambioEstado(orden) {
       <div class="crm-estado-menu" id="estadoMenu_${orden.id}">
         ${transiciones.map(est => `
           <button class="crm-estado-opcion" onclick="cambiarEstadoDesdeTabla('${orden.id}', '${est}')">
-            ${badgeEstado(est)}
+            ${htmlAccionEstado(est)}
           </button>
         `).join('')}
       </div>
@@ -703,7 +703,7 @@ window.verDetalleOrden = function(ordenId) {
     ? `<button class="crm-btn" style="background:#fef3c7;color:#92400e;" onclick="regresarEstadoOrden('${orden.id}')"><i class="bi bi-arrow-counterclockwise"></i> Regresar a ${badgeEstado(reversionModal)}</button>`
     : '';
   $('modalDetalleFooter').innerHTML = `
-    <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalDetalle')">Cerrar</button>
+    <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalDetalle')">Salir</button>
     <button class="crm-btn crm-btn--sm" style="background:#217346;color:white;" onclick="window.generarCSVOrden('${orden.id}')">
       CSV
     </button>
@@ -801,6 +801,7 @@ window.cambiarEstadoOrden = async function(ordenId, nuevoEstado) {
     showToast('Transición no permitida', 'error');
     return;
   }
+  if (!confirmarCambioEstado(nuevoEstado, orden)) return;
 
   try {
     const cambios = cambiosDeEstado(orden, nuevoEstado, `Cambio a ${ESTADOS_ORDEN_LABELS[nuevoEstado]} por ${userPerfil.nombre || currentUser.email}`);

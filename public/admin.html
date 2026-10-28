@@ -1874,7 +1874,7 @@
         <div id="detalleMensajesDespacho"></div>
 
         <div class="modal-actions" style="margin-top: 20px;">
-          <button class="btn-cancel" onclick="cerrarModal('modalDetalleOrden')">Cerrar</button>
+          <button class="btn-cancel" onclick="cerrarModal('modalDetalleOrden')">Salir</button>
         </div>
       </div>
     </div>
@@ -1999,7 +1999,7 @@
       ESTADOS_USUARIO,
       TIPOS_CLIENTE
     } from './js/user-manager.js';
-    import { htmlEstado, htmlFiltroEstado, etiquetaEstado, normalizarEstado, transicionesDe, coincideFiltroEstado, FILTROS_ESTADO, usarContadorNoLeidos } from './js/estados-orden.js?v=20261026e';
+    import { htmlEstado, htmlAccionEstado, confirmarCambioEstado, htmlFiltroEstado, etiquetaEstado, normalizarEstado, transicionesDe, coincideFiltroEstado, FILTROS_ESTADO, usarContadorNoLeidos } from './js/estados-orden.js?v=20261028d';
     import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './js/despacho.js';
     import { pesoOrden, htmlPesoOrden } from './js/peso-orden.js?v=20261028c';
     import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './js/chat-ordenes.js';
@@ -2007,7 +2007,7 @@
       obtenerTodasLasOrdenes,
       actualizarEstadoOrden,
       formatearPrecio
-    } from './js/ordenes.js?v=20261026e';
+    } from './js/ordenes.js?v=20261028d';
     import { DEPARTAMENTOS_CIUDADES } from './js/colombia-data.js';
     import { obtenerDatosUsuario } from './js/auth.js';
     import { nombreLista, formatearNombreLista, setListasPrecios } from './js/firebase-config.js';
@@ -3244,7 +3244,7 @@
               const esCancelada = est === 'cancelada';
               return `${esCancelada ? '<li><hr class="dropdown-divider"></li>' : ''}
               <li><a class="dropdown-item" href="#" onclick="cambiarEstadoRapido('${orden.id}', '${est}'); return false;">
-                ${htmlEstado(est)}
+                ${htmlAccionEstado(est)}
               </a></li>`;
             }).join('')}
           </ul>
@@ -3478,6 +3478,7 @@
     window.cambiarEstadoRapido = async function(ordenId, nuevoEstado) {
       const orden = ordenes.find(o => o.id === ordenId);
       if (!orden) return;
+      if (!confirmarCambioEstado(nuevoEstado, orden)) return;
 
       const resultado = await actualizarEstadoOrden(ordenId, nuevoEstado);
 
@@ -3506,6 +3507,7 @@
 
       const nuevoEstado = document.getElementById('nuevoEstado').value;
       const nota = document.getElementById('estadoNota').value;
+      if (nuevoEstado !== ordenSeleccionada.estado && !confirmarCambioEstado(nuevoEstado, ordenSeleccionada)) return;
 
       const resultado = await actualizarEstadoOrden(ordenSeleccionada.id, nuevoEstado, nota);
 

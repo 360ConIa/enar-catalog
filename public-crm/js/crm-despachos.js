@@ -22,9 +22,9 @@ import {
   tiempoRelativo, badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   obtenerReversion, puedeRegresarEstado,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
-} from './crm-utils.js?v=20261026e';
+} from './crm-utils.js?v=20261028d';
 import { pesoOrden } from './peso-orden.js?v=20261028c';
-import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, usarContadorNoLeidos, infoSubestado, subestadoAlCerrar, htmlSubestado } from './estados-orden.js?v=20261026e';
+import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, confirmarCambioEstado, usarContadorNoLeidos, infoSubestado, subestadoAlCerrar, htmlSubestado } from './estados-orden.js?v=20261028d';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -1011,14 +1011,12 @@ function renderModalFooter(orden) {
         <button class="crm-btn crm-btn--sm" style="background:#ffedd5;color:#9a3412;" onclick="guardarParcial('${orden.id}')">
           <i class="bi bi-pause-circle"></i> Guardar avance (${marcados}/${total})
         </button>
-        <button class="crm-btn crm-btn--success crm-btn--sm" onclick="finalizarAlistamiento('${orden.id}')">
-          <i class="bi bi-check-circle"></i> Cerrar
-        </button>`;
+        ${htmlBotonEstado('cerrada', `finalizarAlistamiento('${orden.id}')`, { pequeno: true })}`;
     } else {
       botonesHTML = `<span style="font-size:0.82rem;color:var(--crm-text-light);align-self:center;">Marca items para habilitar acciones</span>`;
     }
   } else if (normalizarEstado(orden.estado) === 'aprobada') {
-    // Sigue Aprobada hasta registrar el primer ítem; no se ofrece "Pasar a Alistamiento"
+    // Sigue Aprobada hasta registrar el primer ítem; no se ofrece "Iniciar alistamiento"
     botonesHTML = `<span style="font-size:0.82rem;color:var(--crm-text-light);align-self:center;">Registra el primer ítem para iniciar el alistamiento</span>`
       + renderBotonesEstado(orden, { sinAvance: true });
   } else {
@@ -1386,6 +1384,7 @@ window.cambiarEstado = async function(ordenId, nuevoEstado) {
     showToast('Transición de estado no permitida', 'error');
     return;
   }
+  if (!confirmarCambioEstado(nuevoEstado, orden)) return;
 
   try {
     const cambios = cambiosDeEstado(orden, nuevoEstado, `Cambio a ${ESTADOS_ORDEN_LABELS[nuevoEstado]} por ${userPerfil.nombre || currentUser.email}`);

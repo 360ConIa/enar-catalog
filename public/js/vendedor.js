@@ -23,9 +23,9 @@ import {
   badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio
-} from './crm-utils.js?v=20261026e';
+} from './crm-utils.js?v=20261028d';
 import { pesoOrden, htmlPesoOrden } from './peso-orden.js?v=20261028c';
-import { normalizarEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261026e';
+import { normalizarEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, htmlAccionEstado, confirmarCambioEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261028d';
 import { cargarListasPrecios, nombreLista } from './firebase-config.js';
 import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './despacho.js';
 import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './chat-ordenes.js';
@@ -299,7 +299,7 @@ function renderBtnCambioEstado(orden) {
       <div class="crm-estado-menu" id="estadoMenu_${orden.id}">
         ${transiciones.map(est => `
           <button class="crm-estado-opcion" onclick="cambiarEstadoDesdeTabla('${orden.id}', '${est}')">
-            ${badgeEstado(est)}
+            ${htmlAccionEstado(est)}
           </button>
         `).join('')}
       </div>
@@ -446,7 +446,7 @@ window.verDetalleOrden = async function(ordenId) {
   // Botones de cambio de estado: las mismas transiciones que el menú de la tabla
   const transiciones = obtenerTransicionesPermitidas(orden.estado);
   $('modalDetalleFooter').innerHTML = `
-    <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalDetalle')">Cerrar</button>
+    <button class="crm-btn crm-btn--secondary" onclick="cerrarModal('modalDetalle')">Salir</button>
     <button class="crm-btn crm-btn--sm" style="background:#217346;color:white;" onclick="window.generarCSVOrden('${orden.id}')">
       CSV
     </button>
@@ -483,6 +483,7 @@ window.cambiarEstadoOrden = async function(ordenId, nuevoEstado) {
     showToast('Transición no permitida', 'error');
     return;
   }
+  if (!confirmarCambioEstado(nuevoEstado, orden)) return;
 
   try {
     const cambios = cambiosDeEstado(orden, nuevoEstado, `Cambio a ${ESTADOS_ORDEN_LABELS[nuevoEstado]} por ${userPerfil.nombre || currentUser.email}`);

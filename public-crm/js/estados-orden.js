@@ -26,12 +26,13 @@
  */
 
 // fondo/texto: etiqueta (pastel con texto oscuro). color: tono sólido para gráficos.
+// accion: verbo de los botones y menús que pasan la orden a ese estado.
 export const ESTADOS_ORDEN_TABLA = [
-  { estado: 'pendiente',    etiqueta: 'Pendiente',    icono: 'bi-hourglass-split', fondo: '#fef3c7', texto: '#92400e', color: '#f59e0b' },
-  { estado: 'aprobada',     etiqueta: 'Aprobada',     icono: 'bi-hand-thumbs-up',  fondo: '#dbeafe', texto: '#1e40af', color: '#3b82f6' },
-  { estado: 'alistamiento', etiqueta: 'Alistamiento', icono: 'bi-box-seam',        fondo: '#cffafe', texto: '#155e75', color: '#06b6d4' },
-  { estado: 'cerrada',      etiqueta: 'Cerrada',      icono: 'bi-check-circle',    fondo: '#d1fae5', texto: '#065f46', color: '#10b981' },
-  { estado: 'cancelada',    etiqueta: 'Cancelada',    icono: 'bi-x-circle',        fondo: '#fee2e2', texto: '#991b1b', color: '#ef4444' },
+  { estado: 'pendiente',    etiqueta: 'Pendiente',    accion: 'Volver a pendiente',   icono: 'bi-hourglass-split', fondo: '#fef3c7', texto: '#92400e', color: '#f59e0b' },
+  { estado: 'aprobada',     etiqueta: 'Aprobada',     accion: 'Aprobar',              icono: 'bi-hand-thumbs-up',  fondo: '#dbeafe', texto: '#1e40af', color: '#3b82f6' },
+  { estado: 'alistamiento', etiqueta: 'Alistamiento', accion: 'Iniciar alistamiento', icono: 'bi-box-seam',        fondo: '#cffafe', texto: '#155e75', color: '#06b6d4' },
+  { estado: 'cerrada',      etiqueta: 'Cerrada',      accion: 'Cerrar',               icono: 'bi-check-circle',    fondo: '#d1fae5', texto: '#065f46', color: '#10b981' },
+  { estado: 'cancelada',    etiqueta: 'Cancelada',    accion: 'Cancelar',             icono: 'bi-x-circle',        fondo: '#fee2e2', texto: '#991b1b', color: '#ef4444' },
 ];
 
 // Subestados: contorno (borde de 1 px, fondo transparente) y más pequeños que el estado,
@@ -217,11 +218,19 @@ const CSS = `
 .selector-estado-opcion:hover, .selector-estado-opcion.activa { background: #f1f5f9; }
 .selector-estado-opcion--sub { padding-left: 28px; }
 .selector-estado-sep { height: 1px; background: #e2e8f0; margin: 4px 2px; }
+/* Botón de cambio de estado: verbo con el aspecto de la etiqueta del estado de destino
+   (fondo, texto y borde del estado; mismo radio). Colores en línea (htmlBotonEstado). */
 .boton-estado {
-  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; background: #fff;
-  border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px; color: #475569; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px;
+  border: 1px solid currentColor; border-radius: 999px;
+  font-size: 13px; font-weight: 600; line-height: 1.3; white-space: nowrap;
+  cursor: pointer; font-family: inherit; transition: filter .15s;
 }
-.boton-estado:hover { background: #f8fafc; border-color: #94a3b8; }
+.boton-estado:hover { filter: brightness(0.95); }
+.boton-estado:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.boton-estado i { font-size: 13px; line-height: 1; }
+.boton-estado--sm { padding: 4px 12px; font-size: 12px; }
+.estado-orden.estado-orden--accion { border: 1px solid currentColor; }
 `;
 
 function inyectarCSS() {
@@ -260,10 +269,42 @@ export function htmlEstado(estadoUOrden, subestado, { enLinea = false } = {}) {
   return `<span class="estado-orden-grupo${enLinea ? ' estado-orden-grupo--linea' : ''}">${principal}${htmlSubestado(sub)}</span>`;
 }
 
-/** Botón "Pasar a [etiqueta]" para cambiar de estado (mismo aspecto en todas las pantallas) */
-export function htmlBotonEstado(estado, accion, texto = 'Pasar a') {
-  return `<button type="button" class="boton-estado" onclick="${accion}" title="${texto} ${etiquetaEstado(estado)}">`
-    + `<span>${texto}</span>${htmlEstado(estado)}</button>`;
+/** Verbo de la acción que pasa una orden a `estado` (Aprobar, Iniciar alistamiento, Cerrar, Cancelar) */
+export const accionEstado = (estado) => infoEstado(estado).accion || etiquetaEstado(estado);
+
+/** Colores en línea de la etiqueta de un estado, para botones propios de cada página */
+export function estiloEstado(estado) {
+  const e = infoEstado(estado);
+  return `background:${e.fondo};color:${e.texto};border:1px solid ${e.texto};`;
+}
+
+/**
+ * Botón de cambio de estado: el verbo con el aspecto de la etiqueta del estado de destino
+ * (Cerrar con el de Cerrada, Cancelar con el de Cancelada). Igual en todas las pantallas.
+ * texto: reemplaza el verbo; pequeno: tamaño de los botones de tarjeta.
+ */
+export function htmlBotonEstado(estado, accion, { texto, pequeno = false } = {}) {
+  const e = infoEstado(estado);
+  const verbo = texto || accionEstado(estado);
+  return `<button type="button" class="boton-estado${pequeno ? ' boton-estado--sm' : ''}" data-estado="${e.estado}" onclick="${accion}" style="${estiloEstado(estado)}" title="${verbo}">`
+    + `<i class="bi ${e.icono}" aria-hidden="true"></i>${verbo}</button>`;
+}
+
+/** Opción de un menú de cambio de estado: el verbo con el aspecto de la etiqueta */
+export function htmlAccionEstado(estado) {
+  const e = infoEstado(estado);
+  return `<span class="estado-orden estado-orden--accion" data-estado="${e.estado}" style="${estiloEstado(estado)}">`
+    + `<i class="bi ${e.icono}" aria-hidden="true"></i>${accionEstado(estado)}</span>`;
+}
+
+/**
+ * Confirmación antes de cambiar de estado. Solo Cancelar la pide (no se puede deshacer
+ * desde la tabla); el resto devuelve true sin preguntar.
+ */
+export function confirmarCambioEstado(estado, orden) {
+  if (normalizarEstado(estado) !== 'cancelada' || typeof window === 'undefined') return true;
+  const num = orden?.numero_orden || (orden?.id || '').substring(0, 8);
+  return window.confirm(`¿Cancelar la orden ${num}?\n\nLa orden pasa a Cancelada y no sigue a despacho.`);
 }
 
 /**
