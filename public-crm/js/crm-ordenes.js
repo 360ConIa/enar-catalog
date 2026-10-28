@@ -26,6 +26,7 @@ import {
   showToast, debounce, mostrarLoader, mostrarVacio,
   cargarListasPrecios, nombreLista
 } from './crm-utils.js?v=20261026e';
+import { pesoOrden, htmlPesoOrden } from './peso-orden.js?v=20261028c';
 import { normalizarEstado, subestadoDe, etiquetaEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261026e';
 
 // ═══════════ FIREBASE INIT ═══════════
@@ -600,7 +601,7 @@ function renderizarOrdenes() {
   const paginadas = paginador.paginar(ordenesFiltradas);
 
   if (paginadas.length === 0) {
-    body.innerHTML = `<tr><td colspan="7"><div class="crm-empty" style="padding:40px;"><i class="bi bi-inbox"></i><p>No se encontraron órdenes</p></div></td></tr>`;
+    body.innerHTML = `<tr><td colspan="8"><div class="crm-empty" style="padding:40px;"><i class="bi bi-inbox"></i><p>No se encontraron órdenes</p></div></td></tr>`;
     $('paginacionOrdenes').innerHTML = '';
     return;
   }
@@ -616,6 +617,7 @@ function renderizarOrdenes() {
       <td style="white-space:nowrap;">${formatearFecha(o.created_at)}</td>
       <td style="text-align:center;">${o.cantidad_productos || (o.items || o.productos || []).length}</td>
       <td style="text-align:right;font-weight:600;">${formatearPrecio(o.total || 0)}</td>
+      <td style="text-align:right;white-space:nowrap;">${htmlPesoOrden(pesoOrden(o, productosPorCodigo))}</td>
       <td>${badgeEstado(o)}</td>
       <td style="text-align:center;white-space:nowrap;">
         <span style="position:relative;display:inline-block;">

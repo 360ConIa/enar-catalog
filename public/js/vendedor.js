@@ -24,6 +24,7 @@ import {
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js?v=20261026e';
+import { pesoOrden, htmlPesoOrden } from './peso-orden.js?v=20261028c';
 import { normalizarEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261026e';
 import { cargarListasPrecios, nombreLista } from './firebase-config.js';
 import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './despacho.js';
@@ -356,7 +357,7 @@ function renderizarOrdenes() {
   const paginadas = paginador.paginar(ordenesFiltradas);
 
   if (paginadas.length === 0) {
-    body.innerHTML = `<tr><td colspan="7"><div class="crm-empty" style="padding:40px;"><i class="bi bi-inbox"></i><p>No se encontraron órdenes</p></div></td></tr>`;
+    body.innerHTML = `<tr><td colspan="8"><div class="crm-empty" style="padding:40px;"><i class="bi bi-inbox"></i><p>No se encontraron órdenes</p></div></td></tr>`;
     $('paginacionOrdenes').innerHTML = '';
     return;
   }
@@ -371,6 +372,7 @@ function renderizarOrdenes() {
       <td style="white-space:nowrap;">${formatearFecha(o.created_at)}</td>
       <td style="text-align:center;">${o.cantidad_productos || (o.items || o.productos || []).length}</td>
       <td style="text-align:right;font-weight:600;">${formatearPrecio(o.total || 0)}</td>
+      <td style="text-align:right;white-space:nowrap;">${htmlPesoOrden(pesoOrden(o, productosPorCodigo))}</td>
       <td>${badgeEstado(o)}</td>
       <td style="text-align:left;white-space:nowrap;">
         <button class="crm-btn crm-btn--sm" style="position:relative;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;" onclick="verDetalleOrden('${o.id}')" title="Ver detalle">

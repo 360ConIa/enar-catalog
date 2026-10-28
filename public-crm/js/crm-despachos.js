@@ -23,6 +23,7 @@ import {
   obtenerReversion, puedeRegresarEstado,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js?v=20261026e';
+import { pesoOrden } from './peso-orden.js?v=20261028c';
 import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, usarContadorNoLeidos, infoSubestado, subestadoAlCerrar, htmlSubestado } from './estados-orden.js?v=20261026e';
 
 // ═══════════ FIREBASE INIT ═══════════
@@ -556,7 +557,7 @@ function renderCardOrden(orden) {
   const marcados = items.filter(i => ['comp', 'parcial', 'sinstock'].includes(i.estado_alistamiento)).length;
   const progreso = totalItems > 0 ? Math.round((marcados / totalItems) * 100) : 0;
 
-  const pesoTotal = items.reduce((sum, i) => sum + ((i.peso_kg || 0) * (i.cantidad || 0)), 0);
+  const pesoTotal = pesoOrden(orden, productosCache).kg;
   const totalUnidades = items.reduce((sum, i) => sum + (Number(i.cantidad) || 0), 0);
 
   const ubicacion = orden._ubicacion || orden.direccion_entrega?.ciudad || '';

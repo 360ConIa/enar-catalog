@@ -898,6 +898,7 @@
                   <th>Origen</th>
                   <th>Items</th>
                   <th>Total</th>
+                  <th class="text-end">Peso</th>
                   <th>Estado</th>
                   <th>Fecha</th>
                   <th class="text-center">Acciones</th>
@@ -905,7 +906,7 @@
               </thead>
               <tbody id="ordenesBody">
                 <tr>
-                  <td colspan="8" class="empty-message">Cargando órdenes...</td>
+                  <td colspan="9" class="empty-message">Cargando órdenes...</td>
                 </tr>
               </tbody>
             </table>
@@ -2000,6 +2001,7 @@
     } from './js/user-manager.js';
     import { htmlEstado, htmlFiltroEstado, etiquetaEstado, normalizarEstado, transicionesDe, coincideFiltroEstado, FILTROS_ESTADO, usarContadorNoLeidos } from './js/estados-orden.js?v=20261026e';
     import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './js/despacho.js';
+    import { pesoOrden, htmlPesoOrden } from './js/peso-orden.js?v=20261028c';
     import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './js/chat-ordenes.js';
     import {
       obtenerTodasLasOrdenes,
@@ -3168,7 +3170,24 @@
     });
 
     // Cargar órdenes
+    // Catálogo por código para la columna Peso (js/peso-orden.js). Sale de productosAdmin
+    // si ya se cargó; si no (perfiles sin pestaña Productos), se lee una vez.
+    let pesosProductos = new Map();
+    async function cargarPesosProductos() {
+      let lista = productosAdmin;
+      if (!lista.length) {
+        try {
+          const snap = await getDocs(collection(db, 'productos'));
+          lista = snap.docs.map(d => d.data());
+        } catch (e) {
+          console.error('Error cargando pesos de productos:', e);
+        }
+      }
+      pesosProductos = new Map(lista.filter(p => p.activo !== false && p.cod_interno).map(p => [p.cod_interno, p]));
+    }
+
     async function cargarOrdenes() {
+      if (!pesosProductos.size) await cargarPesosProductos();
       // Vendedor externo: la consulta debe filtrar por creadaPor (firestore.rules)
       const resultado = await obtenerTodasLasOrdenes(isVendedorExterno ? { creadaPor: auth.currentUser?.uid } : {});
 
@@ -3249,7 +3268,7 @@
       const tbody = document.getElementById('ordenesBody');
 
       if (ordenesFiltradas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-message">No se encontraron órdenes</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-message">No se encontraron órdenes</td></tr>';
         return;
       }
 
@@ -3269,6 +3288,7 @@
           <td>${origen}</td>
           <td>${o.items?.length || o.productos?.length || o.cantidad_items || 0}</td>
           <td><strong style="color: #D9232D;">${formatearPrecio(o.total)}</strong></td>
+          <td class="text-end">${htmlPesoOrden(pesoOrden(o, pesosProductos))}</td>
           <td>${htmlEstado(o)}</td>
           <td>${formatearFecha(o.created_at)}</td>
           <td class="text-end">
