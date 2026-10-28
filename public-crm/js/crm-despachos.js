@@ -566,10 +566,11 @@ function renderCardOrden(orden) {
 
       <!-- Fila 2: Cuerpo -->
       <div class="crm-despacho-body">
-        <div class="crm-despacho-body-left">
-          <span class="crm-despacho-novedad ${tieneNovedad ? 'crm-despacho-novedad--alerta' : 'crm-despacho-novedad--ok'}">
+        <div class="crm-despacho-body-left${observacionOrden(orden) ? ' crm-despacho-body-left--obs' : ''}">
+          ${observacionOrden(orden) && !tieneNovedad ? '' : `<span class="crm-despacho-novedad ${tieneNovedad ? 'crm-despacho-novedad--alerta' : 'crm-despacho-novedad--ok'}">
             ${tieneNovedad ? 'Con Novedad' : 'Sin Novedad'}
-          </span>
+          </span>`}
+          ${htmlObservacion(orden, true)}
           ${fechaEntrega ? `<span style="color:var(--crm-text-light);">—</span><span class="crm-despacho-fecha-entrega"><i class="bi bi-calendar3"></i> ${fechaEntrega}</span>` : ''}
         </div>
         <div class="crm-despacho-body-right">
@@ -619,6 +620,47 @@ function renderCardOrden(orden) {
     </div>
   `;
 }
+
+// ═══════════ OBSERVACIONES DE LA ORDEN ═══════════
+// Las escritas al crear la orden (B2B, CRM y vendedor guardan `observaciones`)
+function observacionOrden(orden) {
+  return String(orden.observaciones || orden.notas || '').trim();
+}
+
+function escaparHtml(texto) {
+  return texto.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+const OBS_CORTA = 15;
+
+// contraible: en la tarjeta sale en una línea (ícono + 15 caracteres + "…") y un clic
+// la despliega o la vuelve a contraer; en el modal y el detalle va completa
+function htmlObservacion(orden, contraible = false) {
+  const obs = observacionOrden(orden);
+  if (!obs) return '';
+  const letras = Array.from(obs);
+  const completa = `<strong>Observación:</strong> ${escaparHtml(obs)}`;
+  if (!contraible || letras.length <= OBS_CORTA) {
+    return `
+    <div class="crm-observacion${contraible ? ' crm-observacion--compacta' : ''}">
+      <i class="bi bi-exclamation-triangle-fill crm-observacion-icono"></i>
+      <div class="crm-observacion-texto">${contraible ? escaparHtml(obs) : completa}</div>
+    </div>`;
+  }
+  const corta = escaparHtml(letras.slice(0, OBS_CORTA).join('').trimEnd()) + '…';
+  return `
+    <div class="crm-observacion crm-observacion--contraible" role="button" tabindex="0" title="Ver observación"
+      onclick="toggleObservacion(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleObservacion(this)}">
+      <i class="bi bi-exclamation-triangle-fill crm-observacion-icono"></i>
+      <div class="crm-observacion-texto crm-observacion-corta">${corta}</div>
+      <div class="crm-observacion-texto crm-observacion-larga">${completa}</div>
+    </div>`;
+}
+
+window.toggleObservacion = function(box) {
+  const abierta = box.classList.toggle('abierta');
+  box.title = abierta ? 'Contraer observación' : 'Ver observación';
+};
 
 // ═══════════ ACCIONES POR TAB ═══════════
 function renderAccionesTab(orden) {
@@ -753,6 +795,7 @@ window.abrirAlistamiento = function(ordenId) {
   $('modalAlistamientoBody').innerHTML = `
     <div class="alist-layout">
     <div class="alist-items">
+    ${htmlObservacion(orden)}
     <div id="progresoAlistamiento-${ordenId}" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <span id="progresoTexto-${ordenId}" style="font-size:0.82rem;color:var(--crm-text-light);"></span>
       <span id="progresoPct-${ordenId}" style="font-size:0.82rem;font-weight:600;"></span>
@@ -1131,6 +1174,7 @@ window.toggleDetalle = function(ordenId) {
     };
 
     dropdown.innerHTML = `
+      ${observacionOrden(orden) ? `<div class="crm-despacho-dropdown-obs">${htmlObservacion(orden)}</div>` : ''}
       <div class="crm-tabla-wrapper" style="border:none;box-shadow:none;">
         <table class="crm-tabla">
           <thead>

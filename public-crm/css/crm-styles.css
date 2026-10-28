@@ -604,6 +604,80 @@
   flex-wrap: wrap;
 }
 
+/* Con observación: ocupa el ancho a la izquierda de los botones */
+.crm-despacho-body-left--obs {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.crm-observacion {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 7px 12px;
+  background: #fef3c7;
+  border-left: 4px solid #d97706;
+  border-radius: 6px;
+  color: #78350f;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.crm-observacion-icono {
+  color: #d97706;
+  font-size: 0.95rem;
+  line-height: 1.3;
+}
+
+.crm-observacion-texto {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.crm-observacion-texto strong {
+  color: #92400e;
+}
+
+/* Tarjeta: contraída en una línea; clic para desplegar y volver a contraer */
+.crm-observacion--contraible {
+  cursor: pointer;
+  user-select: none;
+}
+
+.crm-observacion--compacta,
+.crm-observacion--contraible:not(.abierta) {
+  flex: 0 1 auto;
+  font-weight: 600;
+}
+
+.crm-observacion--contraible:not(.abierta) .crm-observacion-corta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crm-observacion--contraible:hover,
+.crm-observacion--contraible:focus-visible {
+  background: #fde68a;
+  outline: none;
+}
+
+.crm-observacion--contraible .crm-observacion-larga,
+.crm-observacion--contraible.abierta .crm-observacion-corta { display: none; }
+.crm-observacion--contraible.abierta .crm-observacion-larga { display: block; }
+
+.alist-items > .crm-observacion { margin-bottom: 12px; }
+
+.crm-despacho-dropdown-obs { padding: 10px 16px 4px; }
+/* deja sitio a la observación sin recortar la tabla (598px) */
+@media (min-width: 992px) {
+  .crm-despacho-dropdown.open:has(.crm-despacho-dropdown-obs) { max-height: 760px; }
+}
+
 .crm-despacho-novedad {
   display: inline-flex;
   align-items: center;
