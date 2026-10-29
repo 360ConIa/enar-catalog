@@ -25,9 +25,9 @@ import {
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio,
   cargarListasPrecios, nombreLista
-} from './crm-utils.js?v=20261028d';
+} from './crm-utils.js?v=20261028e';
 import { pesoOrden, htmlPesoOrden } from './peso-orden.js?v=20261028c';
-import { normalizarEstado, subestadoDe, etiquetaEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, htmlAccionEstado, confirmarCambioEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261028d';
+import { normalizarEstado, subestadoDe, etiquetaEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, htmlAccionEstado, confirmarCambioEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261028e';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({

@@ -22,9 +22,9 @@ import {
   tiempoRelativo, badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   obtenerReversion, puedeRegresarEstado,
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
-} from './crm-utils.js?v=20261028d';
+} from './crm-utils.js?v=20261028e';
 import { pesoOrden } from './peso-orden.js?v=20261028c';
-import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, confirmarCambioEstado, usarContadorNoLeidos, infoSubestado, subestadoAlCerrar, htmlSubestado } from './estados-orden.js?v=20261028d';
+import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, confirmarCambioEstado, usarContadorNoLeidos, infoSubestado, subestadoAlCerrar, htmlSubestado } from './estados-orden.js?v=20261028e';
 
 // ═══════════ FIREBASE INIT ═══════════
 const app = initializeApp({
@@ -751,38 +751,6 @@ async function guardarItemsAlistamiento(ordenId, items, { registro }) {
   return paso;
 }
 
-// ═══════════ GUARDAR PARCIAL (sigue en alistamiento) ═══════════
-window.guardarParcial = async function(ordenId) {
-  const orden = todasLasOrdenes.find(o => o.id === ordenId);
-  if (!orden) return;
-
-  try {
-    const historial = orden.historial || [];
-    const items = orden.items || orden.productos || [];
-    const marcados = items.filter(i => ['comp', 'parcial', 'sinstock'].includes(i.estado_alistamiento)).length;
-
-    historial.push({
-      estado: 'alistamiento',
-      fecha: new Date().toISOString(),
-      nota: `Avance de alistamiento (${marcados}/${items.length} items) por ${userPerfil.nombre || currentUser.email}`
-    });
-
-    // Avance guardado: la orden sigue en alistamiento (el subestado se fija al cerrar)
-    await updateDoc(doc(db, 'ordenes', ordenId), {
-      historial: historial,
-      updated_at: new Date().toISOString()
-    });
-
-    orden.historial = historial;
-
-    $('modalAlistamiento')?.classList.remove('open');
-    showToast(`Avance de alistamiento guardado (${marcados}/${items.length})`, 'info');
-  } catch (error) {
-    console.error('Error guardando parcial:', error);
-    showToast('Error al guardar', 'error');
-  }
-};
-
 // ═══════════ FINALIZAR ALISTAMIENTO ═══════════
 window.finalizarAlistamiento = async function(ordenId) {
   const orden = todasLasOrdenes.find(o => o.id === ordenId);
@@ -997,7 +965,6 @@ window.enviarMensajeModal = function(ordenId) {
 
 function renderModalFooter(orden) {
   const items = orden.items || orden.productos || [];
-  const total = items.length;
   const marcados = items.filter(i => ['comp', 'parcial', 'sinstock'].includes(i.estado_alistamiento)).length;
   const hayMarcados = marcados > 0;
 
@@ -1005,12 +972,12 @@ function renderModalFooter(orden) {
 
   if (orden.estado === 'alistamiento') {
     if (hayMarcados) {
-      // Subestado con el que cerraría la orden, recalculado con cada marca o cantidad
+      // Cada marca y cantidad se guarda al instante (guardarItemsAlistamiento): no hay botón
+      // de guardar. Junto a Cerrar se avisa si cerraría Parcial, recalculado en cada cambio
+      // (Completa no se muestra: es lo esperado).
+      const sub = subestadoEnVivo(items);
       botonesHTML = `
-        <span class="alist-subestado-vivo" title="Subestado al cerrar">${htmlSubestado(subestadoEnVivo(items))}</span>
-        <button class="crm-btn crm-btn--sm" style="background:#ffedd5;color:#9a3412;" onclick="guardarParcial('${orden.id}')">
-          <i class="bi bi-pause-circle"></i> Guardar avance (${marcados}/${total})
-        </button>
+        ${sub === 'parcial' ? `<span class="alist-subestado-vivo" title="Subestado al cerrar">${htmlSubestado(sub)}</span>` : ''}
         ${htmlBotonEstado('cerrada', `finalizarAlistamiento('${orden.id}')`, { pequeno: true })}`;
     } else {
       botonesHTML = `<span style="font-size:0.82rem;color:var(--crm-text-light);align-self:center;">Marca items para habilitar acciones</span>`;
@@ -1555,6 +1522,9 @@ window.generarCSVOrden = async function(ordenId) {
 // ═══════════ MODAL ═══════════
 window.cerrarModal = function(id) {
   const el = $(id);
+  // Una cantidad escrita y sin confirmar (Enter o salir del campo) se guarda al cerrar:
+  // quitar el foco dispara su 'change' antes de ocultar el modal
+  if (el && el.contains(document.activeElement)) document.activeElement.blur();
   if (el) el.classList.remove('open');
   // Al cerrar el alistamiento se deja de escuchar su chat (con Esc o clic en el fondo se
   // detiene en el siguiente aviso: iniciarChatModal comprueba que el modal siga abierto)

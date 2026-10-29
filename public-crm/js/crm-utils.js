@@ -8,7 +8,7 @@
  * ============================================
  */
 
-import { htmlEstado } from './estados-orden.js?v=20261028d';
+import { htmlEstado } from './estados-orden.js?v=20261028e';
 
 // ═══════════ CONSTANTES ═══════════
 
@@ -30,7 +30,7 @@ export {
   puedeRegresarEstado,
   subestadoDe,
   subestadoAlCerrar
-} from './estados-orden.js?v=20261028d';
+} from './estados-orden.js?v=20261028e';
 
 export const ROLES = {
   ADMIN: 'admin',

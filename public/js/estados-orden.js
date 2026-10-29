@@ -253,19 +253,25 @@ export function htmlSubestado(subestado) {
   return s ? pastilla(s, ' estado-orden--sub', `data-subestado="${s.subestado}"`) : '';
 }
 
+// Subestados que no aportan información (lo esperado): no se pintan junto al estado.
+// Siguen en los filtros, para poder buscar las completas o las que no tienen mensajes.
+const SUBESTADOS_SIN_ETIQUETA = new Set(['completa', 'sin_mensaje']);
+
 /**
  * Etiqueta de estado igual en todas las vistas. Acepta el estado o la orden entera:
  * htmlEstado('aprobada'), htmlEstado(orden), htmlEstado('cerrada', 'parcial').
- * Una orden cerrada muestra su subestado debajo de Cerrada, con sangría (tablas, detalle).
+ * Una orden cerrada muestra su subestado debajo de Cerrada, con sangría (tablas, detalle),
+ * salvo Completa y Sin mensaje (SUBESTADOS_SIN_ETIQUETA); todos: los muestra (filtros).
  * enLinea: el subestado a la derecha, para espacios de una sola línea (botón del filtro).
  */
-export function htmlEstado(estadoUOrden, subestado, { enLinea = false } = {}) {
+export function htmlEstado(estadoUOrden, subestado, { enLinea = false, todos = false } = {}) {
   const orden = estadoUOrden && typeof estadoUOrden === 'object' ? estadoUOrden : null;
   const estado = orden ? orden.estado : estadoUOrden;
   const e = infoEstado(estado);
   const principal = pastilla(e, '', `data-estado="${e.estado}"`);
   const sub = orden ? subestadoDe(orden) : (subestado || LEGADO[estado]?.subestado || null);
   if (!sub || !(SUBESTADOS_POR_ESTADO[e.estado] || []).includes(sub)) return principal;
+  if (!todos && SUBESTADOS_SIN_ETIQUETA.has(sub)) return principal;
   return `<span class="estado-orden-grupo${enLinea ? ' estado-orden-grupo--linea' : ''}">${principal}${htmlSubestado(sub)}</span>`;
 }
 
@@ -316,7 +322,7 @@ export function htmlFiltroEstado(valor, { enLista = false } = {}) {
   if (!valor) return '';
   const [estado, sub] = valor.split('/');
   if (!sub) return htmlEstado(estado);
-  return enLista ? htmlSubestado(sub) : htmlEstado(estado, sub, { enLinea: true });
+  return enLista ? htmlSubestado(sub) : htmlEstado(estado, sub, { enLinea: true, todos: true });
 }
 
 /**

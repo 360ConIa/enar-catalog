@@ -23,9 +23,9 @@ import {
   badgeEstado, obtenerTransicionesPermitidas, puedeTransicionar,
   generarIdOrden, Paginador, buscarMultiCampo,
   showToast, debounce, mostrarLoader, mostrarVacio
-} from './crm-utils.js?v=20261028d';
+} from './crm-utils.js?v=20261028e';
 import { pesoOrden, htmlPesoOrden } from './peso-orden.js?v=20261028c';
-import { normalizarEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, htmlAccionEstado, confirmarCambioEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261028d';
+import { normalizarEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, htmlAccionEstado, confirmarCambioEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261028e';
 import { cargarListasPrecios, nombreLista } from './firebase-config.js';
 import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './despacho.js';
 import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './chat-ordenes.js';
