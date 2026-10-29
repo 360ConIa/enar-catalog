@@ -1865,10 +1865,8 @@
         <div id="detalleDespachoTotales"></div>
 
         <!-- Observaciones -->
-        <div id="detalleObservacionesContainer" style="margin-top: 15px; display: none;">
-          <h4 style="font-size: 14px; color: #666; margin-bottom: 8px;">Observaciones</h4>
-          <p style="font-size: 13px; padding: 10px; background: #fffbeb; border-radius: 6px; border-left: 3px solid #f59e0b;" id="detalleObservaciones">-</p>
-        </div>
+        <!-- Observación de la orden: mismo recuadro que en Despachos (js/observacion-orden.js) -->
+        <div id="detalleObservacionesContainer" style="margin-top: 15px; display: none;"></div>
 
         <!-- Mensajes internos de despacho (CRM, colección chat_ordenes) -->
         <div id="detalleMensajesDespacho"></div>
@@ -2002,6 +2000,7 @@
     import { htmlEstado, htmlAccionEstado, confirmarCambioEstado, htmlFiltroEstado, etiquetaEstado, normalizarEstado, transicionesDe, coincideFiltroEstado, FILTROS_ESTADO, usarContadorNoLeidos } from './js/estados-orden.js?v=20261028e';
     import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './js/despacho.js';
     import { pesoOrden, htmlPesoOrden } from './js/peso-orden.js?v=20261028c';
+    import { observacionOrden, htmlObservacion } from './js/observacion-orden.js?v=20261028f';
     import { crearAvisosChat, htmlBadgeChat, pintarBadgeChat, montarConversacion } from './js/chat-ordenes.js';
     import {
       obtenerTodasLasOrdenes,
@@ -3437,8 +3436,8 @@
 
       // Observaciones
       const obsContainer = document.getElementById('detalleObservacionesContainer');
-      if (orden.observaciones) {
-        document.getElementById('detalleObservaciones').textContent = orden.observaciones;
+      if (observacionOrden(orden)) {
+        obsContainer.innerHTML = htmlObservacion(orden);
         obsContainer.style.display = 'block';
       } else {
         obsContainer.style.display = 'none';

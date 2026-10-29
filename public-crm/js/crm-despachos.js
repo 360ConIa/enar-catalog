@@ -24,6 +24,7 @@ import {
   Paginador, buscarMultiCampo, showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js?v=20261028e';
 import { pesoOrden } from './peso-orden.js?v=20261028c';
+import { observacionOrden, htmlObservacion } from './observacion-orden.js?v=20261028f';
 import { normalizarEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, confirmarCambioEstado, usarContadorNoLeidos, infoSubestado, subestadoAlCerrar, htmlSubestado } from './estados-orden.js?v=20261028e';
 
 // ═══════════ FIREBASE INIT ═══════════
@@ -647,47 +648,6 @@ function renderCardOrden(orden) {
     </div>
   `;
 }
-
-// ═══════════ OBSERVACIONES DE LA ORDEN ═══════════
-// Las escritas al crear la orden (B2B, CRM y vendedor guardan `observaciones`)
-function observacionOrden(orden) {
-  return String(orden.observaciones || orden.notas || '').trim();
-}
-
-function escaparHtml(texto) {
-  return texto.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-const OBS_CORTA = 15;
-
-// contraible: en la tarjeta sale en una línea (ícono + 15 caracteres + "…") y un clic
-// la despliega o la vuelve a contraer; en el modal y el detalle va completa
-function htmlObservacion(orden, contraible = false) {
-  const obs = observacionOrden(orden);
-  if (!obs) return '';
-  const letras = Array.from(obs);
-  const completa = `<strong>Observación:</strong> ${escaparHtml(obs)}`;
-  if (!contraible || letras.length <= OBS_CORTA) {
-    return `
-    <div class="crm-observacion${contraible ? ' crm-observacion--compacta' : ''}">
-      <i class="bi bi-exclamation-triangle-fill crm-observacion-icono"></i>
-      <div class="crm-observacion-texto">${contraible ? escaparHtml(obs) : completa}</div>
-    </div>`;
-  }
-  const corta = escaparHtml(letras.slice(0, OBS_CORTA).join('').trimEnd()) + '…';
-  return `
-    <div class="crm-observacion crm-observacion--contraible" role="button" tabindex="0" title="Ver observación"
-      onclick="toggleObservacion(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleObservacion(this)}">
-      <i class="bi bi-exclamation-triangle-fill crm-observacion-icono"></i>
-      <div class="crm-observacion-texto crm-observacion-corta">${corta}</div>
-      <div class="crm-observacion-texto crm-observacion-larga">${completa}</div>
-    </div>`;
-}
-
-window.toggleObservacion = function(box) {
-  const abierta = box.classList.toggle('abierta');
-  box.title = abierta ? 'Contraer observación' : 'Ver observación';
-};
 
 // ═══════════ ACCIONES POR TAB ═══════════
 function renderAccionesTab(orden) {

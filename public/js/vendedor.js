@@ -25,6 +25,7 @@ import {
   showToast, debounce, mostrarLoader, mostrarVacio
 } from './crm-utils.js?v=20261028e';
 import { pesoOrden, htmlPesoOrden } from './peso-orden.js?v=20261028c';
+import { observacionOrden, htmlObservacion } from './observacion-orden.js?v=20261028f';
 import { normalizarEstado, coincideFiltroEstado, cambiosDeEstado, etiquetaEstadoOrden, htmlBotonEstado, htmlAccionEstado, confirmarCambioEstado, opcionesFiltroEstado, mejorarSelectorEstado, usarContadorNoLeidos } from './estados-orden.js?v=20261028e';
 import { cargarListasPrecios, nombreLista } from './firebase-config.js';
 import { resumenDespacho, htmlCantidad, htmlTotalesDespacho, leerOrdenActual } from './despacho.js';
@@ -409,7 +410,7 @@ window.verDetalleOrden = async function(ordenId) {
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">Creada por</span><br><strong>${orden.creadaPorNombre || orden.creadaPorEmail || '-'}</strong></div>
       <div><span style="color:var(--crm-text-light);font-size:0.78rem;">CSV Generado</span><br><strong>${orden.csv_generado ? 'Sí' : 'No'}</strong></div>
     </div>
-    ${orden.observaciones ? `<div style="margin-bottom:16px;padding:10px;background:#f8fafc;border-radius:6px;font-size:0.85rem;"><strong>Observaciones:</strong> ${orden.observaciones}</div>` : ''}
+    ${observacionOrden(orden) ? `<div style="margin-bottom:16px;">${htmlObservacion(orden)}</div>` : ''}
     <div class="crm-tabla-wrapper">
       <table class="crm-tabla">
         <thead>
